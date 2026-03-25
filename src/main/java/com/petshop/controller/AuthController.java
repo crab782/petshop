@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -26,14 +25,12 @@ public class AuthController {
 
     @Operation(summary = "用户注册", description = "普通用户注册接口")
     @PostMapping("/register/user")
-    public String registerUser(@RequestParam String username, @RequestParam String email, @RequestParam String password, @RequestParam String confirmPassword, @RequestParam String phone, RedirectAttributes redirectAttributes) {
+    public String registerUser(@RequestParam String username, @RequestParam String email, @RequestParam String password, @RequestParam String confirmPassword, @RequestParam String phone) {
         if (!password.equals(confirmPassword)) {
-            redirectAttributes.addFlashAttribute("error", "两次输入的密码不一致");
-            return "redirect:/register";
+            return "redirect:/register.html?error=" + java.net.URLEncoder.encode("两次输入的密码不一致", java.nio.charset.StandardCharsets.UTF_8);
         }
         if (userService.findByEmail(email) != null) {
-            redirectAttributes.addFlashAttribute("error", "邮箱已被注册");
-            return "redirect:/register";
+            return "redirect:/register.html?error=" + java.net.URLEncoder.encode("邮箱已被注册", java.nio.charset.StandardCharsets.UTF_8);
         }
         User user = new User();
         user.setUsername(username);
@@ -41,20 +38,17 @@ public class AuthController {
         user.setPassword(password);
         user.setPhone(phone);
         userService.register(user);
-        redirectAttributes.addFlashAttribute("success", "注册成功，请登录");
-        return "redirect:/login";
+        return "redirect:/login.html?success=" + java.net.URLEncoder.encode("注册成功，请登录", java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Operation(summary = "商家注册", description = "商家注册接口，需要等待审核")
     @PostMapping("/register/merchant")
-    public String registerMerchant(@RequestParam String name, @RequestParam String contactPerson, @RequestParam String phone, @RequestParam String email, @RequestParam String password, @RequestParam String confirmPassword, @RequestParam String address, RedirectAttributes redirectAttributes) {
+    public String registerMerchant(@RequestParam String name, @RequestParam String contactPerson, @RequestParam String phone, @RequestParam String email, @RequestParam String password, @RequestParam String confirmPassword, @RequestParam String address) {
         if (!password.equals(confirmPassword)) {
-            redirectAttributes.addFlashAttribute("error", "两次输入的密码不一致");
-            return "redirect:/register";
+            return "redirect:/register.html?error=" + java.net.URLEncoder.encode("两次输入的密码不一致", java.nio.charset.StandardCharsets.UTF_8);
         }
         if (merchantService.findByEmail(email) != null) {
-            redirectAttributes.addFlashAttribute("error", "邮箱已被注册");
-            return "redirect:/register";
+            return "redirect:/register.html?error=" + java.net.URLEncoder.encode("邮箱已被注册", java.nio.charset.StandardCharsets.UTF_8);
         }
         Merchant merchant = new Merchant();
         merchant.setName(name);
@@ -64,13 +58,12 @@ public class AuthController {
         merchant.setPassword(password);
         merchant.setAddress(address);
         merchantService.register(merchant);
-        redirectAttributes.addFlashAttribute("success", "注册成功，等待审核");
-        return "redirect:/login";
+        return "redirect:/login.html?success=" + java.net.URLEncoder.encode("注册成功，等待审核", java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Operation(summary = "用户登录", description = "支持用户、商家、管理员三种角色登录")
     @PostMapping("/login")
-    public String login(@RequestParam String email, @RequestParam String password, @RequestParam String type, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String login(@RequestParam String email, @RequestParam String password, @RequestParam String type, HttpSession session) {
         if ("user".equals(type)) {
             User user = userService.login(email, password);
             if (user != null) {
@@ -92,8 +85,8 @@ public class AuthController {
                 return "redirect:/admin/dashboard";
             }
         }
-        redirectAttributes.addFlashAttribute("error", "邮箱或密码错误");
-        return "redirect:/login";
+        // 将错误信息通过URL参数传递
+        return "redirect:/login.html?error=" + java.net.URLEncoder.encode("邮箱或密码错误", java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Operation(summary = "退出登录", description = "用户退出登录，清除会话")

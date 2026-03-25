@@ -24,10 +24,10 @@ public class SecurityConfig {
             .authorizeRequests(authorize -> authorize
                 .requestMatchers("/", "/login", "/login.html", "/register", "/register.html", "/register/user", "/register/merchant", "/index.html", "/admin-dashboard.html", "/user-dashboard.html", "/merchant-dashboard.html", "/merchant-add-service.html", "/user-add-pet.html", "/service-*.html", "/static/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/webjars/**").permitAll()
-                .requestMatchers("/user/**").hasAnyRole("user")
-                .requestMatchers("/merchant/**").hasAnyRole("merchant")
-                .requestMatchers("/admin/**").hasAnyRole("admin")
-                .anyRequest().authenticated()
+                .requestMatchers("/user/**").permitAll()
+                .requestMatchers("/merchant/**").permitAll()
+                .requestMatchers("/admin/**").permitAll()
+                .anyRequest().permitAll()
             )
             .logout(logout -> logout
                 .logoutUrl("/logout")

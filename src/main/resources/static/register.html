@@ -78,6 +78,15 @@
                         <button id="userRegisterTab" class="flex-1 py-2 text-center text-primary border-b-2 border-primary font-medium">用户注册</button>
                         <button id="merchantRegisterTab" class="flex-1 py-2 text-center text-gray-500 font-medium">商家注册</button>
                     </div>
+                    <!-- 错误信息提示区域 -->
+                    <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        <span id="errorText"></span>
+                    </div>
+                    <!-- 成功信息提示区域 -->
+                    <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                        <span id="successText"></span>
+                    </div>
+
                     <div id="userRegisterForm">
                     <form action="/register/user" method="post" class="space-y-4">
                         <div>
@@ -275,6 +284,36 @@
     </button>
 
     <script>
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        // 显示成功信息
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            const successText = document.getElementById('successText');
+            successText.textContent = message;
+            successDiv.classList.remove('hidden');
+        }
+
+        // 页面加载时检查URL参数
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const error = urlParams.get('error');
+            const success = urlParams.get('success');
+
+            if (error) {
+                showError(decodeURIComponent(error));
+            }
+            if (success) {
+                showSuccess(decodeURIComponent(success));
+            }
+        });
+
         // 注册类型切换功能
         const userRegisterTab = document.getElementById('userRegisterTab');
         const merchantRegisterTab = document.getElementById('merchantRegisterTab');

@@ -23,7 +23,13 @@ public class UserService {
     }
 
     public User login(String email, String password) {
+        // 先尝试通过email查询
         User user = userRepository.findByEmail(email);
+        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+            return user;
+        }
+        // 如果通过email查询失败，尝试通过username查询
+        user = userRepository.findByUsername(email);
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
             return user;
         }
