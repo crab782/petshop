@@ -7,5 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class PetManagementSystemApplication {
     public static void main(String[] args) {
         SpringApplication.run(PetManagementSystemApplication.class, args);
+        System.out.println("Pefffffffffffffffffffffffffff!");
     }
 }
