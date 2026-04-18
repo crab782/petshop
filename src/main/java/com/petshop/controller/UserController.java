@@ -43,15 +43,12 @@ public class UserController {
         if (user == null) {
             return "redirect:/login";
         }
-        List<Pet> pets = petService.findByUserId(user.getId());
-        model.addAttribute("pets", pets);
-        return "user-pets";
+        return "redirect:/user-pets.html";
     }
 
     @GetMapping("/pets/add")
     public String addPetForm(Model model) {
-        model.addAttribute("pet", new Pet());
-        return "user-add-pet";
+        return "redirect:/user-add-pet.html";
     }
 
     @PostMapping("/pets/add")
@@ -69,9 +66,7 @@ public class UserController {
         if (user == null) {
             return "redirect:/login";
         }
-        List<Appointment> appointments = appointmentService.findByUserId(user.getId());
-        model.addAttribute("appointments", appointments);
-        return "user-appointments";
+        return "redirect:/user-appointments.html";
     }
 
     @GetMapping("/appointments/book")
@@ -80,11 +75,7 @@ public class UserController {
         if (user == null) {
             return "redirect:/login";
         }
-        List<Pet> pets = petService.findByUserId(user.getId());
-        model.addAttribute("pets", pets);
-        model.addAttribute("services", serviceService.findAll());
-        model.addAttribute("appointment", new Appointment());
-        return "user-book-appointment";
+        return "redirect:/user-book-appointment.html";
     }
 
     @PostMapping("/appointments/book")
@@ -102,8 +93,7 @@ public class UserController {
         if (user == null) {
             return "redirect:/login";
         }
-        model.addAttribute("user", user);
-        return "user-profile";
+        return "redirect:/user-profile.html";
     }
 
     @PostMapping("/profile/update")

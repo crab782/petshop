@@ -69,27 +69,27 @@
             <nav class="p-4">
                 <ul class="space-y-2">
                     <li>
-                        <a href="#dashboard" class="flex items-center space-x-3 p-3 bg-primary/10 text-primary rounded-lg">
+                        <a href="/merchant/dashboard" class="flex items-center space-x-3 p-3 bg-primary/10 text-primary rounded-lg">
                             <i class="fa fa-home text-xl"></i>
                             <span class="font-medium">后台首页</span>
                         </a>
                     </li>
                     <li>
-                        <a href="#shop" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/merchant/profile" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-shopping-bag text-xl text-gray-600"></i>
                             <span>店铺管理</span>
                         </a>
                     </li>
                     <li>
-                        <a href="#appointment" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/merchant/appointments" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-calendar text-xl text-gray-600"></i>
                             <span>预约订单列表</span>
                         </a>
                     </li>
                     <li>
-                        <a href="#product" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/merchant/services" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-cubes text-xl text-gray-600"></i>
-                            <span>商品订单列表</span>
+                            <span>服务管理</span>
                         </a>
                     </li>
                     <li>
@@ -99,7 +99,7 @@
                         </a>
                     </li>
                     <li class="mt-8">
-                        <a href="login.html" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/logout" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-sign-out text-xl text-gray-600"></i>
                             <span>退出登录</span>
                         </a>
@@ -324,8 +324,7 @@
         // 导航菜单激活状态
         const navLinks = document.querySelectorAll('nav a');
         navLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
+            link.addEventListener('click', function() {
                 navLinks.forEach(item => item.classList.remove('bg-primary/10', 'text-primary'));
                 navLinks.forEach(item => item.classList.add('hover:bg-gray-100'));
                 this.classList.add('bg-primary/10', 'text-primary');

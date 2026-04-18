@@ -40,15 +40,12 @@ public class MerchantController {
         if (merchant == null) {
             return "redirect:/login";
         }
-        List<Service> services = serviceService.findByMerchantId(merchant.getId());
-        model.addAttribute("services", services);
-        return "merchant-services";
+        return "redirect:/merchant-services.html";
     }
 
     @GetMapping("/services/add")
     public String addServiceForm(Model model) {
-        model.addAttribute("service", new Service());
-        return "merchant-add-service";
+        return "redirect:/merchant-add-service.html";
     }
 
     @PostMapping("/services/add")
@@ -66,9 +63,7 @@ public class MerchantController {
         if (merchant == null) {
             return "redirect:/login";
         }
-        List<Appointment> appointments = appointmentService.findByMerchantId(merchant.getId());
-        model.addAttribute("appointments", appointments);
-        return "merchant-appointments";
+        return "redirect:/merchant-appointments.html";
     }
 
     @PostMapping("/appointments/{id}/status")
@@ -88,8 +83,7 @@ public class MerchantController {
         if (merchant == null) {
             return "redirect:/login";
         }
-        model.addAttribute("merchant", merchant);
-        return "merchant-profile";
+        return "redirect:/merchant-profile.html";
     }
 
     @PostMapping("/profile/update")

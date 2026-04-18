@@ -1,0 +1,201 @@
+/* 商家端全局样式 */
+
+/* 颜色变量 */
+:root {
+  --primary-color: #4CAF50;
+  --secondary-color: #FF9800;
+  --dark-color: #333333;
+  --light-color: #F5F5F5;
+  --gray-500: #666666;
+  --gray-700: #777777;
+  --gray-500: #999999;
+  --green-100: #d1fae5;
+  --green-500: #10b981;
+  --green-800: #065f46;
+  --blue-100: #dbeafe;
+  --blue-500: #3b82f6;
+  --blue-800: #1e40af;
+  --orange-100: #ffedd5;
+  --orange-500: #f97316;
+  --orange-800: #9a3412;
+  --red-100: #fee2e2;
+  --red-500: #ef4444;
+  --red-800: #991b1b;
+}
+
+/* 通用样式 */
+.merchant-page {
+  font-family: Arial, sans-serif;
+  background-color: var(--light-color);
+  min-height: 100vh;
+}
+
+/* 卡片样式 */
+.card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* 标题样式 */
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dark-color);
+  margin-bottom: 1rem;
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* 按钮样式 */
+.btn {
+  display: inline-block;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(76, 175, 80, 0.3);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: var(--dark-color);
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+  background-color: #f3f4f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 状态标签样式 */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  background-color: var(--orange-100);
+  color: var(--orange-800);
+}
+
+.status-completed {
+  background-color: var(--green-100);
+  color: var(--green-800);
+}
+
+.status-processing {
+  background-color: var(--blue-100);
+  color: var(--blue-800);
+}
+
+.status-cancelled {
+  background-color: var(--red-100);
+  color: var(--red-800);
+}
+
+/* 表格样式 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background-color: #f9fafb;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--dark-color);
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table tr:hover {
+  background-color: #f9fafb;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .card {
+    padding: 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.25rem;
+  }
+  
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 0.75rem;
+  }
+  
+  .page-title {
+    font-size: 1.125rem;
+  }
+  
+  .form-control {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
+  }
+}

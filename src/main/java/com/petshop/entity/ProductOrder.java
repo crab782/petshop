@@ -1,0 +1,38 @@
+package com.petshop.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@Entity
+@Table(name = "product_order")
+public class ProductOrder {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
+    @ManyToOne
+    @JoinColumn(name = "merchant_id", nullable = false)
+    private Merchant merchant;
+    
+    @Column(name = "total_price", columnDefinition = "decimal(10,2)", nullable = false)
+    private BigDecimal totalPrice;
+    
+    @Column(name = "status", columnDefinition = "enum('pending','paid','shipped','completed','cancelled') default 'pending'")
+    private String status;
+    
+    @Column(name = "shipping_address", length = 255, nullable = false)
+    private String shippingAddress;
+    
+    @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    private LocalDateTime updatedAt;
+}

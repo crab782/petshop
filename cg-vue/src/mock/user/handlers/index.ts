@@ -1,0 +1,8 @@
+export { default as setupUserHandlers } from './user'
+export { default as setupAppointmentHandlers } from './appointment'
+export { setupCartHandlers, setupFavoriteHandlers, setupReviewHandlers } from './cart'
+export { setupServiceHandlers, setupMerchantHandlers, setupDashboardHandlers } from './service'
+export { setupSearchHandlers } from './search'
+export { setupStatsHandlers } from './stats'
+export { default as setupAnnouncementHandlers } from './announcements'
+export { default as setupAddressHandlers } from './addresses'

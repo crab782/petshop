@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mock API 测试</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      color: #2196F3;
+      border-bottom: 2px solid #2196F3;
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    .test-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+    .test-item.success {
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+    }
+    .test-item.error {
+      background: #ffebee;
+      border-left: 4px solid #f44336;
+    }
+    .test-item.pending {
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
+    }
+    .test-name {
+      flex: 1;
+      font-weight: 500;
+    }
+    .test-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .test-status.success {
+      background: #4caf50;
+      color: white;
+    }
+    .test-status.error {
+      background: #f44336;
+      color: white;
+    }
+    .test-status.pending {
+      background: #ff9800;
+      color: white;
+    }
+    .test-time {
+      color: #666;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .test-response {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .summary {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .summary-stat {
+      display: inline-block;
+      margin: 0 20px;
+    }
+    .summary-stat .number {
+      font-size: 36px;
+      font-weight: bold;
+    }
+    .summary-stat .label {
+      color: #666;
+      font-size: 14px;
+    }
+    .run-all-btn {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      display: block;
+      margin: 20px auto;
+    }
+    .run-all-btn:hover {
+      background: #1976D2;
+    }
+    .run-all-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Mock API 测试面板</h1>
+  
+  <div class="summary">
+    <div class="summary-stat">
+      <div class="number" id="total-tests">0</div>
+      <div class="label">总测试数</div>
+    </div>
+    <div class="summary-stat">
+      <div class="number" style="color: #4caf50" id="passed-tests">0</div>
+      <div class="label">通过</div>
+    </div>
+    <div class="summary-stat">
+      <div class="number" style="color: #f44336" id="failed-tests">0</div>
+      <div class="label">失败</div>
+    </div>
+    <div class="summary-stat">
+      <div class="number" style="color: #ff9800" id="pending-tests">0</div>
+      <div class="label">待测试</div>
+    </div>
+  </div>
+
+  <button class="run-all-btn" onclick="runAllTests()">运行所有测试</button>
+
+  <div id="test-results"></div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:8080';
+    
+    const testCases = [
+      {
+        category: '用户模块',
+        tests: [
+          { name: '获取用户信息', method: 'GET', url: '/api/user/profile' },
+          { name: '更新用户信息', method: 'PUT', url: '/api/user/profile', body: { username: 'test' } },
+          { name: '获取宠物列表', method: 'GET', url: '/api/user/pets' },
+          { name: '添加宠物', method: 'POST', url: '/api/user/pets', body: { name: '小猫', type: 'cat' } },
+          { name: '获取宠物详情', method: 'GET', url: '/api/user/pets/1' },
+          { name: '更新宠物信息', method: 'PUT', url: '/api/user/pets/1', body: { name: '大猫' } },
+        ]
+      },
+      {
+        category: '购物模块',
+        tests: [
+          { name: '获取购物车', method: 'GET', url: '/api/cart' },
+          { name: '添加商品到购物车', method: 'POST', url: '/api/cart', body: { productId: 1, quantity: 2 } },
+          { name: '更新购物车商品', method: 'PUT', url: '/api/cart/1', body: { quantity: 3 } },
+          { name: '获取订单列表', method: 'GET', url: '/api/orders' },
+          { name: '创建订单', method: 'POST', url: '/api/orders', body: { items: [{ productId: 1, quantity: 2 }], shippingAddress: '测试地址' } },
+          { name: '获取订单详情', method: 'GET', url: '/api/orders/1' },
+        ]
+      },
+      {
+        category: '商家模块',
+        tests: [
+          { name: '获取商家信息', method: 'GET', url: '/api/merchant/info' },
+          { name: '商家注册', method: 'POST', url: '/api/merchant/register', body: { email: 'test@example.com', password: '123456' } },
+          { name: '获取商家统计', method: 'GET', url: '/api/merchant/dashboard/stats' },
+          { name: '获取最近订单', method: 'GET', url: '/api/merchant/dashboard/recent-orders' },
+          { name: '获取最新评价', method: 'GET', url: '/api/merchant/dashboard/recent-reviews' },
+        ]
+      },
+      {
+        category: '商品模块',
+        tests: [
+          { name: '获取商品列表', method: 'GET', url: '/api/products' },
+          { name: '获取商品详情', method: 'GET', url: '/api/products/1' },
+          { name: '搜索商品', method: 'GET', url: '/api/products?name=猫粮' },
+          { name: '添加商品', method: 'POST', url: '/api/products', body: { name: '测试商品', price: 100 } },
+        ]
+      },
+      {
+        category: '服务模块',
+        tests: [
+          { name: '获取服务列表', method: 'GET', url: '/api/services' },
+          { name: '获取服务详情', method: 'GET', url: '/api/services/1' },
+          { name: '搜索服务', method: 'GET', url: '/api/services?name=洗澡' },
+          { name: '添加服务', method: 'POST', url: '/api/services', body: { name: '测试服务', price: 100 } },
+        ]
+      },
+      {
+        category: '预约模块',
+        tests: [
+          { name: '获取预约列表', method: 'GET', url: '/api/appointments' },
+          { name: '更新预约状态', method: 'PUT', url: '/api/appointments/1/status', body: { status: 'confirmed' } },
+        ]
+      },
+      {
+        category: '评价模块',
+        tests: [
+          { name: '获取评价列表', method: 'GET', url: '/api/reviews' },
+          { name: '获取评价统计', method: 'GET', url: '/api/reviews/stats' },
+          { name: '回复评价', method: 'POST', url: '/api/reviews/1/reply', body: { content: '感谢评价' } },
+        ]
+      },
+      {
+        category: '分类模块',
+        tests: [
+          { name: '获取分类列表', method: 'GET', url: '/api/categories' },
+          { name: '添加分类', method: 'POST', url: '/api/categories', body: { name: '测试分类' } },
+        ]
+      },
+      {
+        category: '店铺模块',
+        tests: [
+          { name: '获取店铺信息', method: 'GET', url: '/api/shop/info' },
+          { name: '更新店铺信息', method: 'PUT', url: '/api/shop/info', body: { name: '测试店铺' } },
+          { name: '获取店铺设置', method: 'GET', url: '/api/shop/settings' },
+        ]
+      },
+      {
+        category: '统计模块',
+        tests: [
+          { name: '获取预约统计概览', method: 'GET', url: '/api/stats/appointments/overview' },
+          { name: '获取预约趋势', method: 'GET', url: '/api/stats/appointments/trend' },
+          { name: '获取营收统计概览', method: 'GET', url: '/api/stats/revenue/overview' },
+          { name: '获取营收趋势', method: 'GET', url: '/api/stats/revenue/trend' },
+        ]
+      }
+    ];
+
+    let stats = {
+      total: 0,
+      passed: 0,
+      failed: 0,
+      pending: 0
+    };
+
+    function updateStats() {
+      document.getElementById('total-tests').textContent = stats.total;
+      document.getElementById('passed-tests').textContent = stats.passed;
+      document.getElementById('failed-tests').textContent = stats.failed;
+      document.getElementById('pending-tests').textContent = stats.pending;
+    }
+
+    async function runTest(test) {
+      const startTime = Date.now();
+      try {
+        const options = {
+          method: test.method,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        };
+        
+        if (test.body) {
+          options.body = JSON.stringify(test.body);
+        }
+
+        const response = await fetch(API_BASE_URL + test.url, options);
+        const data = await response.json();
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+
+        return {
+          success: response.ok && data.code === 200,
+          duration: duration,
+          response: data,
+          status: response.status
+        };
+      } catch (error) {
+        const endTime = Date.now();
+        return {
+          success: false,
+          duration: endTime - startTime,
+          error: error.message
+        };
+      }
+    }
+
+    function renderTestResult(test, result, container) {
+      const testItem = document.createElement('div');
+      testItem.className = `test-item ${result.success ? 'success' : 'error'}`;
+      
+      testItem.innerHTML = `
+        <div class="test-name">${test.name}</div>
+        <div class="test-status ${result.success ? 'success' : 'error'}">${result.success ? '✓ 通过' : '✗ 失败'}</div>
+        <div class="test-time">${result.duration}ms</div>
+      `;
+
+      const responseDiv = document.createElement('div');
+      responseDiv.className = 'test-response';
+      responseDiv.textContent = JSON.stringify(result.response || result.error, null, 2);
+      testItem.appendChild(responseDiv);
+
+      container.appendChild(testItem);
+    }
+
+    async function runAllTests() {
+      const button = document.querySelector('.run-all-btn');
+      button.disabled = true;
+      button.textContent = '测试运行中...';
+
+      const resultsContainer = document.getElementById('test-results');
+      resultsContainer.innerHTML = '';
+
+      stats = { total: 0, passed: 0, failed: 0, pending: 0 };
+
+      for (const category of testCases) {
+        stats.total += category.tests.length;
+        stats.pending += category.tests.length;
+      }
+      updateStats();
+
+      for (const category of testCases) {
+        const section = document.createElement('div');
+        section.className = 'test-section';
+        section.innerHTML = `<h2>${category.category}</h2>`;
+        
+        for (const test of category.tests) {
+          stats.pending--;
+          const result = await runTest(test);
+          
+          if (result.success) {
+            stats.passed++;
+          } else {
+            stats.failed++;
+          }
+          
+          updateStats();
+          renderTestResult(test, result, section);
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        resultsContainer.appendChild(section);
+      }
+
+      button.disabled = false;
+      button.textContent = '运行所有测试';
+    }
+
+    updateStats();
+  </script>
+</body>
+</html>

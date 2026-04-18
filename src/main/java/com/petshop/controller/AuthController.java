@@ -2,6 +2,7 @@ package com.petshop.controller;
 
 import com.petshop.entity.User;
 import com.petshop.entity.Merchant;
+import com.petshop.entity.Admin;
 import com.petshop.service.UserService;
 import com.petshop.service.MerchantService;
 import com.petshop.service.AdminService;
@@ -79,8 +80,9 @@ public class AuthController {
                 return "redirect:/merchant/dashboard";
             }
         } else if ("admin".equals(type)) {
-            if (adminService.login(email, password) != null) {
-                session.setAttribute("admin", email);
+            Admin admin = adminService.login(email, password);
+            if (admin != null) {
+                session.setAttribute("admin", admin.getUsername());
                 session.setAttribute("role", "ROLE_admin");
                 return "redirect:/admin/dashboard";
             }

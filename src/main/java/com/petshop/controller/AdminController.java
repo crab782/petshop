@@ -34,9 +34,7 @@ public class AdminController {
         if (session.getAttribute("admin") == null) {
             return "redirect:/login";
         }
-        List<User> users = userService.findAll();
-        model.addAttribute("users", users);
-        return "admin-users";
+        return "redirect:/admin-users.html";
     }
 
     @GetMapping("/merchants")
@@ -44,9 +42,7 @@ public class AdminController {
         if (session.getAttribute("admin") == null) {
             return "redirect:/login";
         }
-        List<Merchant> merchants = merchantService.findAll();
-        model.addAttribute("merchants", merchants);
-        return "admin-merchants";
+        return "redirect:/admin-merchants.html";
     }
 
     @PostMapping("/merchants/{id}/status")

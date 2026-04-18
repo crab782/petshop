@@ -69,7 +69,7 @@
             <nav class="p-4">
                 <ul class="space-y-2">
                     <li>
-                        <a href="#dashboard" class="flex items-center space-x-3 p-3 bg-primary/10 text-primary rounded-lg">
+                        <a href="/user/dashboard" class="flex items-center space-x-3 p-3 bg-primary/10 text-primary rounded-lg">
                             <i class="fa fa-home text-xl"></i>
                             <span class="font-medium">后台首页</span>
                         </a>
@@ -87,7 +87,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#appointment" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/user/appointments" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-calendar text-xl text-gray-600"></i>
                             <span>预约服务</span>
                         </a>
@@ -99,13 +99,13 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#profile" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/user/profile" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-user text-xl text-gray-600"></i>
                             <span>个人中心</span>
                         </a>
                     </li>
                     <li>
-                        <a href="#pets" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/user/pets" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-paw text-xl text-gray-600"></i>
                             <span>我的宠物</span>
                         </a>
@@ -123,7 +123,7 @@
                         </a>
                     </li>
                     <li class="mt-8">
-                        <a href="login.html" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
+                        <a href="/logout" class="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition">
                             <i class="fa fa-sign-out text-xl text-gray-600"></i>
                             <span>退出登录</span>
                         </a>
@@ -272,8 +272,7 @@
         // 导航菜单激活状态
         const navLinks = document.querySelectorAll('nav a');
         navLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
+            link.addEventListener('click', function() {
                 navLinks.forEach(item => item.classList.remove('bg-primary/10', 'text-primary'));
                 navLinks.forEach(item => item.classList.add('hover:bg-gray-100'));
                 this.classList.add('bg-primary/10', 'text-primary');
