@@ -3,6 +3,7 @@ package com.petshop.service;
 import com.petshop.repository.ServiceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -33,5 +34,10 @@ public class ServiceService {
 
     public void delete(Integer id) {
         serviceRepository.deleteById(id);
+    }
+    
+    @Transactional
+    public int batchUpdateStatus(List<Integer> ids, String status, Integer merchantId) {
+        return serviceRepository.batchUpdateStatus(ids, status, merchantId);
     }
 }

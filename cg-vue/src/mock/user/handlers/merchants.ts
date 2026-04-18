@@ -1,6 +1,7 @@
 import Mock from 'mockjs'
 import { merchants, getMerchantById } from '../data/merchants'
 import { getServicesByMerchantId } from '../data/services'
+import { products } from '../data/products'
 
 export const setupMerchantHandlers = () => {
   Mock.mock(/\/api\/merchants\?/, 'get', (options) => {
@@ -135,6 +136,68 @@ export const setupMerchantHandlers = () => {
       code: 200,
       message: 'success',
       data: recommendMerchants
+    }
+  })
+
+  Mock.mock(/\/api\/merchant\/\d+\/products/, 'get', (options) => {
+    const match = options.url.match(/\/api\/merchant\/(\d+)\/products/)
+    if (!match) {
+      return {
+        code: 400,
+        message: '无效的商家ID',
+        data: null
+      }
+    }
+
+    const merchantId = parseInt(match[1])
+    const merchantProducts = products.filter(p => p.merchantId === merchantId)
+
+    return {
+      code: 200,
+      message: 'success',
+      data: merchantProducts
+    }
+  })
+
+  Mock.mock(/\/api\/merchant\/\d+\/available-slots/, 'get', (options) => {
+    const match = options.url.match(/\/api\/merchant\/(\d+)\/available-slots/)
+    if (!match) {
+      return {
+        code: 400,
+        message: '无效的商家ID',
+        data: null
+      }
+    }
+
+    const url = new URL(options.url, 'http://localhost')
+    const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0]
+    
+    const timeSlots = [
+      { time: '09:00', available: true },
+      { time: '09:30', available: true },
+      { time: '10:00', available: false },
+      { time: '10:30', available: true },
+      { time: '11:00', available: true },
+      { time: '11:30', available: true },
+      { time: '12:00', available: false },
+      { time: '14:00', available: true },
+      { time: '14:30', available: true },
+      { time: '15:00', available: true },
+      { time: '15:30', available: false },
+      { time: '16:00', available: true },
+      { time: '16:30', available: true },
+      { time: '17:00', available: true },
+      { time: '17:30', available: true },
+      { time: '18:00', available: false }
+    ]
+
+    return {
+      code: 200,
+      message: 'success',
+      data: {
+        date,
+        slots: timeSlots
+      }
     }
   })
 }

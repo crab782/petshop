@@ -67,6 +67,25 @@ export const setupCartHandlers = () => {
     }
     return createErrorResponse('购物车商品不存在', 404)
   })
+
+  Mock.mock('/api/user/cart/batch', 'delete', (options: { body: string }) => {
+    const { productIds } = JSON.parse(options.body) as { productIds: number[] }
+
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return createErrorResponse('请选择要删除的商品', 400)
+    }
+
+    let deletedCount = 0
+    productIds.forEach(productId => {
+      const index = mockCartItems.findIndex(c => c.userId === currentUserId && c.productId === productId)
+      if (index > -1) {
+        mockCartItems.splice(index, 1)
+        deletedCount++
+      }
+    })
+
+    return createSuccessResponse({ deletedCount }, `成功删除${deletedCount}个商品`)
+  })
 }
 
 export const setupFavoriteHandlers = () => {

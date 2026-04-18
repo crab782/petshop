@@ -12,7 +12,10 @@ import {
   setupAnnouncementHandlers,
   setupAddressHandlers,
   setupSearchHandlers,
-  setupStatsHandlers
+  setupStatsHandlers,
+  setupUserHomeHandlers,
+  setupUserServicesHandlers,
+  setupAuthHandlers
 } from './handlers'
 
 export * from './types'
@@ -65,6 +68,18 @@ const mockModules: MockModule[] = [
   {
     name: 'address',
     handlers: [setupAddressHandlers]
+  },
+  {
+    name: 'user-home',
+    handlers: [setupUserHomeHandlers]
+  },
+  {
+    name: 'user-services',
+    handlers: [setupUserServicesHandlers]
+  },
+  {
+    name: 'auth',
+    handlers: [setupAuthHandlers]
   }
 ]
 

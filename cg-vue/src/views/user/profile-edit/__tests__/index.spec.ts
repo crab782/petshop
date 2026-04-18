@@ -365,7 +365,7 @@ describe('ProfileEdit', () => {
 
     it('should have form reference', () => {
       wrapper = createWrapper()
-      expect(wrapper.vm.profileFormRef).toBeNull()
+      expect(wrapper.vm.profileFormRef).toBeUndefined()
     })
 
     it('should have imageUrl for avatar preview', () => {

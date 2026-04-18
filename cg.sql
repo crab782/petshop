@@ -182,3 +182,20 @@ CREATE TABLE `favorite` (
   FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
   FOREIGN KEY (`merchant_id`) REFERENCES `merchant`(`id`)
 );
+
+-- 商品分类表
+CREATE TABLE `category` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `merchant_id` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `icon` VARCHAR(255),
+  `description` TEXT,
+  `sort` INT NOT NULL DEFAULT 0,
+  `status` ENUM('enabled', 'disabled') DEFAULT 'enabled',
+  `product_count` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`merchant_id`) REFERENCES `merchant`(`id`),
+  INDEX `idx_merchant_sort` (`merchant_id`, `sort`),
+  INDEX `idx_merchant_status` (`merchant_id`, `status`)
+);

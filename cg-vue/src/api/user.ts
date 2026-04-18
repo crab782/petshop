@@ -437,3 +437,146 @@ export const getUserReviewsList = (params?: {
 }) => {
   return request.get<{ data: UserReview[]; total: number }>('/api/user/reviews', { params })
 }
+
+export interface HomeStats {
+  petCount: number
+  pendingAppointments: number
+  reviewCount: number
+}
+
+export const getHomeStats = () => {
+  return request.get<HomeStats>('/api/user/home/stats')
+}
+
+export interface Activity {
+  id: number
+  type: 'appointment' | 'review' | 'order'
+  title: string
+  time: string
+  status: string
+  statusColor: string
+  relatedId?: number
+}
+
+export const getRecentActivities = (limit?: number) => {
+  return request.get<Activity[]>('/api/user/home/activities', { params: { limit } })
+}
+
+export const getRecommendedServices = (limit?: number) => {
+  return request.get<Service[]>('/api/services/recommended', { params: { limit } })
+}
+
+export interface AppointmentDetail {
+  id: number
+  serviceId: number
+  serviceName: string
+  servicePrice: number
+  serviceDuration: number
+  merchantId: number
+  merchantName: string
+  merchantPhone: string
+  merchantAddress: string
+  petId: number
+  petName: string
+  petType: string
+  appointmentTime: string
+  status: string
+  totalPrice: number
+  remark?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export const getAppointmentById = (id: number) => {
+  return request.get<AppointmentDetail>(`/api/user/appointments/${id}`)
+}
+
+export interface AppointmentStats {
+  total: number
+  pending: number
+  confirmed: number
+  completed: number
+  cancelled: number
+}
+
+export const getAppointmentStats = () => {
+  return request.get<AppointmentStats>('/api/user/appointments/stats')
+}
+
+export interface UserPurchasedService {
+  id: number
+  name: string
+  merchant: string
+  merchantId: number
+  price: number
+  purchaseDate: string
+  expiryDate: string
+  status: 'active' | 'used' | 'expired'
+  category: string
+  serviceId: number
+}
+
+export const getUserPurchasedServices = (params?: {
+  keyword?: string
+  status?: string
+  page?: number
+  pageSize?: number
+}) => {
+  return request.get<{ data: UserPurchasedService[]; total: number }>('/api/user/services', { params })
+}
+
+export const batchRemoveFromCart = (productIds: number[]) => {
+  return request.delete('/api/user/cart/batch', { data: { productIds } })
+}
+
+export interface OrderPreview {
+  items: {
+    productId: number
+    productName: string
+    productImage: string
+    price: number
+    quantity: number
+    subtotal: number
+  }[]
+  productTotal: number
+  shippingFee: number
+  discount: number
+  totalAmount: number
+}
+
+export const previewOrder = (items: { productId: number; quantity: number }[]) => {
+  return request.post<OrderPreview>('/api/user/orders/preview', { items })
+}
+
+export interface PayStatusResponse {
+  orderId: number
+  payStatus: 'pending' | 'paying' | 'success' | 'failed'
+  payTime?: string
+  transactionId?: string
+}
+
+export const getPayStatus = (orderId: number) => {
+  return request.get<PayStatusResponse>(`/api/user/orders/${orderId}/pay/status`)
+}
+
+export const getMerchantProducts = (id: number) => {
+  return request.get<Product[]>(`/api/merchant/${id}/products`)
+}
+
+export interface AvailableSlot {
+  time: string
+  available: boolean
+}
+
+export interface AvailableSlotsResponse {
+  date: string
+  slots: AvailableSlot[]
+  workingHours: {
+    start: string
+    end: string
+  }
+}
+
+export const getAvailableSlots = (merchantId: number, date: string) => {
+  return request.get<AvailableSlotsResponse>(`/api/merchant/${merchantId}/available-slots`, { params: { date } })
+}

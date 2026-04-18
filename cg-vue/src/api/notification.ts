@@ -33,3 +33,7 @@ export const deleteNotification = (id: number) => {
 export const deleteBatchNotifications = (ids: number[]) => {
   return request.delete('/api/user/notifications/batch', { data: { ids } })
 }
+
+export const getUnreadCount = () => {
+  return request.get<{ count: number }>('/api/user/notifications/unread-count')
+}

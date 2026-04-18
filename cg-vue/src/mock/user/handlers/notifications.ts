@@ -195,4 +195,16 @@ Mock.mock('/api/notifications/unread-count', 'get', () => {
   }
 })
 
+Mock.mock('/api/user/notifications/unread-count', 'get', () => {
+  const unreadCount = notificationsList.filter(n => !n.is_read).length
+
+  return {
+    code: 200,
+    message: 'success',
+    data: {
+      count: unreadCount
+    }
+  }
+})
+
 export { notificationsList }

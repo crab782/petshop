@@ -66,3 +66,12 @@ export interface ResetPasswordData {
 export const resetPassword = (data: ResetPasswordData) => {
   return request.post('/api/auth/resetPassword', data)
 }
+
+export interface ChangePasswordData {
+  oldPassword: string
+  newPassword: string
+}
+
+export const changePassword = (data: ChangePasswordData) => {
+  return request.put<{ success: boolean; message: string }>('/api/auth/password', data)
+}

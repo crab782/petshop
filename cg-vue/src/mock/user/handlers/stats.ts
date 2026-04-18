@@ -8,6 +8,33 @@ import { appointments } from '../data/appointments'
 import { orders } from '../data/orders'
 
 export const setupStatsHandlers = () => {
+  Mock.mock('/api/services/recommended', 'get', (options) => {
+    const url = new URL(options.url, 'http://localhost')
+    const limit = parseInt(url.searchParams.get('limit') || '6')
+
+    const recommendedServices = [...services]
+      .sort((a, b) => b.rating * b.reviewCount - a.rating * a.reviewCount)
+      .slice(0, limit)
+      .map(s => ({
+        id: s.id,
+        name: s.name,
+        image: s.image,
+        price: s.price,
+        rating: s.rating,
+        reviewCount: s.reviewCount,
+        merchantName: s.merchantName,
+        merchantId: s.merchantId,
+        category: s.category,
+        duration: s.duration
+      }))
+
+    return {
+      code: 200,
+      message: 'success',
+      data: recommendedServices
+    }
+  })
+
   Mock.mock('/api/user/stats', 'get', (options) => {
     const url = new URL(options.url, 'http://localhost')
     const userId = parseInt(url.searchParams.get('userId') || '1')

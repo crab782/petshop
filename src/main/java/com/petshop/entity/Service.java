@@ -32,6 +32,9 @@ public class Service {
     @Column(name = "image", length = 255)
     private String image;
     
+    @Column(name = "status", length = 20)
+    private String status = "enabled";
+    
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
     

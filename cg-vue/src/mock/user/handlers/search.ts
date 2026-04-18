@@ -247,4 +247,39 @@ export const setupSearchHandlers = () => {
       data: allSuggestions
     }
   })
+
+  Mock.mock('/api/search/hot-keywords', 'get', (options) => {
+    const url = new URL(options.url, 'http://localhost')
+    const limit = parseInt(url.searchParams.get('limit') || '10')
+
+    const hotKeywords = getHotSearchKeywords(limit)
+
+    return {
+      code: 200,
+      message: 'success',
+      data: hotKeywords
+    }
+  })
+
+  Mock.mock('/api/user/search-history', 'get', (options) => {
+    const url = new URL(options.url, 'http://localhost')
+    const limit = parseInt(url.searchParams.get('limit') || '10')
+
+    const histories = getSearchHistories(1, limit)
+
+    return {
+      code: 200,
+      message: 'success',
+      data: histories
+    }
+  })
+
+  Mock.mock('/api/user/search-history', 'delete', (options) => {
+    clearSearchHistories()
+    return {
+      code: 200,
+      message: 'success',
+      data: null
+    }
+  })
 }

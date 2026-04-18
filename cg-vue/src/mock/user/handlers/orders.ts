@@ -356,6 +356,88 @@ const orderHandlers: MockMethod[] = [
         }
       }
     }
+  },
+  {
+    url: '/api/user/orders/preview',
+    method: 'post',
+    response: (req) => {
+      const { items, addressId } = req.body
+      
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return {
+          code: 400,
+          message: '请选择要购买的商品',
+          data: null
+        }
+      }
+
+      const orderItems = items.map((item: any) => {
+        const product = getProductById(item.productId)
+        return {
+          productId: item.productId,
+          productName: product?.name || '未知商品',
+          productImage: product?.image || '',
+          quantity: item.quantity,
+          price: product?.price || 0,
+          subtotal: (product?.price || 0) * item.quantity
+        }
+      })
+
+      const totalPrice = orderItems.reduce((sum: number, item: any) => sum + item.subtotal, 0)
+      const freight = totalPrice >= 99 ? 0 : 10
+
+      return {
+        code: 200,
+        message: 'success',
+        data: {
+          items: orderItems,
+          totalPrice,
+          freight,
+          totalAmount: totalPrice + freight,
+          address: {
+            id: 1,
+            receiverName: '张三',
+            phone: '13800138001',
+            province: '北京市',
+            city: '北京市',
+            district: '朝阳区',
+            detailAddress: '建国路88号SOHO现代城A座1001室',
+            isDefault: true
+          }
+        }
+      }
+    }
+  },
+  {
+    url: /\/api\/user\/orders\/(\d+)\/pay\/status$/,
+    method: 'get',
+    response: (req) => {
+      const { id } = req.params
+      const order = getOrderById(parseInt(id))
+      
+      if (!order) {
+        return {
+          code: 404,
+          message: '订单不存在',
+          data: null
+        }
+      }
+
+      const payStatus = order.status === 'pending' ? 'unpaid' : 'paid'
+      
+      return {
+        code: 200,
+        message: 'success',
+        data: {
+          orderId: order.id,
+          orderNo: order.orderNo,
+          status: order.status,
+          payStatus,
+          totalPrice: order.totalPrice,
+          payTime: order.paidAt || null
+        }
+      }
+    }
   }
 ]
 

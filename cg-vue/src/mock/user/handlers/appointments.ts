@@ -259,4 +259,23 @@ Mock.mock(/\/api\/user\/appointments\/(\d+)$/, 'get', (options: { url: string })
   }
 })
 
+Mock.mock('/api/user/appointments/stats', 'get', () => {
+  const userId = 1
+  const userAppointments = getUserAppointments(userId)
+  
+  const stats = {
+    total: userAppointments.length,
+    pending: userAppointments.filter(a => a.status === 'pending').length,
+    confirmed: userAppointments.filter(a => a.status === 'confirmed').length,
+    completed: userAppointments.filter(a => a.status === 'completed').length,
+    cancelled: userAppointments.filter(a => a.status === 'cancelled').length
+  }
+  
+  return {
+    code: 200,
+    message: 'success',
+    data: stats
+  }
+})
+
 export default Mock

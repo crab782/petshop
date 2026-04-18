@@ -415,7 +415,7 @@ describe('PetEdit', () => {
 
     it('should have form reference', () => {
       wrapper = createWrapper()
-      expect(wrapper.vm.formRef).toBeNull()
+      expect(wrapper.vm.formRef).toBeUndefined()
     })
 
     it('should have loading state', () => {

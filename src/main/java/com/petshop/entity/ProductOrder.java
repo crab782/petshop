@@ -30,6 +30,15 @@ public class ProductOrder {
     @Column(name = "shipping_address", length = 255, nullable = false)
     private String shippingAddress;
     
+    @Column(name = "logistics_company", length = 50)
+    private String logisticsCompany;
+    
+    @Column(name = "logistics_number", length = 100)
+    private String logisticsNumber;
+    
+    @Column(name = "shipped_at")
+    private LocalDateTime shippedAt;
+    
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
     

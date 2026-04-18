@@ -32,9 +32,33 @@ public class Product {
     @Column(name = "image", length = 255)
     private String image;
     
+    @Column(name = "status", columnDefinition = "ENUM('enabled', 'disabled') DEFAULT 'enabled'")
+    private String status = "enabled";
+    
+    @Column(name = "low_stock_threshold")
+    private Integer lowStockThreshold = 10;
+    
+    @Column(name = "category", length = 50)
+    private String category;
+    
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
     
     @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
+    public boolean isLowStock() {
+        return stock != null && lowStockThreshold != null && stock <= lowStockThreshold;
+    }
 }

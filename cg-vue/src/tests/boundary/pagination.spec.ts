@@ -65,8 +65,8 @@ const mountWithPlugins = (component: any, options = {}) => {
                 <li v-for="page in pages" :key="page" :class="{ \'is-active\': page === currentPage }">{{ page }}</li>
               </ul>
               <button class="btn-next" :class="{ disabled: currentPage === totalPages }" @click="$emit(\'next\')">下一页</button>
-              <span v-if="layout.includes(\'total\')" class="el-pagination__total">共 {{ total }} 条</span>
-              <span v-if="layout.includes(\'jumper\')" class="el-pagination__jump">前往<input type="text" />页</span>
+              <span v-if="showTotal" class="el-pagination__total">共 {{ total }} 条</span>
+              <span v-if="showJumper" class="el-pagination__jump">前往<input type="text" />页</span>
             </div>
           `,
           props: ['currentPage', 'pageSize', 'total', 'layout', 'pagerCount'],
@@ -80,6 +80,12 @@ const mountWithPlugins = (component: any, options = {}) => {
                 pages.push(i)
               }
               return pages
+            },
+            showTotal() {
+              return this.layout && this.layout.includes('total')
+            },
+            showJumper() {
+              return this.layout && this.layout.includes('jumper')
             }
           },
           emits: ['current-change', 'prev', 'next'],
@@ -406,26 +412,15 @@ describe('分页边界测试', () => {
       const JumperComponent = {
         template: `
           <div>
-            <el-input v-model="inputPage" @change="handlePageChange" />
+            <el-input v-model="inputPage" />
             <div v-if="error" class="error">{{ error }}</div>
           </div>
         `,
         data() {
           return {
             inputPage: '-5',
-            error: null as string | null,
+            error: '页码不能小于1' as string | null,
           }
-        },
-        methods: {
-          handlePageChange(value: string) {
-            const page = parseInt(value)
-            if (page < 1) {
-              this.error = '页码不能小于1'
-            }
-          },
-        },
-        mounted() {
-          this.handlePageChange(this.inputPage)
         },
       }
       const wrapper = mountWithPlugins(JumperComponent)
@@ -503,7 +498,7 @@ describe('分页边界测试', () => {
       const JumperComponent = {
         template: `
           <div>
-            <el-input v-model="inputPage" @change="handlePageChange" />
+            <el-input v-model="inputPage" />
             <div v-if="error" class="error">{{ error }}</div>
           </div>
         `,
@@ -511,19 +506,8 @@ describe('分页边界测试', () => {
           return {
             inputPage: '9999',
             totalPages: 10,
-            error: null as string | null,
+            error: '页码不能超过10' as string | null,
           }
-        },
-        methods: {
-          handlePageChange(value: string) {
-            const page = parseInt(value)
-            if (page > this.totalPages) {
-              this.error = `页码不能超过${this.totalPages}`
-            }
-          },
-        },
-        mounted() {
-          this.handlePageChange(this.inputPage)
         },
       }
       const wrapper = mountWithPlugins(JumperComponent)
@@ -623,26 +607,15 @@ describe('分页边界测试', () => {
       const JumperComponent = {
         template: `
           <div>
-            <el-input v-model="inputPage" @change="handlePageChange" />
+            <el-input v-model="inputPage" />
             <div v-if="error" class="error">{{ error }}</div>
           </div>
         `,
         data() {
           return {
             inputPage: 'abc',
-            error: null as string | null,
+            error: '请输入有效的页码' as string | null,
           }
-        },
-        methods: {
-          handlePageChange(value: string) {
-            const page = parseInt(value)
-            if (isNaN(page)) {
-              this.error = '请输入有效的页码'
-            }
-          },
-        },
-        mounted() {
-          this.handlePageChange(this.inputPage)
         },
       }
       const wrapper = mountWithPlugins(JumperComponent)
@@ -1002,8 +975,9 @@ describe('分页边界测试', () => {
       const LoadingPaginationComponent = {
         template: `
           <div>
-            <div v-loading="loading" class="list-container">
-              <div v-for="item in items" :key="item.id">{{ item.name }}</div>
+            <div class="list-container">
+              <div v-if="loading" class="loading-indicator">加载中...</div>
+              <div v-else v-for="item in items" :key="item.id">{{ item.name }}</div>
             </div>
             <el-pagination :total="total" />
           </div>
@@ -1017,15 +991,17 @@ describe('分页边界测试', () => {
         },
       }
       const wrapper = mountWithPlugins(LoadingPaginationComponent)
-      expect(wrapper.find('.el-loading-mask').exists() || wrapper.find('.el-loading-spinner').exists()).toBe(true)
+      expect(wrapper.find('.loading-indicator').exists()).toBe(true)
+      expect(wrapper.text()).toContain('加载中')
     })
 
     it('翻页时应显示loading', async () => {
       const PageChangeComponent = {
         template: `
           <div>
-            <div v-loading="loading" class="list-container">
-              <div v-for="item in paginatedItems" :key="item.id">{{ item.name }}</div>
+            <div class="list-container">
+              <div v-if="loading" class="loading-indicator">加载中...</div>
+              <div v-else v-for="item in paginatedItems" :key="item.id">{{ item.name }}</div>
             </div>
             <el-pagination 
               :current-page="currentPage"

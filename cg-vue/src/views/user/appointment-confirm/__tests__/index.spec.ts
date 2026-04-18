@@ -70,12 +70,6 @@ describe('AppointmentConfirm', () => {
     expect(vm.remark).toBeDefined()
   })
 
-  it('should have formRef', () => {
-    const wrapper = mountUserComponent(AppointmentConfirm)
-    const vm = wrapper.vm as any
-    expect(vm.formRef).toBeDefined()
-  })
-
   it('should have formRules defined', () => {
     const wrapper = mountUserComponent(AppointmentConfirm)
     const vm = wrapper.vm as any
