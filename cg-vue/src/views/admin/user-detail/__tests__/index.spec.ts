@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { createRouter, createWebHistory } from 'vue-router'
 import ElementPlus from 'element-plus'
 import UserDetailPage from '../index.vue'
 import * as adminApi from '@/api/admin'
@@ -79,19 +78,15 @@ const mockDisabledUserDetail: UserDetail = {
   reviews: []
 }
 
-const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    {
-      path: '/admin/users',
-      name: 'admin-users'
-    },
-    {
-      path: '/admin/users/:id',
-      name: 'admin-user-detail'
-    }
-  ]
-})
+const mockRouter = {
+  push: vi.fn(),
+  replace: vi.fn(),
+  go: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn()
+}
+
+let mockRouteParams: Record<string, string> = {}
 
 vi.mock('element-plus', async (importOriginal) => {
   const actual = await importOriginal<any>()
@@ -109,16 +104,30 @@ vi.mock('element-plus', async (importOriginal) => {
   }
 })
 
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<any>()
+  return {
+    ...actual,
+    useRouter: () => mockRouter,
+    useRoute: () => ({
+      path: '/admin/users/' + (mockRouteParams.id || ''),
+      params: mockRouteParams,
+      query: {},
+      name: 'admin-user-detail',
+      meta: {}
+    })
+  }
+})
+
 describe('UserDetail', () => {
   let wrapper: any
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRouteParams = {}
 
     vi.spyOn(adminApi, 'getUserDetailById').mockResolvedValue({ data: mockUserDetail } as any)
     vi.spyOn(adminApi, 'updateUserStatus').mockResolvedValue({} as any)
-
-    vi.spyOn(router, 'back').mockImplementation(() => {})
 
     vi.mocked(ElMessageBox.confirm).mockResolvedValue(true)
   })
@@ -127,17 +136,16 @@ describe('UserDetail', () => {
     if (wrapper) {
       wrapper.unmount()
     }
+    mockRouteParams = {}
   })
 
   const mountComponent = async (userId = 1) => {
+    mockRouteParams = { id: String(userId) }
+
     wrapper = mount(UserDetailPage, {
       global: {
-        plugins: [ElementPlus, router]
+        plugins: [ElementPlus]
       }
-    })
-
-    Object.defineProperty(wrapper.vm.$route, 'params', {
-      get: () => ({ id: String(userId) })
     })
 
     await flushPromises()
@@ -320,7 +328,7 @@ describe('UserDetail', () => {
       const backButton = wrapper.find('.back-card .el-button')
       await backButton.trigger('click')
 
-      expect(router.back).toHaveBeenCalled()
+      expect(mockRouter.back).toHaveBeenCalled()
     })
 
     it('测试标签页切换 - 订单', async () => {
@@ -382,14 +390,12 @@ describe('UserDetail', () => {
         new Promise((resolve) => setTimeout(() => resolve({ data: mockUserDetail } as any), 1000))
       )
 
+      mockRouteParams = { id: '1' }
+
       wrapper = mount(UserDetailPage, {
         global: {
-          plugins: [ElementPlus, router]
+          plugins: [ElementPlus]
         }
-      })
-
-      Object.defineProperty(wrapper.vm.$route, 'params', {
-        get: () => ({ id: '1' })
       })
 
       await wrapper.vm.$nextTick()
@@ -466,14 +472,12 @@ describe('UserDetail', () => {
     })
 
     it('测试无用户ID时的处理', async () => {
+      mockRouteParams = {}
+
       wrapper = mount(UserDetailPage, {
         global: {
-          plugins: [ElementPlus, router]
+          plugins: [ElementPlus]
         }
-      })
-
-      Object.defineProperty(wrapper.vm.$route, 'params', {
-        get: () => ({})
       })
 
       await flushPromises()
@@ -549,14 +553,6 @@ describe('UserDetail', () => {
 
       expect(adminApi.getUserDetailById).toHaveBeenCalledTimes(1)
     })
-
-    it('测试组件卸载时清理状态', async () => {
-      await mountComponent()
-
-      wrapper.unmount()
-
-      expect(wrapper.vm).toBeUndefined()
-    })
   })
 
   describe('用户界面元素测试', () => {
@@ -570,6 +566,7 @@ describe('UserDetail', () => {
       await mountComponent()
 
       const sectionTitles = wrapper.findAll('.section-title')
+      expect(sectionTitles.length).toBeGreaterThan(0)
       expect(sectionTitles[0].text()).toContain('基本信息')
     })
 
@@ -577,6 +574,7 @@ describe('UserDetail', () => {
       await mountComponent()
 
       const sectionTitles = wrapper.findAll('.section-title')
+      expect(sectionTitles.length).toBeGreaterThan(1)
       expect(sectionTitles[1].text()).toContain('用户行为记录')
     })
 

@@ -96,8 +96,8 @@ public class MerchantSettingsService {
         if (merchant == null) {
             return false;
         }
-        Merchant existingMerchant = merchantRepository.findByEmail(email);
-        if (existingMerchant != null && !existingMerchant.getId().equals(merchantId)) {
+        Optional<Merchant> existingMerchantOpt = merchantRepository.findByEmail(email);
+        if (existingMerchantOpt.isPresent() && !existingMerchantOpt.get().getId().equals(merchantId)) {
             return false;
         }
         merchant.setEmail(email);

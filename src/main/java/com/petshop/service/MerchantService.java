@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class MerchantService {
@@ -24,15 +25,15 @@ public class MerchantService {
     }
 
     public Merchant login(String email, String password) {
-        Merchant merchant = merchantRepository.findByEmail(email);
-        if (merchant != null && passwordEncoder.matches(password, merchant.getPassword()) && "approved".equals(merchant.getStatus())) {
-            return merchant;
+        Optional<Merchant> merchantOpt = merchantRepository.findByEmail(email);
+        if (merchantOpt.isPresent() && passwordEncoder.matches(password, merchantOpt.get().getPassword()) && "approved".equals(merchantOpt.get().getStatus())) {
+            return merchantOpt.get();
         }
         return null;
     }
 
     public Merchant findByEmail(String email) {
-        return merchantRepository.findByEmail(email);
+        return merchantRepository.findByEmail(email).orElse(null);
     }
 
     public Merchant findById(Integer id) {
@@ -44,10 +45,15 @@ public class MerchantService {
     }
 
     public Merchant update(Merchant merchant) {
+        merchant.setUpdatedAt(java.time.LocalDateTime.now());
         return merchantRepository.save(merchant);
     }
 
     public void delete(Integer id) {
         merchantRepository.deleteById(id);
+    }
+
+    public Optional<Merchant> findByEmailOptional(String email) {
+        return merchantRepository.findByEmail(email);
     }
 }

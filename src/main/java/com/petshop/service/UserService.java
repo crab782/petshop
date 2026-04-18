@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -23,21 +24,19 @@ public class UserService {
     }
 
     public User login(String email, String password) {
-        // 先尝试通过email查询
-        User user = userRepository.findByEmail(email);
-        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            return user;
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
+            return userOpt.get();
         }
-        // 如果通过email查询失败，尝试通过username查询
-        user = userRepository.findByUsername(email);
-        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            return user;
+        userOpt = userRepository.findByUsername(email);
+        if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
+            return userOpt.get();
         }
         return null;
     }
 
     public User findByEmail(String email) {
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(email).orElse(null);
     }
 
     public User findById(Integer id) {
@@ -49,10 +48,15 @@ public class UserService {
     }
 
     public User update(User user) {
+        user.setUpdatedAt(java.time.LocalDateTime.now());
         return userRepository.save(user);
     }
 
     public void delete(Integer id) {
         userRepository.deleteById(id);
+    }
+
+    public Optional<User> findByEmailOptional(String email) {
+        return userRepository.findByEmail(email);
     }
 }

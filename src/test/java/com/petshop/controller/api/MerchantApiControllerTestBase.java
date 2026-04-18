@@ -28,8 +28,12 @@ public abstract class MerchantApiControllerTestBase {
 
     protected MockMvc mockMvc;
 
-    protected ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.findAndRegisterModules();
+    protected ObjectMapper objectMapper;
+
+    {
+        objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules();
+    }
 
     @Mock
     protected MerchantService merchantService;

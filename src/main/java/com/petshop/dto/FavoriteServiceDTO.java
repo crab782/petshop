@@ -4,19 +4,20 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FavoriteDTO {
+public class FavoriteServiceDTO {
     private Integer id;
-    private Integer userId;
+    private Integer serviceId;
+    private String serviceName;
+    private String serviceImage;
+    private BigDecimal servicePrice;
+    private Integer serviceDuration;
     private Integer merchantId;
-    private LocalDateTime createTime;
     private String merchantName;
-    private String merchantLogo;
-    private String merchantAddress;
-    private String merchantPhone;
+    private String createdAt;
 }

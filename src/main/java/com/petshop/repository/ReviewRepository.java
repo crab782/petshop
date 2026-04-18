@@ -40,4 +40,10 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
     
     @Query("SELECT r FROM Review r WHERE r.merchant.id = :merchantId ORDER BY r.createdAt DESC")
     List<Review> findRecentByMerchantId(@Param("merchantId") Integer merchantId, Pageable pageable);
+    
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.merchant.id = :merchantId")
+    Long countByMerchantId(@Param("merchantId") Integer merchantId);
+    
+    @Query("SELECT r FROM Review r WHERE r.merchant.id = :merchantId ORDER BY r.createdAt DESC LIMIT :limit")
+    List<Review> findRecentReviewsByMerchantId(@Param("merchantId") Integer merchantId, @Param("limit") int limit);
 }
