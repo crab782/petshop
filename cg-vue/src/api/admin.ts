@@ -237,6 +237,17 @@ export const deleteProduct = (id: number) => {
   return request.delete(`/api/admin/products/${id}`)
 }
 
+export interface Shop {
+  id: number
+  name: string
+  applicant?: string
+  applicantPhone?: string
+  address?: string
+  description?: string
+  createTime: string
+  licenseImage?: string
+}
+
 export const getPendingShops = (params?: PaginationParams) => {
   return request.get<Shop[]>('/api/admin/shops/pending', { params })
 }

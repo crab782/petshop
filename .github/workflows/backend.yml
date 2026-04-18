@@ -17,6 +17,7 @@ on:
       - 'pom.xml'
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   JAVA_VERSION: '17'
   MAVEN_CACHE_DIR: ~/.m2/repository
 
@@ -27,6 +28,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x ./mvnw
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
@@ -66,6 +70,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x ./mvnw
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
@@ -116,6 +123,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x ./mvnw
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
