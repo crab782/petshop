@@ -1,14 +1,14 @@
 import Mock from 'mockjs'
 import { randomId, randomDate, randomEnum, randomString, randomPhone } from '../utils/random'
 
-Mock.mock('/api/admin/dashboard/stats', 'get', () => ({
+Mock.mock('/api/admin/dashboard', 'get', () => ({
   code: 200,
   message: 'success',
   data: {
-    totalUsers: 2580,
-    totalMerchants: 128,
-    todayOrders: 156,
-    monthlyRevenue: 156800
+    userCount: Mock.Random.integer(2000, 3000),
+    merchantCount: Mock.Random.integer(100, 200),
+    orderCount: Mock.Random.integer(100, 300),
+    serviceCount: Mock.Random.integer(50, 150)
   }
 }))
 
@@ -17,10 +17,11 @@ Mock.mock('/api/admin/dashboard/recent-users', 'get', () => {
   for (let i = 0; i < 10; i++) {
     users.push({
       id: randomId(),
-      username: randomString(6),
+      username: Mock.Random.cname(),
       phone: randomPhone(),
-      email: randomString(8) + '@mail.com',
-      createdAt: randomDate('2024-01-01')
+      email: Mock.Random.email(),
+      avatar: Mock.Random.image('100x100', Mock.Random.color()),
+      registerTime: randomDate('2024-01-01')
     })
   }
   return {
@@ -35,11 +36,12 @@ Mock.mock('/api/admin/dashboard/pending-merchants', 'get', () => {
   for (let i = 0; i < 5; i++) {
     merchants.push({
       id: randomId(),
-      name: randomString(8) + '宠物店',
-      contactPerson: randomString(4) + '先生',
+      name: Mock.Random.cword(4, 8) + '宠物店',
+      contact: Mock.Random.cname(),
       phone: randomPhone(),
-      address: randomString(10) + '路',
-      createdAt: randomDate('2024-01-01')
+      email: Mock.Random.email(),
+      address: Mock.Random.county(true),
+      registerTime: randomDate('2024-01-01')
     })
   }
   return {
@@ -54,10 +56,10 @@ Mock.mock('/api/admin/dashboard/announcements', 'get', () => {
   for (let i = 0; i < 5; i++) {
     announcements.push({
       id: randomId(),
-      title: randomString(10) + '公告',
-      content: randomString(30),
-      author: randomString(4),
-      publishedAt: randomDate('2024-01-01')
+      title: Mock.Random.ctitle(5, 15),
+      content: Mock.Random.cparagraph(1, 3),
+      publishTime: randomDate('2024-01-01'),
+      publisher: Mock.Random.cname()
     })
   }
   return {

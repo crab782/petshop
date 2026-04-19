@@ -4,17 +4,10 @@ import com.petshop.entity.Appointment;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.ProductOrder;
 import com.petshop.factory.TestDataFactory;
-import com.petshop.service.AppointmentService;
-import com.petshop.service.ProductOrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
@@ -22,59 +15,26 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(MockitoExtension.class)
 @DisplayName("商家商品订单和预约API测试")
-public class MerchantApiControllerProductOrdersTest {
+public class MerchantApiControllerProductOrdersTest extends MerchantApiControllerTestBase {
 
-    private MockMvc mockMvc;
-
-    @org.mockito.Mock
-    private ProductOrderService productOrderService;
-
-    @org.mockito.Mock
-    private AppointmentService appointmentService;
-
-    @org.mockito.Mock
-    private com.petshop.service.MerchantService merchantService;
-
-    @org.mockito.Mock
-    private com.petshop.service.ServiceService serviceService;
-
-    @org.mockito.Mock
-    private com.petshop.service.ProductService productService;
-
-    @org.mockito.Mock
-    private com.petshop.service.CategoryService categoryService;
-
-    @org.mockito.Mock
-    private com.petshop.service.ReviewService reviewService;
-
-    @org.mockito.Mock
-    private com.petshop.service.MerchantStatsService merchantStatsService;
-
-    @org.mockito.Mock
-    private com.petshop.service.MerchantSettingsService merchantSettingsService;
-
-    @InjectMocks
     private MerchantApiController controller;
 
-    private Merchant testMerchant;
-    private Integer testMerchantId = 1;
-
     @BeforeEach
-    void setUp() {
+    public void setupController() {
+        controller = new MerchantApiController();
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "productOrderService", productOrderService);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "appointmentService", appointmentService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
-        testMerchant = TestDataFactory.createMerchant(testMerchantId);
     }
 
     @Nested
-    @DisplayName("获取商品订单列表测试")
+    @DisplayName("GET /api/merchant/orders - 获取商品订单列表")
     class GetOrdersTests {
 
         @Test
@@ -86,16 +46,11 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(productOrderService.findByMerchantId(testMerchantId)).thenReturn(orders);
 
-            mockMvc.perform(get("/api/merchant/orders")
-                    .sessionAttr("merchant", testMerchant)
-                    .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(2))
-                    .andExpect(jsonPath("$.data[0].id").value(1))
+            var result = performGet("/api/merchant/orders");
+
+            assertSuccess(result);
+            assertListResponse(result, 2);
+            result.andExpect(jsonPath("$.data[0].id").value(1))
                     .andExpect(jsonPath("$.data[0].status").value("pending"))
                     .andExpect(jsonPath("$.data[1].id").value(2))
                     .andExpect(jsonPath("$.data[1].status").value("paid"));
@@ -108,15 +63,10 @@ public class MerchantApiControllerProductOrdersTest {
         void testGetOrders_EmptyList() throws Exception {
             when(productOrderService.findByMerchantId(testMerchantId)).thenReturn(Collections.emptyList());
 
-            mockMvc.perform(get("/api/merchant/orders")
-                    .sessionAttr("merchant", testMerchant)
-                    .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(0));
+            var result = performGet("/api/merchant/orders");
+
+            assertSuccess(result);
+            assertListResponse(result, 0);
 
             verify(productOrderService).findByMerchantId(testMerchantId);
         }
@@ -125,13 +75,13 @@ public class MerchantApiControllerProductOrdersTest {
         @DisplayName("获取商品订单列表 - 未登录返回401")
         void testGetOrders_Unauthorized() throws Exception {
             mockMvc.perform(get("/api/merchant/orders")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(result -> {})
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401))
                     .andExpect(jsonPath("$.message").value("未授权访问，请先登录"));
 
-            verify(productOrderService, never()).findByMerchantId(any());
+            verify(productOrderService, never()).findByMerchantId(anyInt());
         }
 
         @Test
@@ -140,12 +90,9 @@ public class MerchantApiControllerProductOrdersTest {
             when(productOrderService.findByMerchantId(testMerchantId))
                     .thenThrow(new RuntimeException("数据库连接失败"));
 
-            mockMvc.perform(get("/api/merchant/orders")
-                    .sessionAttr("merchant", testMerchant)
-                    .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isInternalServerError())
+            var result = performGet("/api/merchant/orders");
+
+            result.andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.code").value(500))
                     .andExpect(jsonPath("$.message").value("获取订单列表失败：数据库连接失败"));
 
@@ -154,7 +101,7 @@ public class MerchantApiControllerProductOrdersTest {
     }
 
     @Nested
-    @DisplayName("更新商品订单状态测试")
+    @DisplayName("PUT /api/merchant/orders/{id}/status - 更新商品订单状态")
     class UpdateOrderStatusTests {
 
         @Test
@@ -166,16 +113,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(productOrderService.findById(1)).thenReturn(order);
             when(productOrderService.update(any(ProductOrder.class))).thenReturn(updatedOrder);
 
-            mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
                     .param("status", "paid")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.message").value("订单状态更新成功"))
-                    .andExpect(jsonPath("$.data.id").value(1))
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "订单状态更新成功");
+            result.andExpect(jsonPath("$.data.id").value(1))
                     .andExpect(jsonPath("$.data.status").value("paid"));
 
             verify(productOrderService).findById(1);
@@ -191,15 +137,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(productOrderService.findById(1)).thenReturn(order);
             when(productOrderService.update(any(ProductOrder.class))).thenReturn(updatedOrder);
 
-            mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
                     .param("status", "shipped")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.status").value("shipped"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "订单状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("shipped"));
 
             verify(productOrderService).findById(1);
             verify(productOrderService).update(any(ProductOrder.class));
@@ -214,15 +160,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(productOrderService.findById(1)).thenReturn(order);
             when(productOrderService.update(any(ProductOrder.class))).thenReturn(updatedOrder);
 
-            mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
                     .param("status", "completed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.status").value("completed"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "订单状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("completed"));
 
             verify(productOrderService).findById(1);
             verify(productOrderService).update(any(ProductOrder.class));
@@ -233,13 +179,13 @@ public class MerchantApiControllerProductOrdersTest {
         void testUpdateOrderStatus_Unauthorized() throws Exception {
             mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
                     .param("status", "paid")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(result -> {})
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401))
                     .andExpect(jsonPath("$.message").value("未授权访问，请先登录"));
 
-            verify(productOrderService, never()).findById(any());
+            verify(productOrderService, never()).findById(anyInt());
             verify(productOrderService, never()).update(any());
         }
 
@@ -248,13 +194,14 @@ public class MerchantApiControllerProductOrdersTest {
         void testUpdateOrderStatus_NotFound() throws Exception {
             when(productOrderService.findById(999)).thenReturn(null);
 
-            mockMvc.perform(put("/api/merchant/orders/{id}/status", 999)
+            var result = mockMvc.perform(put("/api/merchant/orders/{id}/status", 999)
                     .param("status", "paid")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isNotFound())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value(404))
                     .andExpect(jsonPath("$.message").value("订单不存在"));
 
@@ -270,13 +217,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(productOrderService.findById(1)).thenReturn(order);
 
-            mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
                     .param("status", "paid")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isForbidden())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value(403))
                     .andExpect(jsonPath("$.message").value("无权操作此订单"));
 
@@ -291,13 +239,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(productOrderService.findById(1)).thenReturn(order);
 
-            mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
                     .param("status", "invalid_status")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isBadRequest())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
                     .andExpect(jsonPath("$.message").value("无效的订单状态"));
 
@@ -314,13 +263,14 @@ public class MerchantApiControllerProductOrdersTest {
             when(productOrderService.update(any(ProductOrder.class)))
                     .thenThrow(new RuntimeException("更新失败"));
 
-            mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/orders/{id}/status", 1)
                     .param("status", "paid")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isInternalServerError())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.code").value(500))
                     .andExpect(jsonPath("$.message").value("更新订单状态失败：更新失败"));
 
@@ -330,7 +280,7 @@ public class MerchantApiControllerProductOrdersTest {
     }
 
     @Nested
-    @DisplayName("获取预约列表测试")
+    @DisplayName("GET /api/merchant/appointments - 获取预约列表")
     class GetAppointmentsTests {
 
         @Test
@@ -342,16 +292,11 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(appointmentService.findByMerchantId(testMerchantId)).thenReturn(appointments);
 
-            mockMvc.perform(get("/api/merchant/appointments")
-                    .sessionAttr("merchant", testMerchant)
-                    .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(2))
-                    .andExpect(jsonPath("$.data[0].id").value(1))
+            var result = performGet("/api/merchant/appointments");
+
+            assertSuccess(result);
+            assertListResponse(result, 2);
+            result.andExpect(jsonPath("$.data[0].id").value(1))
                     .andExpect(jsonPath("$.data[0].status").value("pending"))
                     .andExpect(jsonPath("$.data[1].id").value(2))
                     .andExpect(jsonPath("$.data[1].status").value("confirmed"));
@@ -364,15 +309,10 @@ public class MerchantApiControllerProductOrdersTest {
         void testGetAppointments_EmptyList() throws Exception {
             when(appointmentService.findByMerchantId(testMerchantId)).thenReturn(Collections.emptyList());
 
-            mockMvc.perform(get("/api/merchant/appointments")
-                    .sessionAttr("merchant", testMerchant)
-                    .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(0));
+            var result = performGet("/api/merchant/appointments");
+
+            assertSuccess(result);
+            assertListResponse(result, 0);
 
             verify(appointmentService).findByMerchantId(testMerchantId);
         }
@@ -381,13 +321,13 @@ public class MerchantApiControllerProductOrdersTest {
         @DisplayName("获取预约列表 - 未登录返回401")
         void testGetAppointments_Unauthorized() throws Exception {
             mockMvc.perform(get("/api/merchant/appointments")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(result -> {})
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401))
                     .andExpect(jsonPath("$.message").value("未授权访问，请先登录"));
 
-            verify(appointmentService, never()).findByMerchantId(any());
+            verify(appointmentService, never()).findByMerchantId(anyInt());
         }
 
         @Test
@@ -396,12 +336,9 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findByMerchantId(testMerchantId))
                     .thenThrow(new RuntimeException("数据库连接失败"));
 
-            mockMvc.perform(get("/api/merchant/appointments")
-                    .sessionAttr("merchant", testMerchant)
-                    .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isInternalServerError())
+            var result = performGet("/api/merchant/appointments");
+
+            result.andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.code").value(500))
                     .andExpect(jsonPath("$.message").value("获取预约列表失败：数据库连接失败"));
 
@@ -410,7 +347,7 @@ public class MerchantApiControllerProductOrdersTest {
     }
 
     @Nested
-    @DisplayName("更新预约状态测试")
+    @DisplayName("PUT /api/merchant/appointments/{id}/status - 更新预约状态")
     class UpdateAppointmentStatusTests {
 
         @Test
@@ -422,16 +359,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(appointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(updatedAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "confirmed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.message").value("预约状态更新成功"))
-                    .andExpect(jsonPath("$.data.id").value(1))
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "预约状态更新成功");
+            result.andExpect(jsonPath("$.data.id").value(1))
                     .andExpect(jsonPath("$.data.status").value("confirmed"));
 
             verify(appointmentService).findById(1);
@@ -447,15 +383,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(appointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(updatedAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "cancelled")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.status").value("cancelled"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "预约状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("cancelled"));
 
             verify(appointmentService).findById(1);
             verify(appointmentService).update(any(Appointment.class));
@@ -470,15 +406,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(appointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(updatedAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "completed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.status").value("completed"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "预约状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("completed"));
 
             verify(appointmentService).findById(1);
             verify(appointmentService).update(any(Appointment.class));
@@ -493,15 +429,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(appointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(updatedAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "cancelled")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.status").value("cancelled"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "预约状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("cancelled"));
 
             verify(appointmentService).findById(1);
             verify(appointmentService).update(any(Appointment.class));
@@ -512,13 +448,13 @@ public class MerchantApiControllerProductOrdersTest {
         void testUpdateAppointmentStatus_Unauthorized() throws Exception {
             mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "confirmed")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(result -> {})
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401))
                     .andExpect(jsonPath("$.message").value("未授权访问，请先登录"));
 
-            verify(appointmentService, never()).findById(any());
+            verify(appointmentService, never()).findById(anyInt());
             verify(appointmentService, never()).update(any());
         }
 
@@ -527,13 +463,14 @@ public class MerchantApiControllerProductOrdersTest {
         void testUpdateAppointmentStatus_NotFound() throws Exception {
             when(appointmentService.findById(999)).thenReturn(null);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 999)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 999)
                     .param("status", "confirmed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isNotFound())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value(404))
                     .andExpect(jsonPath("$.message").value("预约不存在"));
 
@@ -549,13 +486,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(appointmentService.findById(1)).thenReturn(appointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "confirmed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isForbidden())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value(403))
                     .andExpect(jsonPath("$.message").value("无权操作此预约"));
 
@@ -570,13 +508,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(appointmentService.findById(1)).thenReturn(appointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "invalid_status")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isBadRequest())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
                     .andExpect(jsonPath("$.message").value("无效的预约状态，只能是 pending、confirmed、completed 或 cancelled"));
 
@@ -591,13 +530,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(appointmentService.findById(1)).thenReturn(appointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "pending")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isBadRequest())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
                     .andExpect(jsonPath("$.message").value("状态流转无效：不能从 completed 变更为 pending"));
 
@@ -612,13 +552,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(appointmentService.findById(1)).thenReturn(appointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "pending")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isBadRequest())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
                     .andExpect(jsonPath("$.message").value("状态流转无效：不能从 cancelled 变更为 pending"));
 
@@ -633,13 +574,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(appointmentService.findById(1)).thenReturn(appointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "completed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isBadRequest())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
                     .andExpect(jsonPath("$.message").value("状态流转无效：不能从 pending 变更为 completed"));
 
@@ -654,13 +596,14 @@ public class MerchantApiControllerProductOrdersTest {
 
             when(appointmentService.findById(1)).thenReturn(appointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "pending")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isBadRequest())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
                     .andExpect(jsonPath("$.message").value("状态流转无效：不能从 confirmed 变更为 pending"));
 
@@ -677,15 +620,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(appointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(updatedAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "pending")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.status").value("pending"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "预约状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("pending"));
 
             verify(appointmentService).findById(1);
             verify(appointmentService).update(any(Appointment.class));
@@ -700,13 +643,14 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.update(any(Appointment.class)))
                     .thenThrow(new RuntimeException("更新失败"));
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "confirmed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isInternalServerError())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            result.andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.code").value(500))
                     .andExpect(jsonPath("$.message").value("更新预约状态失败：更新失败"));
 
@@ -729,27 +673,29 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(pendingAppointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(confirmedAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result1 = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "confirmed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.status").value("confirmed"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result1, "预约状态更新成功");
+            result1.andExpect(jsonPath("$.data.status").value("confirmed"));
 
             reset(appointmentService);
             when(appointmentService.findById(1)).thenReturn(confirmedAppointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(completedAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result2 = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "completed")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.status").value("completed"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result2, "预约状态更新成功");
+            result2.andExpect(jsonPath("$.data.status").value("completed"));
         }
 
         @Test
@@ -761,14 +707,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(pendingAppointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(cancelledAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "cancelled")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.status").value("cancelled"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "预约状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("cancelled"));
         }
 
         @Test
@@ -780,14 +727,15 @@ public class MerchantApiControllerProductOrdersTest {
             when(appointmentService.findById(1)).thenReturn(confirmedAppointment);
             when(appointmentService.update(any(Appointment.class))).thenReturn(cancelledAppointment);
 
-            mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
+            var result = mockMvc.perform(put("/api/merchant/appointments/{id}/status", 1)
                     .param("status", "cancelled")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.status").value("cancelled"));
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                    .andDo(r -> {});
+
+            assertSuccess(result, "预约状态更新成功");
+            result.andExpect(jsonPath("$.data.status").value("cancelled"));
         }
     }
 }

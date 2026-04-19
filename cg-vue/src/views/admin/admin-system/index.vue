@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { ElMessage, FormInstance, FormRules } from 'element-plus'
-import { Save, Upload } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+import { Check, Upload } from '@element-plus/icons-vue'
 
 defineOptions({
   name: 'AdminSystem'

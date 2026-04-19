@@ -10,10 +10,10 @@ export interface Announcement {
   category: AnnouncementCategory
   author: string
   status: 'published' | 'draft'
-  is_read: boolean
-  published_at: string
-  created_at: string
-  updated_at: string
+  isRead: boolean
+  publishedAt: string
+  createdAt: string
+  updatedAt: string
 }
 
 const categoryTitles: Record<AnnouncementCategory, string[]> = {
@@ -158,15 +158,15 @@ const generateAnnouncements = (count = 10): Announcement[] => {
       category: category,
       author: randomEnum(authors),
       status: Math.random() > 0.2 ? 'published' : 'draft',
-      is_read: Math.random() > 0.7,
-      published_at: randomDate('2024-01-01'),
-      created_at: randomDate('2024-01-01'),
-      updated_at: randomDate('2024-01-01')
+      isRead: Math.random() > 0.7,
+      publishedAt: randomDate('2024-01-01'),
+      createdAt: randomDate('2024-01-01'),
+      updatedAt: randomDate('2024-01-01')
     })
   }
 
   return announcements.sort((a, b) =>
-    new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   )
 }
 

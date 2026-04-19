@@ -69,14 +69,65 @@ Mock.mock('/api/admin/reviews/pending', 'get', () => {
   }
 })
 
-Mock.mock(/\/api\/admin\/reviews\/\d+\/audit/, 'post', () => ({
-  code: 200,
-  message: '审核成功',
-  data: { success: true }
-}))
+Mock.mock(/\/api\/admin\/reviews\/\d+\/audit/, 'put', (options) => {
+  const id = parseInt(options.url.match(/\/api\/admin\/reviews\/(\d+)\/audit/)[1])
+  const body = JSON.parse(options.body || '{}')
+  const review = reviews.find(r => r.id === id)
+  if (review) {
+    review.status = body.status || 'approved'
+  }
+  return {
+    code: 200,
+    message: '审核成功',
+    data: { success: true }
+  }
+})
 
-Mock.mock(/\/api\/admin\/reviews\/\d+/, 'delete', () => ({
-  code: 200,
-  message: '删除成功',
-  data: { success: true }
-}))
+Mock.mock(/\/api\/admin\/reviews\/\d+/, 'delete', (options) => {
+  const id = parseInt(options.url.match(/\/api\/admin\/reviews\/(\d+)/)[1])
+  const index = reviews.findIndex(r => r.id === id)
+  if (index > -1) {
+    reviews.splice(index, 1)
+  }
+  return {
+    code: 200,
+    message: '删除成功',
+    data: { success: true }
+  }
+})
+
+Mock.mock('/api/admin/reviews/batch/status', 'put', (options) => {
+  const body = JSON.parse(options.body || '{}')
+  const { ids, status } = body
+  if (ids && Array.isArray(ids)) {
+    ids.forEach(id => {
+      const review = reviews.find(r => r.id === id)
+      if (review) {
+        review.status = status
+      }
+    })
+  }
+  return {
+    code: 200,
+    message: '批量更新状态成功',
+    data: { success: true }
+  }
+})
+
+Mock.mock('/api/admin/reviews/batch', 'delete', (options) => {
+  const body = JSON.parse(options.body || '{}')
+  const { ids } = body
+  if (ids && Array.isArray(ids)) {
+    ids.forEach(id => {
+      const index = reviews.findIndex(r => r.id === id)
+      if (index > -1) {
+        reviews.splice(index, 1)
+      }
+    })
+  }
+  return {
+    code: 200,
+    message: '批量删除成功',
+    data: { success: true }
+  }
+})

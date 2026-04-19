@@ -29,6 +29,11 @@ const router = createRouter({
       component: () => import('../views/merchant/Register.vue'),
     },
     {
+      path: '/merchant/login',
+      name: 'merchant-login',
+      component: () => import('../views/merchant/Login.vue'),
+    },
+    {
       path: '/user',
       component: () => import('../views/user/UserLayout.vue'),
       meta: { requiresAuth: true, role: 'user' },

@@ -375,3 +375,15 @@ export const deleteTask = (id: number) => {
 export const executeTask = (id: number) => {
   return request.post<Task>(`/api/admin/tasks/${id}/execute`)
 }
+
+export const getReviewsForAudit = () => {
+  return request.get<Review[]>('/api/admin/reviews/audit')
+}
+
+export const approveReview = (id: number) => {
+  return request.put<Review>(`/api/admin/reviews/${id}/approve`)
+}
+
+export const markReviewViolation = (id: number) => {
+  return request.put<Review>(`/api/admin/reviews/${id}/violation`)
+}

@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface PetRepository extends JpaRepository<Pet, Integer> {
     List<Pet> findByUserId(Integer userId);
+    long countByUserId(Integer userId);
 }

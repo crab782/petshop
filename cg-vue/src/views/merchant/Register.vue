@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Message, Phone, Shop, Upload } from '@element-plus/icons-vue'
-import axios from 'axios'
+import { useForm, useAsync } from '@/composables'
+import { merchantRegister, type MerchantRegisterData } from '@/api/auth'
 
 const router = useRouter()
 
-const registerForm = reactive({
+interface FormData {
+  username: string
+  email: string
+  password: string
+  confirmPassword: string
+  phone: string
+  contact_person: string
+  name: string
+  logo: string
+  address: string
+  agreeToTerms: boolean
+}
+
+const initialFormData: FormData = {
   username: '',
   email: '',
   password: '',
@@ -18,32 +32,77 @@ const registerForm = reactive({
   logo: '',
   address: '',
   agreeToTerms: false
-})
+}
+
+const {
+  formData,
+  errors,
+  isSubmitting,
+  isValid,
+  setFieldError,
+  clearErrors,
+  validate,
+  handleSubmit
+} = useForm<FormData>(initialFormData)
 
 const logoInputMethod = ref<'url' | 'upload'>('url')
 const logoUrl = ref('')
-
 const registerFormRef = ref()
+const termsDialogVisible = ref(false)
 
-const validateConfirmPassword = (rule: any, value: any, callback: any) => {
-  if (value !== registerForm.password) {
-    callback(new Error('两次输入的密码不一致'))
-  } else {
-    callback()
+const validationRules: Record<keyof FormData, (value: any) => string | null> = {
+  username: (value: string) => {
+    if (!value) return '请输入用户名'
+    if (value.length < 3 || value.length > 20) return '用户名长度为3-20个字符'
+    return null
+  },
+  email: (value: string) => {
+    if (!value) return '请输入邮箱'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) return '请输入正确的邮箱格式'
+    if (value.length > 100) return '邮箱最多100个字符'
+    return null
+  },
+  password: (value: string) => {
+    if (!value) return '请输入密码'
+    if (value.length < 6) return '密码至少6个字符'
+    return null
+  },
+  confirmPassword: (value: string) => {
+    if (!value) return '请确认密码'
+    if (value !== formData.password) return '两次输入的密码不一致'
+    return null
+  },
+  phone: (value: string) => {
+    if (!value) return '请输入联系电话'
+    if (value.length > 20) return '联系电话最多20个字符'
+    const phoneRegex = /^1[3-9]\d{9}$/
+    if (!phoneRegex.test(value)) return '请输入正确的手机号格式'
+    return null
+  },
+  contact_person: (value: string) => {
+    if (!value) return '请输入联系人'
+    if (value.length > 50) return '联系人姓名最多50个字符'
+    return null
+  },
+  name: (value: string) => {
+    if (!value) return '请输入商家名称'
+    if (value.length < 2 || value.length > 100) return '商家名称长度为2-100个字符'
+    return null
+  },
+  logo: () => null,
+  address: (value: string) => {
+    if (!value) return '请输入地址'
+    if (value.length > 255) return '地址最多255个字符'
+    return null
+  },
+  agreeToTerms: (value: boolean) => {
+    if (!value) return '请阅读并同意注册协议'
+    return null
   }
 }
 
-const validatePhone = (rule: any, value: any, callback: any) => {
-  if (!value) {
-    callback(new Error('请输入联系电话'))
-  } else if (!/^1[3-9]\d{9}$/.test(value) && value.length > 20) {
-    callback(new Error('请输入正确的手机号格式'))
-  } else {
-    callback()
-  }
-}
-
-const registerRules = {
+const elFormRules = computed(() => ({
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'blur' }
@@ -59,12 +118,33 @@ const registerRules = {
   ],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, trigger: 'blur' }
+    {
+      validator: (_rule: any, value: string, callback: (error?: Error) => void) => {
+        if (value !== formData.password) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ],
   phone: [
     { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { validator: validatePhone, trigger: 'blur' },
-    { max: 20, message: '联系电话最多20个字符', trigger: 'blur' }
+    {
+      validator: (_rule: any, value: string, callback: (error?: Error) => void) => {
+        if (!value) {
+          callback(new Error('请输入联系电话'))
+        } else if (value.length > 20) {
+          callback(new Error('联系电话最多20个字符'))
+        } else if (!/^1[3-9]\d{9}$/.test(value)) {
+          callback(new Error('请输入正确的手机号格式'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ],
   contact_person: [
     { required: true, message: '请输入联系人', trigger: 'blur' },
@@ -78,23 +158,29 @@ const registerRules = {
     { required: true, message: '请输入地址', trigger: 'blur' },
     { max: 255, message: '地址最多255个字符', trigger: 'blur' }
   ]
-}
+}))
 
-const registerLoading = ref(false)
+const {
+  loading: registerLoading,
+  error: registerError,
+  execute: executeRegister
+} = useAsync(async (data: MerchantRegisterData) => {
+  return await merchantRegister(data)
+})
 
 const handleLogoUrlInput = (value: string) => {
   logoUrl.value = value
-  registerForm.logo = value
+  formData.logo = value
 }
 
 const handleLogoUploadChange = (uploadFile: { raw?: File; url?: string }) => {
   if (uploadFile.raw) {
     const url = URL.createObjectURL(uploadFile.raw)
     logoUrl.value = url
-    registerForm.logo = url
+    formData.logo = url
   } else if (uploadFile.url) {
     logoUrl.value = uploadFile.url
-    registerForm.logo = uploadFile.url
+    formData.logo = uploadFile.url
   }
   return false
 }
@@ -102,7 +188,7 @@ const handleLogoUploadChange = (uploadFile: { raw?: File; url?: string }) => {
 const handleRegister = async () => {
   if (!registerFormRef.value) return
 
-  if (!registerForm.agreeToTerms) {
+  if (!formData.agreeToTerms) {
     ElMessage.warning('请阅读并同意注册协议')
     return
   }
@@ -110,30 +196,31 @@ const handleRegister = async () => {
   await registerFormRef.value.validate(async (valid: boolean) => {
     if (!valid) return
 
-    registerLoading.value = true
+    if (!validate(validationRules)) {
+      return
+    }
+
+    const registerData: MerchantRegisterData = {
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      phone: formData.phone,
+      contact_person: formData.contact_person,
+      name: formData.name,
+      logo: formData.logo || undefined,
+      address: formData.address
+    }
 
     try {
-      const response = await axios.post('/api/auth/merchant/register', {
-        username: registerForm.username,
-        email: registerForm.email,
-        password: registerForm.password,
-        phone: registerForm.phone,
-        contact_person: registerForm.contact_person,
-        name: registerForm.name,
-        logo: registerForm.logo,
-        address: registerForm.address
-      })
+      const result = await executeRegister(registerData)
 
-      if (response.data.code === 200 || response.data.code === 0) {
+      if (result) {
         ElMessage.success('注册成功，请等待审核')
         router.push('/login')
-      } else {
-        ElMessage.error(response.data.message || '注册失败')
       }
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '注册失败，请稍后重试')
-    } finally {
-      registerLoading.value = false
+      const errorMessage = error.response?.data?.message || error.message || '注册失败，请稍后重试'
+      ElMessage.error(errorMessage)
     }
   })
 }
@@ -145,8 +232,6 @@ const goToLogin = () => {
 const goToUserRegister = () => {
   router.push('/register')
 }
-
-const termsDialogVisible = ref(false)
 
 const showTermsDialog = () => {
   termsDialogVisible.value = true
@@ -163,8 +248,8 @@ const showTermsDialog = () => {
 
       <el-form
         ref="registerFormRef"
-        :model="registerForm"
-        :rules="registerRules"
+        :model="formData"
+        :rules="elFormRules"
         class="register-form"
         label-position="top"
       >
@@ -173,7 +258,7 @@ const showTermsDialog = () => {
             <span class="form-label">用户名</span>
           </template>
           <el-input
-            v-model="registerForm.username"
+            v-model="formData.username"
             placeholder="请输入用户名"
             :prefix-icon="User"
             size="large"
@@ -185,7 +270,7 @@ const showTermsDialog = () => {
             <span class="form-label">邮箱</span>
           </template>
           <el-input
-            v-model="registerForm.email"
+            v-model="formData.email"
             placeholder="请输入邮箱"
             :prefix-icon="Message"
             size="large"
@@ -197,7 +282,7 @@ const showTermsDialog = () => {
             <span class="form-label">联系电话</span>
           </template>
           <el-input
-            v-model="registerForm.phone"
+            v-model="formData.phone"
             placeholder="请输入联系电话"
             :prefix-icon="Phone"
             size="large"
@@ -209,7 +294,7 @@ const showTermsDialog = () => {
             <span class="form-label">联系人</span>
           </template>
           <el-input
-            v-model="registerForm.contact_person"
+            v-model="formData.contact_person"
             placeholder="请输入联系人姓名"
             size="large"
           />
@@ -220,7 +305,7 @@ const showTermsDialog = () => {
             <span class="form-label">商家名称</span>
           </template>
           <el-input
-            v-model="registerForm.name"
+            v-model="formData.name"
             placeholder="请输入商家名称"
             :prefix-icon="Shop"
             size="large"
@@ -237,7 +322,7 @@ const showTermsDialog = () => {
             <div class="logo-content">
               <div v-if="logoInputMethod === 'url'" class="logo-url-input">
                 <el-input
-                  v-model="registerForm.logo"
+                  v-model="formData.logo"
                   placeholder="请输入Logo图片URL"
                   @input="handleLogoUrlInput"
                 />
@@ -267,7 +352,7 @@ const showTermsDialog = () => {
             <span class="form-label">地址</span>
           </template>
           <el-input
-            v-model="registerForm.address"
+            v-model="formData.address"
             placeholder="请输入地址"
             size="large"
           />
@@ -278,7 +363,7 @@ const showTermsDialog = () => {
             <span class="form-label">密码</span>
           </template>
           <el-input
-            v-model="registerForm.password"
+            v-model="formData.password"
             type="password"
             placeholder="请输入密码"
             :prefix-icon="Lock"
@@ -292,7 +377,7 @@ const showTermsDialog = () => {
             <span class="form-label">确认密码</span>
           </template>
           <el-input
-            v-model="registerForm.confirmPassword"
+            v-model="formData.confirmPassword"
             type="password"
             placeholder="请再次输入密码"
             :prefix-icon="Lock"
@@ -303,7 +388,7 @@ const showTermsDialog = () => {
 
         <el-form-item prop="agreeToTerms">
           <div class="terms-checkbox">
-            <el-checkbox v-model="registerForm.agreeToTerms">
+            <el-checkbox v-model="formData.agreeToTerms">
               我已阅读并同意
               <el-link type="primary" @click.prevent="showTermsDialog">《商家注册协议》</el-link>
             </el-checkbox>
@@ -314,7 +399,7 @@ const showTermsDialog = () => {
           <el-button
             type="primary"
             size="large"
-            :loading="registerLoading"
+            :loading="registerLoading || isSubmitting"
             class="register-button"
             @click="handleRegister"
           >

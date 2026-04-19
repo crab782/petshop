@@ -17,8 +17,16 @@ public class Favorite {
     private User user;
     
     @ManyToOne
-    @JoinColumn(name = "merchant_id", nullable = false)
+    @JoinColumn(name = "merchant_id")
     private Merchant merchant;
+    
+    @ManyToOne
+    @JoinColumn(name = "service_id")
+    private Service service;
+    
+    @ManyToOne
+    @JoinColumn(name = "product_id")
+    private Product product;
     
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;

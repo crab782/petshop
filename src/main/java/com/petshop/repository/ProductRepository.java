@@ -71,4 +71,20 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     
     @Query("SELECT COUNT(p) FROM Product p WHERE p.merchant.id = :merchantId AND p.stock <= p.lowStockThreshold")
     long countLowStockProducts(@Param("merchantId") Integer merchantId);
+    
+    @Query("SELECT p FROM Product p WHERE p.name LIKE %:keyword% OR p.description LIKE %:keyword%")
+    Page<Product> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    
+    Page<Product> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    
+    @Query("SELECT p FROM Product p WHERE " +
+           "(:keyword IS NULL OR :keyword = '' OR p.name LIKE %:keyword% OR p.description LIKE %:keyword%) AND " +
+           "(:status IS NULL OR :status = '' OR p.status = :status) AND " +
+           "(:merchantId IS NULL OR p.merchant.id = :merchantId) AND " +
+           "(:category IS NULL OR :category = '' OR p.category = :category)")
+    Page<Product> adminSearchProducts(@Param("keyword") String keyword,
+                                       @Param("status") String status,
+                                       @Param("merchantId") Integer merchantId,
+                                       @Param("category") String category,
+                                       Pageable pageable);
 }

@@ -63,17 +63,47 @@ Mock.mock('/api/admin/services', 'get', (options) => {
   }
 })
 
-Mock.mock(/\/api\/admin\/services\/\d+/, 'delete', () => ({
+Mock.mock(/\/api\/admin\/services\/\d+\/status$/, 'put', (options) => {
+  const urlParts = options.url.match(/\/api\/admin\/services\/(\d+)\/status/)
+  const id = parseInt(urlParts[1])
+  const { status } = JSON.parse(options.body)
+  const service = services.find(s => s.id === id)
+  if (service) {
+    service.status = status
+  }
+  return {
+    code: 200,
+    message: '状态更新成功',
+    data: { success: true }
+  }
+})
+
+Mock.mock(/\/api\/admin\/services\/\d+$/, 'delete', () => ({
   code: 200,
   message: '删除成功',
   data: { success: true }
 }))
 
-Mock.mock('/api/admin/services/batch', 'post', (options) => {
-  const { action, ids } = JSON.parse(options.body)
+Mock.mock('/api/admin/services/batch/status', 'put', (options) => {
+  const { ids, status } = JSON.parse(options.body)
+  ids.forEach(id => {
+    const service = services.find(s => s.id === id)
+    if (service) {
+      service.status = status
+    }
+  })
   return {
     code: 200,
-    message: '批量操作成功',
-    data: { affected: ids.length, action }
+    message: '批量更新状态成功',
+    data: { affected: ids.length }
+  }
+})
+
+Mock.mock('/api/admin/services/batch', 'delete', (options) => {
+  const { ids } = JSON.parse(options.body)
+  return {
+    code: 200,
+    message: '批量删除成功',
+    data: { affected: ids.length }
   }
 })

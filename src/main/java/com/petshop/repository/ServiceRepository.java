@@ -13,4 +13,11 @@ public interface ServiceRepository extends JpaRepository<Service, Integer> {
     @Modifying
     @Query("UPDATE Service s SET s.status = :status WHERE s.id IN :ids AND s.merchant.id = :merchantId")
     int batchUpdateStatus(List<Integer> ids, String status, Integer merchantId);
+    
+    @Query("SELECT s FROM Service s WHERE s.name LIKE %:keyword% OR s.description LIKE %:keyword%")
+    List<Service> searchByKeyword(String keyword);
+    
+    List<Service> findByCategory(String category);
+    
+    List<Service> findByStatus(String status);
 }

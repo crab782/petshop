@@ -2,6 +2,7 @@ import Mock from 'mockjs'
 import './user'
 import './user/shopping'
 import './merchant'
+import './merchant-api'
 import './products'
 import './services'
 import './appointments'
@@ -10,6 +11,20 @@ import './reviews'
 import './categories'
 import './shop'
 import './stats'
+
+// Admin模块Mock
+import './admin/dashboard'
+import './admin/users'
+import './admin/merchants'
+import './admin/services'
+import './admin/products'
+import './admin/reviews'
+import './admin/announcements'
+import './admin/roles'
+import './admin/logs'
+import './admin/activities'
+import './admin/tasks'
+import './admin/shop-audit'
 
 export interface MockConfig {
   enabled: boolean
@@ -62,6 +77,7 @@ export function setupMock(config: Partial<MockConfig> = {}) {
     console.log('  - 分类模块 (categories)')
     console.log('  - 店铺模块 (shop)')
     console.log('  - 统计模块 (stats)')
+    console.log('  - 平台端管理模块 (dashboard, users, merchants, services, products, reviews, announcements, roles, logs, activities, tasks, shop-audit)')
   }
 }
 

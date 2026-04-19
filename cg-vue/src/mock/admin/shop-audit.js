@@ -51,8 +51,8 @@ Mock.mock('/api/admin/shops/pending', 'get', (options) => {
   }
 })
 
-// POST /api/admin/shops/:id/audit - 店铺审核
-Mock.mock(/\/api\/admin\/shops\/\d+\/audit/, 'post', (options) => {
+// PUT /api/admin/shops/:id/audit - 店铺审核
+Mock.mock(/\/api\/admin\/shops\/\d+\/audit/, 'put', (options) => {
   const { action, reason } = JSON.parse(options.body)
   return {
     code: 200,

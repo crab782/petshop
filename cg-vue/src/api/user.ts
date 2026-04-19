@@ -25,7 +25,12 @@ export interface Appointment {
   merchantName: string
   appointmentTime: string
   status: string
-  remark?: string
+  notes?: string
+  totalPrice?: number
+  petId?: number
+  petName?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Service {
@@ -34,9 +39,15 @@ export interface Service {
   description?: string
   price: number
   duration?: number
+  image?: string
   merchantId: number
   merchantName: string
   category?: string
+  rating?: number
+  reviewCount?: number
+  status?: 'enabled' | 'disabled'
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface MerchantReview {
@@ -63,7 +74,13 @@ export interface Product {
   price: number
   stock: number
   merchantId: number
+  merchantName?: string
   image?: string
+  category?: string
+  sales?: number
+  rating?: number
+  status?: 'enabled' | 'disabled'
+  createdAt?: string
 }
 
 export interface MerchantInfo {
@@ -71,11 +88,19 @@ export interface MerchantInfo {
   name: string
   logo?: string
   contact?: string
+  contactPerson?: string
   phone?: string
+  email?: string
   address?: string
   description?: string
   rating?: number
+  reviewCount?: number
+  serviceCount?: number
+  productCount?: number
+  status?: 'pending' | 'approved' | 'rejected' | 'disabled'
   isFavorited?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export const getUserPets = () => {
@@ -110,7 +135,7 @@ export const createAppointment = (data: {
   serviceId: number
   petId: number
   appointmentTime: string
-  remark?: string
+  notes?: string
 }) => {
   return request.post('/api/user/appointments', data)
 }
@@ -342,7 +367,9 @@ export interface OrderDetail {
   remark?: string
   items: OrderItem[]
   address: OrderAddress
-  timeline: OrderTimelineItem[]
+  timeline?: OrderTimelineItem[]
+  logisticsCompany?: string
+  trackingNumber?: string
 }
 
 export interface OrderItem {
@@ -579,4 +606,8 @@ export interface AvailableSlotsResponse {
 
 export const getAvailableSlots = (merchantId: number, date: string) => {
   return request.get<AvailableSlotsResponse>(`/api/merchant/${merchantId}/available-slots`, { params: { date } })
+}
+
+export const searchMerchants = (keyword: string) => {
+  return request.get<MerchantInfo[]>('/api/merchants/search', { params: { keyword } })
 }

@@ -2,6 +2,7 @@ package com.petshop.controller.api;
 
 import com.petshop.entity.Merchant;
 import com.petshop.entity.MerchantSettings;
+import com.petshop.exception.GlobalExceptionHandler;
 import com.petshop.factory.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,10 +27,26 @@ public class MerchantApiControllerSettingsTest extends MerchantApiControllerTest
     @BeforeEach
     @Override
     protected void setUp() {
+        super.setUp();
         MerchantApiController controller = new MerchantApiController();
+        injectDependencies(controller);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
-        testMerchant = TestDataFactory.createMerchant(testMerchantId);
+    }
+
+    private void injectDependencies(MerchantApiController controller) {
+        try {
+            var merchantSettingsServiceField = MerchantApiController.class.getDeclaredField("merchantSettingsService");
+            merchantSettingsServiceField.setAccessible(true);
+            merchantSettingsServiceField.set(controller, merchantSettingsService);
+
+            var merchantServiceField = MerchantApiController.class.getDeclaredField("merchantService");
+            merchantServiceField.setAccessible(true);
+            merchantServiceField.set(controller, merchantService);
+        } catch (Exception e) {
+            throw new RuntimeException("注入依赖失败", e);
+        }
     }
 
     @Nested

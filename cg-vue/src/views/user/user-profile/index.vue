@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { getUserInfo as getUserInfoApi, updateUserInfo } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
-import { Upload, Edit, Pets, Ticket, Star, Shield, Calendar } from '@element-plus/icons-vue'
+import { Upload, Edit, Box, Ticket, Star, Lock, Calendar } from '@element-plus/icons-vue'
 
 interface UserProfile {
   id: number
@@ -80,7 +80,7 @@ const passwordRules: FormRules = {
 
 const quickActions = [
   { title: '编辑个人资料', icon: Edit, route: '/user/profile/edit' },
-  { title: '管理宠物', icon: Pets, route: '/user/pets' },
+  { title: '管理宠物', icon: Box, route: '/user/pets' },
   { title: '查看订单', icon: Ticket, route: '/user/orders' },
   { title: '查看评价', icon: Star, route: '/user/reviews' }
 ]

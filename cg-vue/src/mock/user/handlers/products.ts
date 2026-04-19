@@ -129,7 +129,7 @@ const productHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/favorites/products',
+    url: '/api/user/favorites/products',
     method: 'post',
     response: (req) => {
       const { productId } = req.body
@@ -171,7 +171,7 @@ const productHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/favorites/products/:id',
+    url: '/api/user/favorites/products/:id',
     method: 'delete',
     response: (req) => {
       const { id } = req.params
@@ -196,7 +196,7 @@ const productHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/favorites/products',
+    url: '/api/user/favorites/products',
     method: 'get',
     response: () => {
       const favoriteProducts = productFavorites.map(id => getProductById(id)).filter(p => p)
@@ -205,6 +205,22 @@ const productHandlers: MockMethod[] = [
         code: 200,
         message: 'success',
         data: favoriteProducts
+      }
+    }
+  },
+  {
+    url: '/api/user/favorites/products/:id/check',
+    method: 'get',
+    response: (req) => {
+      const { id } = req.params
+      const productId = parseInt(id)
+      
+      const isFavorited = productFavorites.includes(productId)
+      
+      return {
+        code: 200,
+        message: 'success',
+        data: { isFavorited }
       }
     }
   }

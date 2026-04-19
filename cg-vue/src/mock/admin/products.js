@@ -7,7 +7,7 @@ const generateProducts = (count = 30) => {
   const products = []
   for (let i = 0; i < count; i++) {
     products.push({
-      id: randomId(),
+      id: i + 1,
       name: randomString(6) + '狗粮/猫粮',
       merchantId: randomId(1, 20),
       merchantName: randomString(6) + '宠物店',
@@ -23,7 +23,12 @@ const generateProducts = (count = 30) => {
   return products
 }
 
-const products = generateProducts(50)
+let products = generateProducts(50)
+
+const extractIdFromUrl = (url) => {
+  const match = url.match(/\/api\/admin\/products\/(\d+)/)
+  return match ? parseInt(match[1]) : null
+}
 
 Mock.mock('/api/admin/products', 'get', (options) => {
   const params = options.url.split('?')[1]?.split('&').reduce((acc, param) => {
@@ -63,34 +68,136 @@ Mock.mock('/api/admin/products', 'get', (options) => {
   return {
     code: 200,
     message: 'success',
-    data: filtered.slice(start, end),
-    total: filtered.length
+    data: {
+      list: filtered.slice(start, end),
+      total: filtered.length,
+      page: parseInt(page),
+      pageSize: parseInt(pageSize)
+    }
   }
 })
 
-Mock.mock(/\/api\/admin\/products\/\d+/, 'get', () => ({
-  code: 200,
-  message: 'success',
-  data: products[randomId(0, products.length - 1)]
-}))
+Mock.mock(/\/api\/admin\/products\/\d+$/, 'get', (options) => {
+  const id = extractIdFromUrl(options.url)
+  const product = products.find(p => p.id === id)
 
-Mock.mock(/\/api\/admin\/products\/\d+/, 'put', () => ({
-  code: 200,
-  message: '更新成功',
-  data: { success: true }
-}))
+  if (!product) {
+    return {
+      code: 404,
+      message: '商品不存在',
+      data: null
+    }
+  }
 
-Mock.mock(/\/api\/admin\/products\/\d+/, 'delete', () => ({
-  code: 200,
-  message: '删除成功',
-  data: { success: true }
-}))
-
-Mock.mock('/api/admin/products/batch', 'post', (options) => {
-  const { action, ids } = JSON.parse(options.body)
   return {
     code: 200,
-    message: '批量操作成功',
-    data: { affected: ids.length, action }
+    message: 'success',
+    data: product
+  }
+})
+
+Mock.mock(/\/api\/admin\/products\/\d+$/, 'put', (options) => {
+  const id = extractIdFromUrl(options.url)
+  const index = products.findIndex(p => p.id === id)
+
+  if (index === -1) {
+    return {
+      code: 404,
+      message: '商品不存在',
+      data: null
+    }
+  }
+
+  const updateData = JSON.parse(options.body)
+  products[index] = { ...products[index], ...updateData, updatedAt: new Date().toISOString() }
+
+  return {
+    code: 200,
+    message: '更新成功',
+    data: products[index]
+  }
+})
+
+Mock.mock(/\/api\/admin\/products\/\d+\/status$/, 'put', (options) => {
+  const urlWithoutStatus = options.url.replace('/status', '')
+  const id = extractIdFromUrl(urlWithoutStatus)
+  const index = products.findIndex(p => p.id === id)
+
+  if (index === -1) {
+    return {
+      code: 404,
+      message: '商品不存在',
+      data: null
+    }
+  }
+
+  const { status } = JSON.parse(options.body)
+  products[index].status = status
+  products[index].updatedAt = new Date().toISOString()
+
+  return {
+    code: 200,
+    message: '状态更新成功',
+    data: products[index]
+  }
+})
+
+Mock.mock(/\/api\/admin\/products\/\d+$/, 'delete', (options) => {
+  const id = extractIdFromUrl(options.url)
+  const index = products.findIndex(p => p.id === id)
+
+  if (index === -1) {
+    return {
+      code: 404,
+      message: '商品不存在',
+      data: null
+    }
+  }
+
+  products.splice(index, 1)
+
+  return {
+    code: 200,
+    message: '删除成功',
+    data: { success: true }
+  }
+})
+
+Mock.mock('/api/admin/products/batch/status', 'put', (options) => {
+  const { ids, status } = JSON.parse(options.body)
+  let affected = 0
+
+  ids.forEach(id => {
+    const index = products.findIndex(p => p.id === id)
+    if (index !== -1) {
+      products[index].status = status
+      products[index].updatedAt = new Date().toISOString()
+      affected++
+    }
+  })
+
+  return {
+    code: 200,
+    message: '批量更新状态成功',
+    data: { affected, status }
+  }
+})
+
+Mock.mock('/api/admin/products/batch', 'delete', (options) => {
+  const { ids } = JSON.parse(options.body)
+  let affected = 0
+
+  ids.forEach(id => {
+    const index = products.findIndex(p => p.id === id)
+    if (index !== -1) {
+      products.splice(index, 1)
+      affected++
+    }
+  })
+
+  return {
+    code: 200,
+    message: '批量删除成功',
+    data: { affected }
   }
 })

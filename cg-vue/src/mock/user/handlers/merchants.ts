@@ -70,8 +70,8 @@ export const setupMerchantHandlers = () => {
     }
   })
 
-  Mock.mock(/\/api\/merchants\/\d+$/, 'get', (options) => {
-    const match = options.url.match(/\/api\/merchants\/(\d+)/)
+  Mock.mock(/\/api\/merchant\/\d+$/, 'get', (options) => {
+    const match = options.url.match(/\/api\/merchant\/(\d+)/)
     if (!match) {
       return {
         code: 400,
@@ -198,6 +198,28 @@ export const setupMerchantHandlers = () => {
         date,
         slots: timeSlots
       }
+    }
+  })
+
+  Mock.mock('/api/merchants/search', 'get', (options) => {
+    const url = new URL(options.url, 'http://localhost')
+    const keyword = url.searchParams.get('keyword') || ''
+
+    let filtered = [...merchants]
+
+    if (keyword) {
+      const lowerKeyword = keyword.toLowerCase()
+      filtered = filtered.filter(m =>
+        m.name.toLowerCase().includes(lowerKeyword) ||
+        m.address.toLowerCase().includes(lowerKeyword) ||
+        m.description.toLowerCase().includes(lowerKeyword)
+      )
+    }
+
+    return {
+      code: 200,
+      message: 'success',
+      data: filtered
     }
   })
 }

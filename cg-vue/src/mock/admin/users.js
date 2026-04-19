@@ -73,23 +73,75 @@ Mock.mock(/\/api\/admin\/users\/\d+/, 'get', () => {
   }
 })
 
-Mock.mock(/\/api\/admin\/users\/\d+/, 'put', () => ({
-  code: 200,
-  message: '更新成功',
-  data: { success: true }
-}))
-
-Mock.mock(/\/api\/admin\/users\/\d+/, 'delete', () => ({
-  code: 200,
-  message: '删除成功',
-  data: { success: true }
-}))
-
-Mock.mock('/api/admin/users/batch', 'post', (options) => {
-  const { action, ids } = JSON.parse(options.body)
+Mock.mock(/\/api\/admin\/users\/\d+$/, 'put', (options) => {
+  const id = parseInt(options.url.match(/\/api\/admin\/users\/(\d+)/)[1])
+  const body = JSON.parse(options.body)
+  const userIndex = users.findIndex(u => u.id === id)
+  if (userIndex > -1) {
+    users[userIndex] = { ...users[userIndex], ...body, updatedAt: new Date().toISOString() }
+  }
   return {
     code: 200,
-    message: '批量操作成功',
-    data: { affected: ids.length, action }
+    message: '更新成功',
+    data: users[userIndex] || null
+  }
+})
+
+Mock.mock(/\/api\/admin\/users\/\d+\/status$/, 'put', (options) => {
+  const id = parseInt(options.url.match(/\/api\/admin\/users\/(\d+)\/status/)[1])
+  const { status } = JSON.parse(options.body)
+  const userIndex = users.findIndex(u => u.id === id)
+  if (userIndex > -1) {
+    users[userIndex].status = status
+    users[userIndex].updatedAt = new Date().toISOString()
+  }
+  return {
+    code: 200,
+    message: '状态更新成功',
+    data: { id, status }
+  }
+})
+
+Mock.mock(/\/api\/admin\/users\/\d+$/, 'delete', (options) => {
+  const id = parseInt(options.url.match(/\/api\/admin\/users\/(\d+)/)[1])
+  const index = users.findIndex(u => u.id === id)
+  if (index > -1) {
+    users.splice(index, 1)
+  }
+  return {
+    code: 200,
+    message: '删除成功',
+    data: { id }
+  }
+})
+
+Mock.mock('/api/admin/users/batch/status', 'put', (options) => {
+  const { ids, status } = JSON.parse(options.body)
+  ids.forEach(id => {
+    const userIndex = users.findIndex(u => u.id === id)
+    if (userIndex > -1) {
+      users[userIndex].status = status
+      users[userIndex].updatedAt = new Date().toISOString()
+    }
+  })
+  return {
+    code: 200,
+    message: '批量状态更新成功',
+    data: { affected: ids.length, status }
+  }
+})
+
+Mock.mock('/api/admin/users/batch', 'delete', (options) => {
+  const { ids } = JSON.parse(options.body)
+  ids.forEach(id => {
+    const index = users.findIndex(u => u.id === id)
+    if (index > -1) {
+      users.splice(index, 1)
+    }
+  })
+  return {
+    code: 200,
+    message: '批量删除成功',
+    data: { affected: ids.length }
   }
 })

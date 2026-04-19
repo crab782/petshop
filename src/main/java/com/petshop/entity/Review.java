@@ -42,4 +42,7 @@ public class Review {
     
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
+    
+    @Column(name = "status", length = 20)
+    private String status = "pending";
 }

@@ -1,8 +1,35 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { ElTable, ElTableColumn, ElButton, ElSwitch, ElDialog, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElMessage, ElMessageBox, ElPagination, ElCard, ElRow, ElCol } from 'element-plus'
+import { ref, onMounted } from 'vue'
+import {
+  ElTable,
+  ElTableColumn,
+  ElButton,
+  ElSwitch,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElSelect,
+  ElOption,
+  ElMessage,
+  ElMessageBox,
+  ElPagination,
+  ElCard,
+  ElImage,
+  ElTag,
+  ElEmpty
+} from 'element-plus'
 import { Plus, Edit, Delete, Search, Refresh, Check, Close } from '@element-plus/icons-vue'
-import { getMerchantServices, addService, updateService, deleteService, batchUpdateServiceStatus, batchDeleteServices, type MerchantService } from '@/api/merchant'
+import {
+  getMerchantServices,
+  addService,
+  updateService,
+  deleteService,
+  batchUpdateServiceStatus,
+  batchDeleteServices,
+  type MerchantService
+} from '@/api/merchant'
+import { usePagination } from '@/composables/usePagination'
 
 const serviceList = ref<MerchantService[]>([])
 const loading = ref(false)
@@ -18,11 +45,13 @@ const serviceForm = ref({
   category: '',
   image: ''
 })
+
 const formRules = {
   name: [{ required: true, message: '请输入服务名称', trigger: 'blur' }],
   price: [{ required: true, message: '请输入服务价格', trigger: 'blur' }],
   duration: [{ required: true, message: '请输入服务时长', trigger: 'blur' }]
 }
+
 const serviceTypes = ['美容', '健康', '寄养', '饮食', '接送', '训练']
 const formRef = ref()
 
@@ -32,48 +61,47 @@ const searchForm = ref({
   maxPrice: '',
   status: ''
 })
-const pagination = ref({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
+
+const { page, pageSize, total, setTotal, setPage, setPageSize, reset: resetPagination } = usePagination(1, 10)
 
 const fetchServices = async () => {
   loading.value = true
   try {
-    const params: any = {
-      page: pagination.value.page,
-      pageSize: pagination.value.pageSize
-    }
+    const res = await getMerchantServices()
+    let data = res.data || []
+
     if (searchForm.value.keyword) {
-      params.keyword = searchForm.value.keyword
+      data = data.filter(s => s.name.toLowerCase().includes(searchForm.value.keyword.toLowerCase()))
     }
     if (searchForm.value.minPrice) {
-      params.minPrice = Number(searchForm.value.minPrice)
+      data = data.filter(s => s.price >= Number(searchForm.value.minPrice))
     }
     if (searchForm.value.maxPrice) {
-      params.maxPrice = Number(searchForm.value.maxPrice)
+      data = data.filter(s => s.price <= Number(searchForm.value.maxPrice))
     }
     if (searchForm.value.status) {
-      params.status = searchForm.value.status
+      data = data.filter(s => s.status === searchForm.value.status)
     }
-    const res = await getMerchantServices(params)
-    if (res.data && typeof res.data === 'object' && 'list' in res.data) {
-      serviceList.value = res.data.list || []
-      pagination.value.total = res.data.total || 0
-    } else {
-      serviceList.value = (res.data as any) || []
-      pagination.value.total = serviceList.value.length
-    }
+
+    serviceList.value = data
+    setTotal(data.length)
   } catch (error) {
-    ElMessage.error('获取服务列表失败')
+    console.error('获取服务列表失败:', error)
+    ElMessage.error('获取服务列表失败，请稍后重试')
+    serviceList.value = []
   } finally {
     loading.value = false
   }
 }
 
+const paginatedServices = () => {
+  const start = (page.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return serviceList.value.slice(start, end)
+}
+
 const handleSearch = () => {
-  pagination.value.page = 1
+  setPage(1)
   fetchServices()
 }
 
@@ -84,7 +112,7 @@ const handleReset = () => {
     maxPrice: '',
     status: ''
   }
-  pagination.value.page = 1
+  resetPagination()
   fetchServices()
 }
 
@@ -92,15 +120,12 @@ const handleSelectionChange = (selection: MerchantService[]) => {
   selectedServices.value = selection
 }
 
-const handlePageChange = (page: number) => {
-  pagination.value.page = page
-  fetchServices()
+const handlePageChange = (newPage: number) => {
+  setPage(newPage)
 }
 
-const handleSizeChange = (size: number) => {
-  pagination.value.pageSize = size
-  pagination.value.page = 1
-  fetchServices()
+const handleSizeChange = (newSize: number) => {
+  setPageSize(newSize)
 }
 
 const handleAdd = () => {
@@ -127,7 +152,8 @@ const handleDelete = async (row: MerchantService) => {
     fetchServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败，请稍后重试')
     }
   }
 }
@@ -139,7 +165,8 @@ const handleStatusChange = async (row: MerchantService, status: boolean) => {
     ElMessage.success(newStatus === 'enabled' ? '已启用' : '已禁用')
     fetchServices()
   } catch (error) {
-    ElMessage.error('状态更新失败')
+    console.error('状态更新失败:', error)
+    ElMessage.error('状态更新失败，请稍后重试')
     fetchServices()
   }
 }
@@ -167,7 +194,8 @@ const submitForm = async () => {
         dialogVisible.value = false
         fetchServices()
       } catch (error) {
-        ElMessage.error(dialogTitle.value === '添加服务' ? '添加失败' : '更新失败')
+        console.error('操作失败:', error)
+        ElMessage.error(dialogTitle.value === '添加服务' ? '添加失败，请稍后重试' : '更新失败，请稍后重试')
       }
     }
   })
@@ -190,7 +218,8 @@ const handleBatchEnable = async () => {
     fetchServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('批量启用失败')
+      console.error('批量启用失败:', error)
+      ElMessage.error('批量启用失败，请稍后重试')
     }
   }
 }
@@ -212,7 +241,8 @@ const handleBatchDisable = async () => {
     fetchServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('批量禁用失败')
+      console.error('批量禁用失败:', error)
+      ElMessage.error('批量禁用失败，请稍后重试')
     }
   }
 }
@@ -234,7 +264,8 @@ const handleBatchDelete = async () => {
     fetchServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('批量删除失败')
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败，请稍后重试')
     }
   }
 }
@@ -315,7 +346,7 @@ onMounted(() => {
       </el-button>
     </el-card>
 
-    <el-table :data="serviceList" v-loading="loading" style="width: 100%" @selection-change="handleSelectionChange">
+    <el-table :data="paginatedServices()" v-loading="loading" style="width: 100%" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="50" />
       <el-table-column label="服务图片" width="120">
         <template #default="{ row }">
@@ -358,14 +389,17 @@ onMounted(() => {
           </el-button>
         </template>
       </el-table-column>
+      <template #empty>
+        <el-empty description="暂无服务数据" />
+      </template>
     </el-table>
 
     <div class="pagination-container">
       <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
         :page-sizes="[10, 20, 50]"
-        :total="pagination.total"
+        :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         @current-change="handlePageChange"
         @size-change="handleSizeChange"

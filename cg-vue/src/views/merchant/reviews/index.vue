@@ -1,481 +1,727 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import ReviewCard from '@/components/ReviewCard.vue'
+import { ref, onMounted, watch, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { 
+  getMerchantReviews, 
+  replyReview, 
+  deleteReview,
+  type Review,
+  type ReviewQuery,
+  type ReviewListResponse
+} from '@/api/merchant'
+import { useAsync } from '@/composables/useAsync'
+import { usePagination } from '@/composables/usePagination'
+import { useSearch } from '@/composables/useSearch'
 
-// 模拟评价数据
-const reviews = [
-  {
-    id: 'REV-2024-001',
-    name: '张先生',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=male%20customer%20avatar%2C%20friendly%20face&image_size=square',
-    rating: 5,
-    date: '2024-01-15',
-    content: '服务非常专业，宠物美容效果很好，下次还会再来！',
-    serviceType: '宠物美容',
-    response: '感谢您的好评，我们会继续努力为您的宠物提供更好的服务！'
-  },
-  {
-    id: 'REV-2024-002',
-    name: '李女士',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=female%20customer%20avatar%2C%20friendly%20face&image_size=square',
-    rating: 4,
-    date: '2024-01-14',
-    content: '宠物寄养服务很贴心，环境干净整洁，工作人员也很负责。',
-    serviceType: '宠物寄养',
-    response: '谢谢反馈，我们会继续保持服务质量！'
-  },
-  {
-    id: 'REV-2024-003',
-    name: '王女士',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=female%20customer%20avatar%2C%20professional%20look&image_size=square',
-    rating: 5,
-    date: '2024-01-13',
-    content: '宠物医疗服务专业可靠，医生很有经验，治疗效果很好。',
-    serviceType: '宠物医疗',
-    response: '非常感谢您的认可，我们会继续为宠物健康保驾护航！'
-  },
-  {
-    id: 'REV-2024-004',
-    name: '赵先生',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=male%20customer%20avatar%2C%20casual%20look&image_size=square',
-    rating: 3,
-    date: '2024-01-12',
-    content: '宠物训练服务还可以，希望教练能更有耐心一些。',
-    serviceType: '宠物训练',
-    response: '感谢您的反馈，我们会加强教练的培训，提高服务质量。'
-  },
-  {
-    id: 'REV-2024-005',
-    name: '钱女士',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=female%20customer%20avatar%2C%20smiling&image_size=square',
-    rating: 5,
-    date: '2024-01-11',
-    content: '宠物美容服务非常满意，造型很好看，宠物也很开心。',
-    serviceType: '宠物美容',
-    response: '感谢您的好评，我们会继续为您的宠物打造美丽造型！'
-  }
-]
+// 使用组合式函数
+const { data: reviewsData, loading, error, execute: fetchReviews } = useAsync<ReviewListResponse>()
+const { page, pageSize, total, setTotal, setPage, setPageSize } = usePagination(1, 10)
+const { keyword, filters, debouncedKeyword, setKeyword, setFilter, clearFilters } = useSearch(300)
 
-const ratingFilter = ref(0)
-const serviceFilter = ref('')
-
-const serviceOptions = [
-  { value: '', label: '全部服务' },
-  { value: '宠物美容', label: '宠物美容' },
-  { value: '宠物寄养', label: '宠物寄养' },
-  { value: '宠物医疗', label: '宠物医疗' },
-  { value: '宠物训练', label: '宠物训练' }
-]
-
-const filteredReviews = computed(() => {
-  return reviews.filter(review => {
-    const matchesRating = ratingFilter.value ? review.rating >= ratingFilter.value : true
-    const matchesService = serviceFilter.value ? review.serviceType === serviceFilter.value : true
-    return matchesRating && matchesService
-  })
+// 评价列表数据
+const reviews = ref<Review[]>([])
+const ratingDistribution = ref({
+  five: 0,
+  four: 0,
+  three: 0,
+  two: 0,
+  one: 0
 })
 
-// 导入computed
-import { computed } from 'vue'
+// 回复对话框
+const replyDialogVisible = ref(false)
+const currentReview = ref<Review | null>(null)
+const replyContent = ref('')
+
+// 日期范围筛选
+const dateRange = ref<[string, string] | null>(null)
+
+// 计算平均评分
+const averageRating = computed(() => {
+  const total = ratingDistribution.value.five + ratingDistribution.value.four + 
+                ratingDistribution.value.three + ratingDistribution.value.two + 
+                ratingDistribution.value.one
+  if (total === 0) return 0
+  const sum = ratingDistribution.value.five * 5 + ratingDistribution.value.four * 4 +
+              ratingDistribution.value.three * 3 + ratingDistribution.value.two * 2 +
+              ratingDistribution.value.one * 1
+  return (sum / total).toFixed(1)
+})
+
+// 加载评价数据
+const loadReviews = async () => {
+  const query: ReviewQuery = {
+    page: page.value,
+    pageSize: pageSize.value,
+    keyword: debouncedKeyword.value || undefined,
+    rating: filters.value.rating || undefined,
+    startDate: dateRange.value?.[0] || undefined,
+    endDate: dateRange.value?.[1] || undefined
+  }
+  
+  const result = await fetchReviews(() => getMerchantReviews(query))
+  
+  if (result) {
+    reviews.value = result.list
+    setTotal(result.total)
+    ratingDistribution.value = result.ratingDistribution
+  }
+}
+
+// 监听筛选条件变化
+watch([page, pageSize, debouncedKeyword, filters, dateRange], () => {
+  loadReviews()
+}, { deep: true })
+
+// 评分筛选
+const handleRatingFilter = (rating: number) => {
+  if (rating === 0) {
+    setFilter('rating', undefined)
+  } else {
+    setFilter('rating', rating)
+  }
+  page.value = 1
+}
+
+// 打开回复对话框
+const openReplyDialog = (review: Review) => {
+  currentReview.value = review
+  replyContent.value = review.replyContent || ''
+  replyDialogVisible.value = true
+}
+
+// 提交回复
+const submitReply = async () => {
+  if (!replyContent.value.trim()) {
+    ElMessage.warning('请输入回复内容')
+    return
+  }
+  
+  if (!currentReview.value) return
+  
+  try {
+    await replyReview(currentReview.value.id, replyContent.value)
+    ElMessage.success('回复成功')
+    replyDialogVisible.value = false
+    loadReviews()
+  } catch (err) {
+    ElMessage.error('回复失败，请重试')
+  }
+}
+
+// 删除评价
+const handleDelete = async (review: Review) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这条评价吗？删除后将无法恢复。',
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    await deleteReview(review.id)
+    ElMessage.success('删除成功')
+    loadReviews()
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error('删除失败，请重试')
+    }
+  }
+}
+
+// 格式化日期
+const formatDate = (dateStr: string) => {
+  return new Date(dateStr).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 分页大小改变
+const handleSizeChange = (size: number) => {
+  setPageSize(size)
+}
+
+// 页码改变
+const handleCurrentChange = (newPage: number) => {
+  setPage(newPage)
+}
+
+// 日期范围改变
+const handleDateRangeChange = (value: [string, string] | null) => {
+  dateRange.value = value
+  page.value = 1
+}
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadReviews()
+})
 </script>
 
 <template>
   <div class="merchant-reviews">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">服务评价列表</h2>
-    
-    <!-- 筛选器 -->
-    <div class="flex flex-col md:flex-row gap-4 mb-6">
-      <div class="flex items-center gap-2">
-        <span class="text-gray-700">评分筛选：</span>
-        <div class="flex gap-2">
-          <button 
-            v-for="rating in [0, 5, 4, 3, 2, 1]" 
-            :key="rating"
-            @click="ratingFilter = rating"
-            class="px-3 py-1 rounded-full text-sm transition"
-            :class="ratingFilter === rating ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-          >
-            {{ rating === 0 ? '全部' : `${rating}星及以上` }}
-          </button>
-        </div>
-      </div>
-      <div class="w-full md:w-48">
-        <select
-          v-model="serviceFilter"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option v-for="option in serviceOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </div>
+    <div class="header">
+      <h2>服务评价列表</h2>
     </div>
     
+    <!-- 统计卡片 -->
+    <div class="stats-cards">
+      <div class="stat-card">
+        <div class="stat-label">平均评分</div>
+        <div class="stat-value">
+          <span class="rating-number">{{ averageRating }}</span>
+          <el-rate 
+            :model-value="Number(averageRating)" 
+            disabled 
+            show-score 
+            text-color="#ff9900"
+          />
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">总评价数</div>
+        <div class="stat-value">{{ total }}</div>
+      </div>
+    </div>
+
+    <!-- 评分分布 -->
+    <div class="rating-distribution">
+      <div class="distribution-title">评分分布</div>
+      <div class="distribution-bars">
+        <div 
+          v-for="star in [5, 4, 3, 2, 1]" 
+          :key="star"
+          class="distribution-item"
+          @click="handleRatingFilter(star)"
+        >
+          <span class="star-label">{{ star }}星</span>
+          <div class="bar-container">
+            <div 
+              class="bar-fill" 
+              :style="{ 
+                width: `${total > 0 ? (ratingDistribution[['one','two','three','four','five'][star-1] as keyof typeof ratingDistribution] / total * 100) : 0}%` 
+              }"
+            ></div>
+          </div>
+          <span class="count">{{ ratingDistribution[['one','two','three','four','five'][star-1] as keyof typeof ratingDistribution] }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="filters">
+      <div class="filter-row">
+        <div class="filter-item">
+          <span class="filter-label">评分筛选：</span>
+          <div class="rating-buttons">
+            <el-button 
+              :type="!filters.rating ? 'primary' : 'default'"
+              size="small"
+              @click="handleRatingFilter(0)"
+            >
+              全部
+            </el-button>
+            <el-button 
+              v-for="rating in [5, 4, 3, 2, 1]"
+              :key="rating"
+              :type="filters.rating === rating ? 'primary' : 'default'"
+              size="small"
+              @click="handleRatingFilter(rating)"
+            >
+              {{ rating }}星及以上
+            </el-button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="filter-row">
+        <div class="filter-item">
+          <span class="filter-label">日期范围：</span>
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            @change="handleDateRangeChange"
+          />
+        </div>
+        
+        <div class="filter-item">
+          <span class="filter-label">关键字搜索：</span>
+          <el-input
+            v-model="keyword"
+            placeholder="搜索评价内容、用户名"
+            clearable
+            style="width: 300px"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <el-icon class="is-loading" :size="40">
+        <i class="el-icon-loading"></i>
+      </el-icon>
+      <p>加载中...</p>
+    </div>
+
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="error-container">
+      <el-icon :size="40" color="#f56c6c">
+        <i class="el-icon-warning"></i>
+      </el-icon>
+      <p>{{ error.message }}</p>
+      <el-button type="primary" @click="loadReviews">重试</el-button>
+    </div>
+
     <!-- 评价列表 -->
-    <div class="space-y-6">
-      <div v-for="review in filteredReviews" :key="review.id" class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-start gap-4">
-          <img :src="review.avatar" alt="客户头像" class="w-16 h-16 rounded-full">
-          <div class="flex-1">
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="font-semibold text-lg text-gray-800">{{ review.name }}</h4>
-              <span class="text-sm text-gray-500">{{ review.date }}</span>
-            </div>
-            <div class="flex items-center mb-3">
-              <div class="text-yellow-400 mr-2">
-                <i v-for="i in 5" :key="i" class="fa" :class="i <= review.rating ? 'fa-star' : 'fa-star-o'"></i>
-              </div>
-              <span class="text-gray-600 text-sm">{{ review.serviceType }}</span>
-            </div>
-            <p class="text-gray-700 mb-4">{{ review.content }}</p>
-            <div v-if="review.response" class="bg-gray-50 p-3 rounded-lg">
-              <div class="flex items-start gap-2">
-                <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                  <i class="fa fa-store text-white"></i>
-                </div>
-                <div>
-                  <p class="font-medium text-gray-800 mb-1">商家回复</p>
-                  <p class="text-gray-700">{{ review.response }}</p>
+    <div v-else class="reviews-list">
+      <div v-if="reviews.length === 0" class="empty-state">
+        <el-empty description="暂无评价数据" />
+      </div>
+      
+      <div v-else class="review-cards">
+        <div 
+          v-for="review in reviews" 
+          :key="review.id" 
+          class="review-card"
+        >
+          <div class="review-header">
+            <div class="user-info">
+              <el-avatar :size="48" :src="review.userAvatar">
+                {{ review.userName.charAt(0) }}
+              </el-avatar>
+              <div class="user-details">
+                <div class="user-name">{{ review.userName }}</div>
+                <div class="review-meta">
+                  <el-rate :model-value="review.rating" disabled />
+                  <span class="service-name">{{ review.serviceName }}</span>
+                  <span class="review-time">{{ formatDate(review.reviewTime) }}</span>
                 </div>
               </div>
             </div>
-            <div v-else class="mt-4">
-              <textarea 
-                placeholder="输入回复..."
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                rows="2"
-              ></textarea>
-              <div class="mt-2 flex justify-end">
-                <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">
-                  回复
-                </button>
-              </div>
+            <div class="review-actions">
+              <el-button 
+                type="primary" 
+                size="small"
+                @click="openReplyDialog(review)"
+              >
+                回复
+              </el-button>
+              <el-button 
+                type="danger" 
+                size="small"
+                @click="handleDelete(review)"
+              >
+                删除
+              </el-button>
             </div>
+          </div>
+          
+          <div class="review-content">
+            {{ review.content }}
+          </div>
+          
+          <!-- 商家回复 -->
+          <div v-if="review.replyContent" class="merchant-reply">
+            <div class="reply-header">
+              <el-icon><i class="el-icon-chat-dot-round"></i></el-icon>
+              <span>商家回复</span>
+              <span class="reply-time">{{ formatDate(review.replyTime!) }}</span>
+            </div>
+            <div class="reply-content">{{ review.replyContent }}</div>
           </div>
         </div>
       </div>
     </div>
-    
+
     <!-- 分页 -->
-    <div class="mt-8 flex justify-center">
-      <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-        <button class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-          <span class="sr-only">上一页</span>
-          <i class="fa fa-chevron-left"></i>
-        </button>
-        <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-primary text-sm font-medium text-white">
-          1
-        </button>
-        <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-          2
-        </button>
-        <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-          3
-        </button>
-        <button class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-          <span class="sr-only">下一页</span>
-          <i class="fa fa-chevron-right"></i>
-        </button>
-      </nav>
+    <div v-if="total > 0" class="pagination-container">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </div>
+
+    <!-- 回复对话框 -->
+    <el-dialog
+      v-model="replyDialogVisible"
+      title="回复评价"
+      width="500px"
+    >
+      <div class="reply-dialog-content">
+        <div v-if="currentReview" class="original-review">
+          <div class="review-user">{{ currentReview.userName }}</div>
+          <el-rate :model-value="currentReview.rating" disabled size="small" />
+          <div class="review-text">{{ currentReview.content }}</div>
+        </div>
+        
+        <el-input
+          v-model="replyContent"
+          type="textarea"
+          :rows="5"
+          placeholder="请输入回复内容..."
+          maxlength="500"
+          show-word-limit
+        />
+      </div>
+      
+      <template #footer>
+        <el-button @click="replyDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitReply">提交回复</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
 .merchant-reviews {
-  font-family: Arial, sans-serif;
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
-.flex {
+.header {
+  margin-bottom: 20px;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #303133;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #303133;
   display: flex;
-}
-
-.flex-col {
-  flex-direction: column;
-}
-
-.md\:flex-row {
-  flex-direction: row;
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-
-.items-center {
   align-items: center;
+  gap: 10px;
 }
 
-.gap-2 {
-  gap: 0.5rem;
+.rating-number {
+  font-size: 32px;
+  color: #ff9900;
 }
 
-.text-gray-700 {
-  color: #374151;
+.rating-distribution {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
-.px-3 {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
+.distribution-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 15px;
 }
 
-.py-1 {
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
+.distribution-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.rounded-full {
-  border-radius: 9999px;
+.distribution-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
 }
 
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+.distribution-item:hover {
+  background-color: #f5f7fa;
 }
 
-.transition {
-  transition: all 0.3s ease;
+.star-label {
+  width: 40px;
+  font-size: 14px;
+  color: #606266;
 }
 
-.bg-primary {
-  background-color: #4CAF50;
-}
-
-.text-white {
-  color: #ffffff;
-}
-
-.bg-gray-100 {
-  background-color: #f3f4f6;
-}
-
-.hover\:bg-gray-200:hover {
-  background-color: #e5e7eb;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.md\:w-48 {
-  width: 12rem;
-}
-
-.px-4 {
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-.py-2 {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.border {
-  border: 1px solid #e5e7eb;
-}
-
-.border-gray-300 {
-  border-color: #d1d5db;
-}
-
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-
-.focus\:outline-none:focus {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-}
-
-.focus\:ring-2:focus {
-  ring-width: 2px;
-}
-
-.focus\:ring-primary:focus {
-  ring-color: #4CAF50;
-}
-
-.space-y-6 > * + * {
-  margin-top: 1.5rem;
-}
-
-.bg-white {
-  background-color: #ffffff;
-}
-
-.shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.p-6 {
-  padding: 1.5rem;
-}
-
-.flex-start {
-  align-items: flex-start;
-}
-
-.w-16 {
-  width: 4rem;
-}
-
-.h-16 {
-  height: 4rem;
-}
-
-.rounded-full {
-  border-radius: 9999px;
-}
-
-.flex-1 {
+.bar-container {
   flex: 1;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.mb-2 {
-  margin-bottom: 0.5rem;
-}
-
-.font-semibold {
-  font-weight: 600;
-}
-
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-}
-
-.text-gray-800 {
-  color: #1f2937;
-}
-
-.text-gray-500 {
-  color: #6b7280;
-}
-
-.mb-3 {
-  margin-bottom: 0.75rem;
-}
-
-.text-yellow-400 {
-  color: #fbbf24;
-}
-
-.mr-2 {
-  margin-right: 0.5rem;
-}
-
-.text-gray-600 {
-  color: #4b5563;
-}
-
-.mb-4 {
-  margin-bottom: 1rem;
-}
-
-.bg-gray-50 {
-  background-color: #f9fafb;
-}
-
-.p-3 {
-  padding: 0.75rem;
-}
-
-.w-8 {
-  width: 2rem;
-}
-
-.h-8 {
-  height: 2rem;
-}
-
-.flex-shrink-0 {
-  flex-shrink: 0;
-}
-
-.mb-1 {
-  margin-bottom: 0.25rem;
-}
-
-.font-medium {
-  font-weight: 500;
-}
-
-.mt-4 {
-  margin-top: 1rem;
-}
-
-.rows-2 {
-  rows: 2;
-}
-
-.mt-2 {
-  margin-top: 0.5rem;
-}
-
-.justify-end {
-  justify-content: flex-end;
-}
-
-.hover\:bg-opacity-90:hover {
-  background-color: rgba(76, 175, 80, 0.9);
-}
-
-.mt-8 {
-  margin-top: 2rem;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.relative {
-  position: relative;
-}
-
-.inline-flex {
-  display: inline-flex;
-}
-
-.rounded-l-md {
-  border-top-left-radius: 0.375rem;
-  border-bottom-left-radius: 0.375rem;
-}
-
-.rounded-r-md {
-  border-top-right-radius: 0.375rem;
-  border-bottom-right-radius: 0.375rem;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
+  height: 8px;
+  background-color: #ebeef5;
+  border-radius: 4px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff9900, #ffb84d);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.count {
+  width: 40px;
+  text-align: right;
+  font-size: 14px;
+  color: #909399;
+}
+
+.filters {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.filter-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-label {
+  font-size: 14px;
+  color: #606266;
   white-space: nowrap;
-  border-width: 0;
 }
 
-.shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+.rating-buttons {
+  display: flex;
+  gap: 8px;
 }
 
-.-space-x-px > * + * {
-  margin-left: -1px;
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
 }
 
-.aria-label {
-  aria-label: Pagination;
+.loading-container p,
+.error-container p {
+  margin-top: 20px;
+  font-size: 16px;
+  color: #909399;
+}
+
+.reviews-list {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.empty-state {
+  padding: 60px 20px;
+}
+
+.review-cards {
+  padding: 20px;
+}
+
+.review-card {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+  transition: box-shadow 0.3s;
+}
+
+.review-card:hover {
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.15);
+}
+
+.review-card:last-child {
+  margin-bottom: 0;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.user-info {
+  display: flex;
+  gap: 12px;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.review-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.service-name {
+  font-size: 14px;
+  color: #909399;
+}
+
+.review-time {
+  font-size: 14px;
+  color: #c0c4cc;
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.review-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #606266;
+  margin-bottom: 15px;
+}
+
+.merchant-reply {
+  background-color: #f5f7fa;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 3px solid #409eff;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #409eff;
+}
+
+.reply-time {
+  font-size: 12px;
+  color: #c0c4cc;
+  font-weight: normal;
+  margin-left: auto;
+}
+
+.reply-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #606266;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.reply-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.original-review {
+  background-color: #f5f7fa;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.review-user {
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.review-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .filter-row {
+    flex-direction: column;
+  }
+  
+  .rating-buttons {
+    flex-wrap: wrap;
+  }
+  
+  .review-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .review-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>

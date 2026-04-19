@@ -4,12 +4,12 @@ export type NotificationType = 'system' | 'order' | 'appointment' | 'review'
 
 export interface Notification {
   id: number
-  user_id: number
+  userId: number
   title: string
   content: string
   type: NotificationType
-  is_read: boolean
-  created_at: string
+  isRead: boolean
+  createdAt: string
 }
 
 const notificationTitles: Record<NotificationType, string[]> = {
@@ -85,12 +85,12 @@ const generateNotifications = (count = 10): Notification[] => {
 
     notifications.push({
       id: randomId(),
-      user_id: randomId(1, 100),
+      userId: randomId(1, 100),
       title: randomEnum(titles),
       content: randomEnum(contents),
       type: type,
-      is_read: Math.random() > 0.5,
-      created_at: randomDate('2024-01-01')
+      isRead: Math.random() > 0.5,
+      createdAt: randomDate('2024-01-01')
     })
   }
   return notifications

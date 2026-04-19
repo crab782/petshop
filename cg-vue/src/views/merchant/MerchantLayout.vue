@@ -1,31 +1,73 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { HomeFilled, ShoppingBag, Calendar, Cubes, Star, SignOut, Bell, ArrowDown, Setting } from '@element-plus/icons-vue'
+import { HomeFilled, ShoppingBag, Calendar, Grid, Star, SwitchButton, Bell, ArrowDown, Setting } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { getMerchantInfo, type MerchantInfo } from '@/api/merchant'
+import { useAsync } from '@/composables'
 
 const router = useRouter()
 const route = useRoute()
 const isCollapse = ref(false)
 
-const menuItems = [
-  { path: '/merchant/home', name: '后台首页', icon: 'HomeFilled' },
-  { path: '/merchant/shop/edit', name: '店铺管理', icon: 'ShoppingBag' },
-  { path: '/merchant/appointments', name: '预约订单列表', icon: 'Calendar' },
-  { path: '/merchant/services', name: '服务管理', icon: 'Cubes' },
-  { path: '/merchant/reviews', name: '服务评价列表', icon: 'Star' }
-]
+// 商家信息
+const merchantInfo = ref<MerchantInfo | null>(null)
 
-const handleMenuSelect = (path: string) => {
-  router.push(path)
+// 使用 useAsync 处理 API 调用
+const { loading, error, execute: fetchMerchantInfo } = useAsync(getMerchantInfo)
+
+// 检查会话状态
+const checkSession = () => {
+  const token = localStorage.getItem('merchant_token') || sessionStorage.getItem('merchant_token')
+  if (!token) {
+    ElMessage.warning('请先登录')
+    router.push('/merchant/login')
+    return false
+  }
+  return true
 }
 
+// 获取商家信息
+const loadMerchantInfo = async () => {
+  if (!checkSession()) return
+  
+  const result = await fetchMerchantInfo()
+  if (result) {
+    merchantInfo.value = result
+  } else if (error.value) {
+    ElMessage.error(error.value.message || '获取商家信息失败')
+  }
+}
+
+// 登出功能
 const handleLogout = () => {
-  router.push('/login')
+  // 清除登录状态
+  localStorage.removeItem('merchant_token')
+  sessionStorage.removeItem('merchant_token')
+  localStorage.removeItem('merchant_info')
+  sessionStorage.removeItem('merchant_info')
+  
+  ElMessage.success('已退出登录')
+  router.push('/merchant/login')
 }
+
+// 菜单选择处理
+const handleMenuSelect = (path: string) => {
+  if (path === '/logout') {
+    handleLogout()
+  } else {
+    router.push(path)
+  }
+}
+
+// 组件挂载时获取商家信息
+onMounted(() => {
+  loadMerchantInfo()
+})
 </script>
 
 <template>
-  <el-container class="merchant-layout">
+  <el-container class="merchant-layout" v-loading="loading" element-loading-text="加载中...">
     <el-header class="header">
       <div class="header-left">
         <el-button text @click="isCollapse = !isCollapse" class="menu-toggle">
@@ -33,30 +75,33 @@ const handleLogout = () => {
         </el-button>
         <div class="logo-area">
           <i class="fa fa-paw text-white text-2xl mr-2"></i>
-          <span class="merchant-name">宠物家园</span>
+          <span class="merchant-name">{{ merchantInfo?.name || '商家后台' }}</span>
         </div>
       </div>
       <div class="header-right">
         <div class="relative mr-4">
           <el-button text class="notification-btn">
             <el-icon><Bell /></el-icon>
-            <span class="notification-badge">5</span>
           </el-button>
         </div>
         <el-dropdown trigger="click">
           <div class="user-info">
-            <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20merchant%20avatar%2C%20business%20person&image_size=square" alt="商家头像" class="user-avatar">
-            <span class="username">商家名称</span>
+            <img 
+              :src="merchantInfo?.logo || 'https://via.placeholder.com/32'" 
+              alt="商家头像" 
+              class="user-avatar"
+            >
+            <span class="username">{{ merchantInfo?.name || '商家' }}</span>
             <i class="fa fa-caret-down text-white ml-1"></i>
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item>
+              <el-dropdown-item @click="router.push('/merchant/profile')">
                 <el-icon><Setting /></el-icon>
-                个人设置
+                店铺设置
               </el-dropdown-item>
               <el-dropdown-item @click="handleLogout">
-                <el-icon><SignOut /></el-icon>
+                <el-icon><SwitchButton /></el-icon>
                 退出登录
               </el-dropdown-item>
             </el-dropdown-menu>
@@ -86,15 +131,15 @@ const handleLogout = () => {
             <template #title>预约订单列表</template>
           </el-menu-item>
           <el-menu-item index="/merchant/services">
-            <el-icon><Cubes /></el-icon>
+            <el-icon><Grid /></el-icon>
             <template #title>服务管理</template>
           </el-menu-item>
           <el-menu-item index="/merchant/reviews">
             <el-icon><Star /></el-icon>
             <template #title>服务评价列表</template>
           </el-menu-item>
-          <el-menu-item index="/logout" @click="handleLogout">
-            <el-icon><SignOut /></el-icon>
+          <el-menu-item index="/logout">
+            <el-icon><SwitchButton /></el-icon>
             <template #title>退出登录</template>
           </el-menu-item>
         </el-menu>
@@ -157,21 +202,6 @@ const handleLogout = () => {
   position: relative;
 }
 
-.notification-badge {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 16px;
-  height: 16px;
-  background-color: #f56c6c;
-  border-radius: 50%;
-  color: white;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .user-info {
   display: flex;
   align-items: center;
@@ -192,6 +222,7 @@ const handleLogout = () => {
   height: 32px;
   border-radius: 50%;
   transition: all 0.3s ease;
+  object-fit: cover;
 }
 
 .user-info:hover .user-avatar {

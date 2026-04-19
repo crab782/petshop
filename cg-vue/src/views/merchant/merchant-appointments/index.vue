@@ -1,8 +1,25 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { ElTable, ElTableColumn, ElButton, ElTag, ElDialog, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElMessage, ElCard, ElPagination, ElDatePicker } from 'element-plus'
-import { Check, Close, Download } from '@element-plus/icons-vue'
+import {
+  ElTable,
+  ElTableColumn,
+  ElButton,
+  ElTag,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElSelect,
+  ElOption,
+  ElMessage,
+  ElCard,
+  ElPagination,
+  ElDatePicker,
+  ElEmpty
+} from 'element-plus'
+import { Check, Close, Download, Refresh } from '@element-plus/icons-vue'
 import { getMerchantAppointments, updateAppointmentStatus, type Appointment } from '@/api/merchant'
+import { usePagination } from '@/composables/usePagination'
 import dayjs from 'dayjs'
 
 const appointments = ref<Appointment[]>([])
@@ -17,8 +34,7 @@ const searchKeyword = ref('')
 const searchUserName = ref('')
 const dateRange = ref<[string, string] | null>(null)
 
-const currentPage = ref(1)
-const pageSize = ref(10)
+const { page, pageSize, total, setTotal, setPage, setPageSize } = usePagination(1, 10)
 
 const statusOptions = [
   { value: 'all', label: '全部' },
@@ -59,7 +75,7 @@ const filteredAppointments = computed(() => {
 })
 
 const paginatedAppointments = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
+  const start = (page.value - 1) * pageSize.value
   const end = start + pageSize.value
   return filteredAppointments.value.slice(start, end)
 })
@@ -89,10 +105,13 @@ const getStatusText = (status: string) => {
 const fetchAppointments = async () => {
   loading.value = true
   try {
-    const data = await getMerchantAppointments()
-    appointments.value = data
-  } catch {
-    ElMessage.error('获取预约列表失败')
+    const res = await getMerchantAppointments()
+    appointments.value = res.data || []
+    setTotal(appointments.value.length)
+  } catch (error) {
+    console.error('获取预约列表失败:', error)
+    ElMessage.error('获取预约列表失败，请稍后重试')
+    appointments.value = []
   } finally {
     loading.value = false
   }
@@ -115,8 +134,9 @@ const handleAccept = async () => {
     ElMessage.success('接单成功')
     dialogVisible.value = false
     fetchAppointments()
-  } catch {
-    ElMessage.error('接单失败')
+  } catch (error) {
+    console.error('接单失败:', error)
+    ElMessage.error('接单失败，请稍后重试')
   }
 }
 
@@ -125,8 +145,9 @@ const handleComplete = async (row: Appointment) => {
     await updateAppointmentStatus(row.id, 'completed')
     ElMessage.success('已完成')
     fetchAppointments()
-  } catch {
-    ElMessage.error('操作失败')
+  } catch (error) {
+    console.error('操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
   }
 }
 
@@ -147,8 +168,9 @@ const confirmReject = async () => {
     rejectDialogVisible.value = false
     rejectReason.value = ''
     fetchAppointments()
-  } catch {
-    ElMessage.error('拒单失败')
+  } catch (error) {
+    console.error('拒单失败:', error)
+    ElMessage.error('拒单失败，请稍后重试')
   }
 }
 
@@ -157,8 +179,9 @@ const handleCancel = async (row: Appointment) => {
     await updateAppointmentStatus(row.id, 'cancelled')
     ElMessage.success('已取消')
     fetchAppointments()
-  } catch {
-    ElMessage.error('操作失败')
+  } catch (error) {
+    console.error('操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
   }
 }
 
@@ -173,13 +196,12 @@ const closeRejectDialog = () => {
   rejectReason.value = ''
 }
 
-const handlePageChange = (page: number) => {
-  currentPage.value = page
+const handlePageChange = (newPage: number) => {
+  setPage(newPage)
 }
 
-const handleSizeChange = (size: number) => {
-  pageSize.value = size
-  currentPage.value = 1
+const handleSizeChange = (newSize: number) => {
+  setPageSize(newSize)
 }
 
 const resetFilters = () => {
@@ -187,7 +209,7 @@ const resetFilters = () => {
   searchUserName.value = ''
   dateRange.value = null
   filterStatus.value = 'all'
-  currentPage.value = 1
+  setPage(1)
 }
 
 const exportAppointments = () => {
@@ -234,9 +256,12 @@ onMounted(() => {
       <template #header>
         <div class="card-header">
           <span class="card-title">服务预约订单</span>
-          <el-button type="success" :icon="Download" @click="exportAppointments">
-            导出
-          </el-button>
+          <div class="header-actions">
+            <el-button type="primary" :icon="Refresh" @click="fetchAppointments">刷新</el-button>
+            <el-button type="success" :icon="Download" @click="exportAppointments">
+              导出
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -246,14 +271,14 @@ onMounted(() => {
           placeholder="搜索预约编号"
           style="width: 160px"
           clearable
-          @keyup.enter="currentPage = 1"
+          @keyup.enter="setPage(1)"
         />
         <el-input
           v-model="searchUserName"
           placeholder="搜索用户名称"
           style="width: 160px"
           clearable
-          @keyup.enter="currentPage = 1"
+          @keyup.enter="setPage(1)"
         />
         <el-date-picker
           v-model="dateRange"
@@ -263,9 +288,9 @@ onMounted(() => {
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
           style="width: 260px"
-          @change="currentPage = 1"
+          @change="setPage(1)"
         />
-        <el-select v-model="filterStatus" style="width: 140px" @change="currentPage = 1">
+        <el-select v-model="filterStatus" style="width: 140px" @change="setPage(1)">
           <el-option
             v-for="item in statusOptions"
             :key="item.value"
@@ -342,11 +367,14 @@ onMounted(() => {
             </el-button>
           </template>
         </el-table-column>
+        <template #empty>
+          <el-empty description="暂无预约数据" />
+        </template>
       </el-table>
 
       <div class="pagination-wrapper">
         <el-pagination
-          v-model:current-page="currentPage"
+          v-model:current-page="page"
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50]"
           :total="totalCount"
@@ -450,6 +478,11 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: #303133;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .search-bar {

@@ -26,7 +26,7 @@ let favoriteServiceId = 1
 const currentUserId = 1
 
 export const setupFavoriteHandlers = () => {
-  Mock.mock(/\/api\/favorites\/merchants\?/, 'get', (options) => {
+  Mock.mock(/\/api\/user\/favorites\?/, 'get', (options) => {
     const url = new URL(options.url, 'http://localhost')
     const page = parseInt(url.searchParams.get('page') || '1')
     const size = parseInt(url.searchParams.get('size') || '10')
@@ -50,7 +50,7 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock('/api/favorites/merchants', 'post', (options) => {
+  Mock.mock('/api/user/favorites', 'post', (options) => {
     const body = JSON.parse(options.body)
     const { merchantId } = body
 
@@ -90,8 +90,8 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock(/\/api\/favorites\/merchants\/\d+$/, 'delete', (options) => {
-    const match = options.url.match(/\/api\/favorites\/merchants\/(\d+)/)
+  Mock.mock(/\/api\/user\/favorites\/\d+$/, 'delete', (options) => {
+    const match = options.url.match(/\/api\/user\/favorites\/(\d+)/)
     if (!match) {
       return {
         code: 400,
@@ -122,8 +122,8 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock(/\/api\/favorites\/merchants\/check\/\d+$/, 'get', (options) => {
-    const match = options.url.match(/\/api\/favorites\/merchants\/check\/(\d+)/)
+  Mock.mock(/\/api\/user\/favorites\/merchants\/check\/\d+$/, 'get', (options) => {
+    const match = options.url.match(/\/api\/user\/favorites\/merchants\/check\/(\d+)/)
     if (!match) {
       return {
         code: 400,
@@ -144,7 +144,7 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock(/\/api\/favorites\/services\?/, 'get', (options) => {
+  Mock.mock(/\/api\/user\/favorites\/services\?/, 'get', (options) => {
     const url = new URL(options.url, 'http://localhost')
     const page = parseInt(url.searchParams.get('page') || '1')
     const size = parseInt(url.searchParams.get('size') || '10')
@@ -168,7 +168,7 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock('/api/favorites/services', 'post', (options) => {
+  Mock.mock('/api/user/favorites/services', 'post', (options) => {
     const body = JSON.parse(options.body)
     const { serviceId } = body
 
@@ -208,8 +208,8 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock(/\/api\/favorites\/services\/\d+$/, 'delete', (options) => {
-    const match = options.url.match(/\/api\/favorites\/services\/(\d+)/)
+  Mock.mock(/\/api\/user\/favorites\/services\/\d+$/, 'delete', (options) => {
+    const match = options.url.match(/\/api\/user\/favorites\/services\/(\d+)/)
     if (!match) {
       return {
         code: 400,
@@ -240,8 +240,8 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock(/\/api\/favorites\/services\/check\/\d+$/, 'get', (options) => {
-    const match = options.url.match(/\/api\/favorites\/services\/check\/(\d+)/)
+  Mock.mock(/\/api\/user\/favorites\/services\/check\/\d+$/, 'get', (options) => {
+    const match = options.url.match(/\/api\/user\/favorites\/services\/check\/(\d+)/)
     if (!match) {
       return {
         code: 400,
@@ -262,7 +262,7 @@ export const setupFavoriteHandlers = () => {
     }
   })
 
-  Mock.mock('/api/favorites/count', 'get', () => {
+  Mock.mock('/api/user/favorites/count', 'get', () => {
     return {
       code: 200,
       message: 'success',

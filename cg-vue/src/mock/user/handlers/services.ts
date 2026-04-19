@@ -209,7 +209,7 @@ export const setupServiceHandlers = () => {
     }
   })
 
-  Mock.mock('/api/services/recommend', 'get', () => {
+  Mock.mock('/api/services/recommended', 'get', () => {
     const recommendServices = [...services]
       .sort((a, b) => b.rating - a.rating)
       .slice(0, 6)
@@ -221,8 +221,8 @@ export const setupServiceHandlers = () => {
     }
   })
 
-  Mock.mock(/\/api\/merchants\/\d+\/services/, 'get', (options) => {
-    const match = options.url.match(/\/api\/merchants\/(\d+)\/services/)
+  Mock.mock(/\/api\/merchant\/\d+\/services/, 'get', (options) => {
+    const match = options.url.match(/\/api\/merchant\/(\d+)\/services/)
     if (!match) {
       return {
         code: 400,

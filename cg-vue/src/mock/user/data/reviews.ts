@@ -4,17 +4,17 @@ export type TargetType = 'service' | 'product'
 
 export interface Review {
   id: number
-  user_id: number
-  target_id: number
-  target_type: TargetType
-  merchant_id: number
+  userId: number
+  targetId: number
+  targetType: TargetType
+  merchantId: number
   rating: number
   comment: string
   images: string[]
   reply?: string
-  reply_at?: string
-  created_at: string
-  updated_at: string
+  replyAt?: string
+  createdAt: string
+  updatedAt: string
 }
 
 const serviceNames = [
@@ -69,10 +69,10 @@ const generateReviews = (count = 15): Review[] => {
 
     reviews.push({
       id: randomId(),
-      user_id: randomId(1, 100),
-      target_id: randomId(1, 50),
-      target_type: targetType,
-      merchant_id: randomId(1, 10),
+      userId: randomId(1, 100),
+      targetId: randomId(1, 50),
+      targetType: targetType,
+      merchantId: randomId(1, 10),
       rating: randomEnum([1, 2, 3, 4, 5]),
       comment: randomEnum(comments),
       images: hasImages
@@ -82,9 +82,9 @@ const generateReviews = (count = 15): Review[] => {
           ]
         : [],
       reply: hasReply ? '感谢您的好评，我们会继续努力！' : undefined,
-      reply_at: hasReply ? randomDate('2024-01-01') : undefined,
-      created_at: randomDate('2024-01-01'),
-      updated_at: randomDate('2024-01-01')
+      replyAt: hasReply ? randomDate('2024-01-01') : undefined,
+      createdAt: randomDate('2024-01-01'),
+      updatedAt: randomDate('2024-01-01')
     })
   }
   return reviews

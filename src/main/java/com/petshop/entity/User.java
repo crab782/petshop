@@ -27,6 +27,9 @@ public class User {
     @Column(name = "avatar", length = 255)
     private String avatar;
     
+    @Column(name = "status", columnDefinition = "ENUM('active', 'disabled') DEFAULT 'active'")
+    private String status = "active";
+    
     @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
     

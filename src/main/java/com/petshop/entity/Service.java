@@ -29,6 +29,9 @@ public class Service {
     @Column(name = "duration")
     private Integer duration;
     
+    @Column(name = "category", length = 50)
+    private String category;
+    
     @Column(name = "image", length = 255)
     private String image;
     

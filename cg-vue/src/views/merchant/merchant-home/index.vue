@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElCard, ElStatistic, ElRow, ElCol, ElTable, ElTableColumn, ElButton, ElTag, ElEmpty } from 'element-plus'
+import { ElCard, ElStatistic, ElRow, ElCol, ElTable, ElTableColumn, ElButton, ElTag, ElEmpty, ElMessage } from 'element-plus'
 import { ShoppingCart, Clock, Money, TrendCharts, Plus, Edit, Document, Check, Star } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { getMerchantAppointments, getMerchantReviews, getMerchantRevenueStats, type Appointment, type Review } from '@/api/merchant'
+import {
+  getMerchantDashboard,
+  getRecentOrders,
+  getRecentReviews,
+  type DashboardStats,
+  type RecentOrder,
+  type RecentReview
+} from '@/api/merchant'
 
 const router = useRouter()
 
 const loading = ref(false)
-const todayOrders = ref(0)
-const pendingAppointments = ref(0)
-const todayRevenue = ref(0)
-const avgRating = ref(0)
-
-const recentAppointments = ref<Appointment[]>([])
-const recentReviews = ref<Review[]>([])
+const dashboardStats = ref<DashboardStats | null>(null)
+const recentOrders = ref<RecentOrder[]>([])
+const recentReviews = ref<RecentReview[]>([])
 
 const statusMap: Record<string, { label: string; type: string }> = {
   pending: { label: '待处理', type: 'warning' },
@@ -43,32 +46,18 @@ const formatPrice = (price: number) => {
 const fetchDashboardData = async () => {
   loading.value = true
   try {
-    const [appointmentsRes, reviewsRes, revenueRes] = await Promise.all([
-      getMerchantAppointments(),
-      getMerchantReviews(),
-      getMerchantRevenueStats({ type: 'today' })
+    const [dashboardRes, ordersRes, reviewsRes] = await Promise.all([
+      getMerchantDashboard(),
+      getRecentOrders(5),
+      getRecentReviews(5)
     ])
 
-    const appointments = appointmentsRes.data || []
-    const reviews = reviewsRes.data || []
-    const revenue = revenueRes.data
-
-    const today = new Date().toDateString()
-    const todayAppointments = appointments.filter(a =>
-      new Date(a.appointmentTime).toDateString() === today
-    )
-    todayOrders.value = todayAppointments.length
-    pendingAppointments.value = appointments.filter(a => a.status === 'pending').length
-    todayRevenue.value = revenue?.totalRevenue || todayAppointments.reduce((sum, a) => sum + a.totalPrice, 0)
-
-    if (reviews.length > 0) {
-      avgRating.value = Number((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1))
-    }
-
-    recentAppointments.value = appointments.slice(0, 5)
-    recentReviews.value = reviews.slice(0, 5)
+    dashboardStats.value = dashboardRes.data
+    recentOrders.value = ordersRes.data || []
+    recentReviews.value = reviewsRes.data || []
   } catch (error) {
     console.error('获取首页数据失败:', error)
+    ElMessage.error('获取首页数据失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -86,7 +75,7 @@ const handleAction = (action: string) => {
   }
 }
 
-const viewAppointmentDetail = (row: Appointment) => {
+const viewAppointmentDetail = (row: RecentOrder) => {
   router.push(`/merchant/appointments?search=${row.id}`)
 }
 
@@ -100,7 +89,7 @@ onMounted(() => {
     <el-row :gutter="20" class="statistics-row">
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <el-statistic title="今日订单" :value="todayOrders">
+          <el-statistic title="今日订单" :value="dashboardStats?.todayOrders || 0">
             <template #prefix>
               <el-icon class="stat-icon order-icon"><ShoppingCart /></el-icon>
             </template>
@@ -109,7 +98,7 @@ onMounted(() => {
       </el-col>
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <el-statistic title="待处理预约" :value="pendingAppointments">
+          <el-statistic title="待处理预约" :value="dashboardStats?.pendingAppointments || 0">
             <template #prefix>
               <el-icon class="stat-icon pending-icon"><Clock /></el-icon>
             </template>
@@ -118,7 +107,7 @@ onMounted(() => {
       </el-col>
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <el-statistic title="今日收入" :value="todayRevenue" :precision="2">
+          <el-statistic title="今日收入" :value="dashboardStats?.todayRevenue || 0" :precision="2">
             <template #prefix>
               <el-icon class="stat-icon revenue-icon"><Money /></el-icon>
             </template>
@@ -128,7 +117,7 @@ onMounted(() => {
       </el-col>
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
-          <el-statistic title="平均评分" :value="avgRating">
+          <el-statistic title="平均评分" :value="dashboardStats?.avgRating || 0">
             <template #prefix>
               <el-icon class="stat-icon rating-icon"><Star /></el-icon>
             </template>
@@ -147,9 +136,9 @@ onMounted(() => {
               <el-button type="primary" link @click="handleAction('view-appointments')">查看全部</el-button>
             </div>
           </template>
-          <el-table :data="recentAppointments" style="width: 100%" :show-header="true">
+          <el-table :data="recentOrders" style="width: 100%" :show-header="true">
             <el-table-column prop="id" label="订单号" width="80" />
-            <el-table-column prop="userName" label="用户名称" width="100" />
+            <el-table-column prop="customerName" label="用户名称" width="100" />
             <el-table-column prop="serviceName" label="服务类型" width="120" />
             <el-table-column prop="totalPrice" label="金额" width="90">
               <template #default="{ row }">
@@ -176,7 +165,7 @@ onMounted(() => {
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-if="recentAppointments.length === 0" description="暂无订单数据" :image-size="60" />
+          <el-empty v-if="recentOrders.length === 0" description="暂无订单数据" :image-size="60" />
         </el-card>
 
         <el-card shadow="hover" class="table-card" style="margin-top: 20px;">

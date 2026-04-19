@@ -1,16 +1,44 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
-import { ElCard, ElForm, ElFormItem, ElCheckboxGroup, ElCheckbox, ElTimeSelect, ElSwitch, ElDatePicker, ElInputNumber, ElButton, ElMessage, ElTag, ElInput, ElDivider, ElTabs, ElTabPane, ElRow, ElCol, ElAvatar, ElEmpty, ElIcon, ElDescriptions, ElDescriptionsItem } from 'element-plus'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
+import {
+  ElCard,
+  ElForm,
+  ElFormItem,
+  ElCheckboxGroup,
+  ElCheckbox,
+  ElTimeSelect,
+  ElSwitch,
+  ElDatePicker,
+  ElInputNumber,
+  ElButton,
+  ElMessage,
+  ElTag,
+  ElInput,
+  ElDivider,
+  ElTabs,
+  ElTabPane,
+  ElRow,
+  ElCol,
+  ElAvatar,
+  ElEmpty,
+  ElIcon,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElDialog
+} from 'element-plus'
 import { User, Shop } from '@element-plus/icons-vue'
-import { getMerchantSettings, updateMerchantSettings, getMerchantInfo, changePassword, bindPhone, bindEmail, sendVerifyCode, type MerchantSettings, type MerchantInfo } from '@/api/merchant'
-
-const loading = ref(false)
-const saving = ref(false)
-const infoLoading = ref(false)
-const passwordLoading = ref(false)
-const bindLoading = ref(false)
-
-const merchantInfo = ref<MerchantInfo | null>(null)
+import {
+  getMerchantSettings,
+  updateMerchantSettings,
+  getMerchantInfo,
+  changePassword,
+  bindPhone,
+  bindEmail,
+  sendVerifyCode,
+  type MerchantSettings,
+  type MerchantInfo
+} from '@/api/merchant'
+import { useAsync, useForm } from '@/composables'
 
 const weekDays = [
   { label: '周一', value: 1 },
@@ -22,19 +50,7 @@ const weekDays = [
   { label: '周日', value: 0 }
 ]
 
-const timeOptions = ref<{ label: string, value: string }[]>([])
-
-for (let h = 0; h < 24; h++) {
-  for (let m = 0; m < 60; m += 30) {
-    const hour = h.toString().padStart(2, '0')
-    const minute = m.toString().padStart(2, '0')
-    const value = `${hour}:${minute}`
-    const label = `${hour}:${minute}`
-    timeOptions.value.push({ label, value })
-  }
-}
-
-const settingsForm = ref<MerchantSettings>({
+const defaultSettings: MerchantSettings = {
   businessDays: [1, 2, 3, 4, 5],
   startTime: '09:00',
   endTime: '18:00',
@@ -50,61 +66,100 @@ const settingsForm = ref<MerchantSettings>({
     notifyViaSms: false,
     notifyViaEmail: true
   }
-})
+}
 
-const passwordForm = reactive({
+const settingsAsync = useAsync(getMerchantSettings, defaultSettings)
+const merchantInfoAsync = useAsync(getMerchantInfo)
+
+const settingsForm = computed(() => settingsAsync.data.value || defaultSettings)
+const merchantInfo = computed(() => merchantInfoAsync.data.value)
+
+const saving = ref(false)
+
+const passwordDialogVisible = ref(false)
+const phoneDialogVisible = ref(false)
+const emailDialogVisible = ref(false)
+
+const passwordForm = useForm({
   oldPassword: '',
   newPassword: '',
   confirmPassword: ''
 })
 
-const phoneForm = reactive({
+const phoneForm = useForm({
   phone: '',
   verifyCode: ''
 })
 
-const emailForm = reactive({
+const emailForm = useForm({
   email: '',
   verifyCode: ''
 })
 
+const passwordLoading = ref(false)
+const bindLoading = ref(false)
 const verifyCodeSending = ref(false)
-const verifyCodeText = ref('发送验证码')
+const verifyCodeCountdown = ref(0)
 let verifyCodeTimer: ReturnType<typeof setInterval> | null = null
 
-const fetchMerchantInfo = async () => {
-  infoLoading.value = true
-  try {
-    const res = await getMerchantInfo()
-    if (res.data) {
-      merchantInfo.value = res.data
-    }
-  } catch (error) {
-    console.error('获取店铺信息失败', error)
-  } finally {
-    infoLoading.value = false
+const verifyCodeText = computed(() => {
+  if (verifyCodeCountdown.value > 0) {
+    return `${verifyCodeCountdown.value}秒后重新发送`
+  }
+  return '发送验证码'
+})
+
+const passwordRules = {
+  oldPassword: (value: string) => {
+    if (!value) return '请输入原密码'
+    return null
+  },
+  newPassword: (value: string) => {
+    if (!value) return '请输入新密码'
+    if (value.length < 6) return '新密码长度不能少于6位'
+    return null
+  },
+  confirmPassword: (value: string) => {
+    if (!value) return '请再次输入新密码'
+    if (value !== passwordForm.formData.newPassword) return '两次输入的密码不一致'
+    return null
+  }
+}
+
+const phoneRules = {
+  phone: (value: string) => {
+    if (!value) return '请输入手机号'
+    const phoneRegex = /^1[3-9]\d{9}$/
+    if (!phoneRegex.test(value)) return '请输入正确的手机号格式'
+    return null
+  },
+  verifyCode: (value: string) => {
+    if (!value) return '请输入验证码'
+    if (!/^\d{6}$/.test(value)) return '验证码为6位数字'
+    return null
+  }
+}
+
+const emailRules = {
+  email: (value: string) => {
+    if (!value) return '请输入邮箱'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) return '请输入正确的邮箱格式'
+    return null
+  },
+  verifyCode: (value: string) => {
+    if (!value) return '请输入验证码'
+    if (!/^\d{6}$/.test(value)) return '验证码为6位数字'
+    return null
   }
 }
 
 const fetchSettings = async () => {
-  loading.value = true
-  try {
-    const res = await getMerchantSettings()
-    if (res.data) {
-      settingsForm.value = {
-        ...settingsForm.value,
-        ...res.data,
-        notificationSettings: {
-          ...settingsForm.value.notificationSettings,
-          ...res.data.notificationSettings
-        }
-      }
-    }
-  } catch (error) {
-    ElMessage.error('获取店铺设置失败')
-  } finally {
-    loading.value = false
-  }
+  await settingsAsync.execute()
+}
+
+const fetchMerchantInfo = async () => {
+  await merchantInfoAsync.execute()
 }
 
 const handleSave = async () => {
@@ -119,59 +174,63 @@ const handleSave = async () => {
   }
 }
 
+const openPasswordDialog = () => {
+  passwordForm.reset()
+  passwordDialogVisible.value = true
+}
+
 const handleChangePassword = async () => {
-  if (!passwordForm.oldPassword) {
-    ElMessage.warning('请输入原密码')
+  if (!passwordForm.validate(passwordRules)) {
     return
   }
-  if (!passwordForm.newPassword) {
-    ElMessage.warning('请输入新密码')
-    return
-  }
-  if (passwordForm.newPassword.length < 6) {
-    ElMessage.warning('新密码长度不能少于6位')
-    return
-  }
-  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    ElMessage.warning('两次输入的密码不一致')
-    return
-  }
-  passwordLoading.value = true
-  try {
-    await changePassword({
-      oldPassword: passwordForm.oldPassword,
-      newPassword: passwordForm.newPassword
-    })
-    ElMessage.success('密码修改成功')
-    passwordForm.oldPassword = ''
-    passwordForm.newPassword = ''
-    passwordForm.confirmPassword = ''
-  } catch (error) {
-    ElMessage.error('密码修改失败')
-  } finally {
-    passwordLoading.value = false
-  }
+
+  await passwordForm.handleSubmit(async (data) => {
+    passwordLoading.value = true
+    try {
+      await changePassword({
+        oldPassword: data.oldPassword,
+        newPassword: data.newPassword
+      })
+      ElMessage.success('密码修改成功')
+      passwordDialogVisible.value = false
+      passwordForm.reset()
+    } catch (error) {
+      ElMessage.error('密码修改失败')
+    } finally {
+      passwordLoading.value = false
+    }
+  })
+}
+
+const openPhoneDialog = () => {
+  phoneForm.reset()
+  phoneDialogVisible.value = true
 }
 
 const handleSendVerifyCode = async (type: 'phone' | 'email') => {
   const form = type === 'phone' ? phoneForm : emailForm
-  const value = type === 'phone' ? form.phone : form.email
+  const fieldName = type === 'phone' ? 'phone' : 'email'
+  const value = form.formData[fieldName]
 
   if (!value) {
     ElMessage.warning(`请输入${type === 'phone' ? '手机号' : '邮箱'}`)
     return
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (type === 'email' && !emailRegex.test(value)) {
-    ElMessage.warning('请输入正确的邮箱格式')
-    return
+  if (type === 'email') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) {
+      ElMessage.warning('请输入正确的邮箱格式')
+      return
+    }
   }
 
-  const phoneRegex = /^1[3-9]\d{9}$/
-  if (type === 'phone' && !phoneRegex.test(value)) {
-    ElMessage.warning('请输入正确的手机号格式')
-    return
+  if (type === 'phone') {
+    const phoneRegex = /^1[3-9]\d{9}$/
+    if (!phoneRegex.test(value)) {
+      ElMessage.warning('请输入正确的手机号格式')
+      return
+    }
   }
 
   verifyCodeSending.value = true
@@ -179,76 +238,74 @@ const handleSendVerifyCode = async (type: 'phone' | 'email') => {
     await sendVerifyCode(type, value)
     ElMessage.success('验证码发送成功')
 
-    let countdown = 60
-    verifyCodeText.value = `${countdown}秒后重新发送`
+    verifyCodeCountdown.value = 60
     if (verifyCodeTimer) clearInterval(verifyCodeTimer)
 
     verifyCodeTimer = setInterval(() => {
-      countdown--
-      if (countdown <= 0) {
+      verifyCodeCountdown.value--
+      if (verifyCodeCountdown.value <= 0) {
         if (verifyCodeTimer) clearInterval(verifyCodeTimer)
-        verifyCodeText.value = '发送验证码'
-        verifyCodeSending.value = false
-      } else {
-        verifyCodeText.value = `${countdown}秒后重新发送`
+        verifyCodeTimer = null
       }
     }, 1000)
   } catch (error) {
     ElMessage.error('验证码发送失败')
+  } finally {
     verifyCodeSending.value = false
   }
 }
 
 const handleBindPhone = async () => {
-  if (!phoneForm.phone) {
-    ElMessage.warning('请输入手机号')
+  if (!phoneForm.validate(phoneRules)) {
     return
   }
-  if (!phoneForm.verifyCode) {
-    ElMessage.warning('请输入验证码')
-    return
-  }
-  bindLoading.value = true
-  try {
-    await bindPhone({
-      phone: phoneForm.phone,
-      verifyCode: phoneForm.verifyCode
-    })
-    ElMessage.success('手机号绑定成功')
-    phoneForm.phone = ''
-    phoneForm.verifyCode = ''
-    fetchMerchantInfo()
-  } catch (error) {
-    ElMessage.error('手机号绑定失败')
-  } finally {
-    bindLoading.value = false
-  }
+
+  await phoneForm.handleSubmit(async (data) => {
+    bindLoading.value = true
+    try {
+      await bindPhone({
+        phone: data.phone,
+        verifyCode: data.verifyCode
+      })
+      ElMessage.success('手机号绑定成功')
+      phoneDialogVisible.value = false
+      phoneForm.reset()
+      fetchMerchantInfo()
+    } catch (error) {
+      ElMessage.error('手机号绑定失败')
+    } finally {
+      bindLoading.value = false
+    }
+  })
+}
+
+const openEmailDialog = () => {
+  emailForm.reset()
+  emailDialogVisible.value = true
 }
 
 const handleBindEmail = async () => {
-  if (!emailForm.email) {
-    ElMessage.warning('请输入邮箱')
+  if (!emailForm.validate(emailRules)) {
     return
   }
-  if (!emailForm.verifyCode) {
-    ElMessage.warning('请输入验证码')
-    return
-  }
-  bindLoading.value = true
-  try {
-    await bindEmail({
-      email: emailForm.email,
-      verifyCode: emailForm.verifyCode
-    })
-    ElMessage.success('邮箱绑定成功')
-    emailForm.email = ''
-    emailForm.verifyCode = ''
-    fetchMerchantInfo()
-  } catch (error) {
-    ElMessage.error('邮箱绑定失败')
-  } finally {
-    bindLoading.value = false
-  }
+
+  await emailForm.handleSubmit(async (data) => {
+    bindLoading.value = true
+    try {
+      await bindEmail({
+        email: data.email,
+        verifyCode: data.verifyCode
+      })
+      ElMessage.success('邮箱绑定成功')
+      emailDialogVisible.value = false
+      emailForm.reset()
+      fetchMerchantInfo()
+    } catch (error) {
+      ElMessage.error('邮箱绑定失败')
+    } finally {
+      bindLoading.value = false
+    }
+  })
 }
 
 const getStatusType = (status: string) => {
@@ -285,6 +342,13 @@ onMounted(() => {
   fetchMerchantInfo()
   fetchSettings()
 })
+
+onUnmounted(() => {
+  if (verifyCodeTimer) {
+    clearInterval(verifyCodeTimer)
+    verifyCodeTimer = null
+  }
+})
 </script>
 
 <template>
@@ -295,7 +359,7 @@ onMounted(() => {
 
     <el-tabs>
       <el-tab-pane label="店铺信息">
-        <el-card v-loading="infoLoading" class="info-card">
+        <el-card v-loading="merchantInfoAsync.loading.value" class="info-card">
           <template #header>
             <div class="card-header">
               <span>基本信息</span>
@@ -318,7 +382,7 @@ onMounted(() => {
                   {{ merchantInfo.name }}
                 </el-descriptions-item>
                 <el-descriptions-item label="联系人">
-                  {{ merchantInfo.contactPerson || '-' }}
+                  {{ merchantInfo.contact_person || '-' }}
                 </el-descriptions-item>
                 <el-descriptions-item label="联系电话">
                   {{ merchantInfo.phone || '-' }}
@@ -330,12 +394,12 @@ onMounted(() => {
                   {{ merchantInfo.address || '-' }}
                 </el-descriptions-item>
                 <el-descriptions-item label="审核状态">
-                  <el-tag :type="getStatusType(merchantInfo.status)">
-                    {{ getStatusText(merchantInfo.status) }}
+                  <el-tag :type="getStatusType(merchantInfo.status || '')">
+                    {{ getStatusText(merchantInfo.status || '') }}
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item label="注册时间">
-                  {{ formatDate(merchantInfo.createdAt) }}
+                  {{ formatDate(merchantInfo.created_at || '') }}
                 </el-descriptions-item>
               </el-descriptions>
             </el-col>
@@ -345,7 +409,7 @@ onMounted(() => {
       </el-tab-pane>
 
       <el-tab-pane label="营业设置">
-        <el-card v-loading="loading" class="settings-card">
+        <el-card v-loading="settingsAsync.loading.value" class="settings-card">
           <el-form label-width="140px" label-position="left">
             <el-form-item label="店铺状态">
               <el-switch
@@ -434,7 +498,7 @@ onMounted(() => {
       </el-tab-pane>
 
       <el-tab-pane label="通知设置">
-        <el-card v-loading="loading" class="settings-card">
+        <el-card v-loading="settingsAsync.loading.value" class="settings-card">
           <el-form label-width="140px" label-position="left">
             <el-form-item label="预约提醒">
               <el-switch v-model="settingsForm.notificationSettings.appointmentReminder" />
@@ -476,106 +540,166 @@ onMounted(() => {
       <el-tab-pane label="账户安全">
         <el-card class="settings-card">
           <el-divider content-position="left">修改密码</el-divider>
-          <el-form label-width="100px" label-position="left" style="max-width: 400px;">
-            <el-form-item label="原密码">
-              <el-input
-                v-model="passwordForm.oldPassword"
-                type="password"
-                placeholder="请输入原密码"
-                show-password
-              />
-            </el-form-item>
-            <el-form-item label="新密码">
-              <el-input
-                v-model="passwordForm.newPassword"
-                type="password"
-                placeholder="请输入新密码（至少6位）"
-                show-password
-              />
-            </el-form-item>
-            <el-form-item label="确认密码">
-              <el-input
-                v-model="passwordForm.confirmPassword"
-                type="password"
-                placeholder="请再次输入新密码"
-                show-password
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="passwordLoading" @click="handleChangePassword">
-                修改密码
-              </el-button>
-            </el-form-item>
-          </el-form>
+          <div class="security-item">
+            <div class="security-info">
+              <span class="security-label">登录密码</span>
+              <span class="security-desc">定期修改密码可以提高账户安全性</span>
+            </div>
+            <el-button type="primary" plain @click="openPasswordDialog">
+              修改密码
+            </el-button>
+          </div>
 
           <el-divider content-position="left">绑定手机号</el-divider>
-          <el-form label-width="100px" label-position="left" style="max-width: 400px;">
-            <el-form-item label="当前手机">
-              <span>{{ merchantInfo?.phone || '未绑定' }}</span>
-            </el-form-item>
-            <el-form-item label="新手机号">
-              <el-input
-                v-model="phoneForm.phone"
-                placeholder="请输入手机号"
-                style="width: 200px;"
-              />
-              <el-button
-                @click="handleSendVerifyCode('phone')"
-                :disabled="verifyCodeSending"
-                style="margin-left: 10px;"
-              >
-                {{ verifyCodeText }}
-              </el-button>
-            </el-form-item>
-            <el-form-item label="验证码">
-              <el-input
-                v-model="phoneForm.verifyCode"
-                placeholder="请输入验证码"
-                style="width: 200px;"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="bindLoading" @click="handleBindPhone">
-                绑定手机号
-              </el-button>
-            </el-form-item>
-          </el-form>
+          <div class="security-item">
+            <div class="security-info">
+              <span class="security-label">当前手机</span>
+              <span class="security-desc">{{ merchantInfo?.phone || '未绑定' }}</span>
+            </div>
+            <el-button type="primary" plain @click="openPhoneDialog">
+              {{ merchantInfo?.phone ? '更换手机号' : '绑定手机号' }}
+            </el-button>
+          </div>
 
           <el-divider content-position="left">绑定邮箱</el-divider>
-          <el-form label-width="100px" label-position="left" style="max-width: 400px;">
-            <el-form-item label="当前邮箱">
-              <span>{{ merchantInfo?.email || '未绑定' }}</span>
-            </el-form-item>
-            <el-form-item label="新邮箱">
-              <el-input
-                v-model="emailForm.email"
-                placeholder="请输入邮箱"
-                style="width: 200px;"
-              />
-              <el-button
-                @click="handleSendVerifyCode('email')"
-                :disabled="verifyCodeSending"
-                style="margin-left: 10px;"
-              >
-                {{ verifyCodeText }}
-              </el-button>
-            </el-form-item>
-            <el-form-item label="验证码">
-              <el-input
-                v-model="emailForm.verifyCode"
-                placeholder="请输入验证码"
-                style="width: 200px;"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="bindLoading" @click="handleBindEmail">
-                绑定邮箱
-              </el-button>
-            </el-form-item>
-          </el-form>
+          <div class="security-item">
+            <div class="security-info">
+              <span class="security-label">当前邮箱</span>
+              <span class="security-desc">{{ merchantInfo?.email || '未绑定' }}</span>
+            </div>
+            <el-button type="primary" plain @click="openEmailDialog">
+              {{ merchantInfo?.email ? '更换邮箱' : '绑定邮箱' }}
+            </el-button>
+          </div>
         </el-card>
       </el-tab-pane>
     </el-tabs>
+
+    <el-dialog
+      v-model="passwordDialogVisible"
+      title="修改密码"
+      width="450px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        label-width="100px"
+        label-position="left"
+        @submit.prevent="handleChangePassword"
+      >
+        <el-form-item label="原密码" :error="passwordForm.errors.oldPassword">
+          <el-input
+            v-model="passwordForm.formData.oldPassword"
+            type="password"
+            placeholder="请输入原密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="新密码" :error="passwordForm.errors.newPassword">
+          <el-input
+            v-model="passwordForm.formData.newPassword"
+            type="password"
+            placeholder="请输入新密码（至少6位）"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" :error="passwordForm.errors.confirmPassword">
+          <el-input
+            v-model="passwordForm.formData.confirmPassword"
+            type="password"
+            placeholder="请再次输入新密码"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="passwordLoading" @click="handleChangePassword">
+          确认修改
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="phoneDialogVisible"
+      title="绑定手机号"
+      width="450px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        label-width="100px"
+        label-position="left"
+        @submit.prevent="handleBindPhone"
+      >
+        <el-form-item label="新手机号" :error="phoneForm.errors.phone">
+          <el-input
+            v-model="phoneForm.formData.phone"
+            placeholder="请输入手机号"
+          />
+        </el-form-item>
+        <el-form-item label="验证码" :error="phoneForm.errors.verifyCode">
+          <div class="verify-code-input">
+            <el-input
+              v-model="phoneForm.formData.verifyCode"
+              placeholder="请输入验证码"
+              maxlength="6"
+            />
+            <el-button
+              @click="handleSendVerifyCode('phone')"
+              :disabled="verifyCodeSending || verifyCodeCountdown > 0"
+            >
+              {{ verifyCodeText }}
+            </el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="phoneDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="bindLoading" @click="handleBindPhone">
+          确认绑定
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="emailDialogVisible"
+      title="绑定邮箱"
+      width="450px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        label-width="100px"
+        label-position="left"
+        @submit.prevent="handleBindEmail"
+      >
+        <el-form-item label="新邮箱" :error="emailForm.errors.email">
+          <el-input
+            v-model="emailForm.formData.email"
+            placeholder="请输入邮箱"
+          />
+        </el-form-item>
+        <el-form-item label="验证码" :error="emailForm.errors.verifyCode">
+          <div class="verify-code-input">
+            <el-input
+              v-model="emailForm.formData.verifyCode"
+              placeholder="请输入验证码"
+              maxlength="6"
+            />
+            <el-button
+              @click="handleSendVerifyCode('email')"
+              :disabled="verifyCodeSending || verifyCodeCountdown > 0"
+            >
+              {{ verifyCodeText }}
+            </el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="emailDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="bindLoading" @click="handleBindEmail">
+          确认绑定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -634,6 +758,39 @@ onMounted(() => {
 .notify-channels {
   display: flex;
   gap: 20px;
+}
+
+.security-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.security-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.security-label {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.security-desc {
+  font-size: 13px;
+  color: #909399;
+}
+
+.verify-code-input {
+  display: flex;
+  gap: 10px;
+}
+
+.verify-code-input .el-input {
+  flex: 1;
 }
 
 :deep(.el-tabs__nav-wrap) {

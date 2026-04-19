@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -24,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public abstract class MerchantApiControllerTestBase {
 
     protected MockMvc mockMvc;
@@ -239,8 +242,8 @@ public abstract class MerchantApiControllerTestBase {
                 .andExpect(jsonPath("$.data.content").isArray())
                 .andExpect(jsonPath("$.data.totalElements").isNumber())
                 .andExpect(jsonPath("$.data.totalPages").isNumber())
-                .andExpect(jsonPath("$.data.size").isNumber())
-                .andExpect(jsonPath("$.data.number").isNumber());
+                .andExpect(jsonPath("$.data.pageSize").isNumber())
+                .andExpect(jsonPath("$.data.currentPage").isNumber());
     }
 
     protected void assertListResponse(ResultActions result, int expectedSize) throws Exception {

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { getAnnouncementById, addAnnouncement, updateAnnouncement } from '@/api/announcement'
-import { ArrowLeft, Send } from '@element-plus/icons-vue'
+import { ArrowLeft, Promotion } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -153,7 +154,7 @@ onMounted(() => {
         <el-form-item>
           <el-button @click="handleBack">取消</el-button>
           <el-button type="primary" @click="handleSubmit(formRef)" :loading="submitting">
-            <el-icon v-if="!submitting"><Send /></el-icon>
+            <el-icon v-if="!submitting"><Promotion /></el-icon>
             {{ isEdit ? '保存' : '发布' }}
           </el-button>
         </el-form-item>

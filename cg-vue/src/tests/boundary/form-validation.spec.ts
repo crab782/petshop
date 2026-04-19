@@ -65,7 +65,7 @@ const mountWithPlugins = (component: any, options = {}) => {
           props: ['label', 'prop', 'error', 'required'],
         },
       },
-      ...((options as any).global || {}),
+      ...(options as any).global,
     },
   })
 }

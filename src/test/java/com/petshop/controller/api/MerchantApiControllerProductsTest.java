@@ -1,8 +1,8 @@
 package com.petshop.controller.api;
 
-import com.petshop.dto.ApiResponse;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.Product;
+import com.petshop.exception.GlobalExceptionHandler;
 import com.petshop.factory.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,7 +30,9 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
         super.setUp();
         MerchantApiController controller = new MerchantApiController();
         injectDependencies(controller);
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     private void injectDependencies(MerchantApiController controller) {
@@ -84,11 +86,9 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
         void testGetProducts_Unauthorized() throws Exception {
             mockMvc.perform(get("/api/merchant/products")
                     .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401))
-                                .andExpect(jsonPath("$.message").value("未授权访问"));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401))
+                    .andExpect(jsonPath("$.message").value("未授权访问"));
 
             verify(productService, never()).findByMerchantId(any());
         }
@@ -168,10 +168,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
             mockMvc.perform(post("/api/merchant/products")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(newProduct)))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).create(any());
         }
@@ -245,10 +243,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
         void testGetProductById_Unauthorized() throws Exception {
             mockMvc.perform(get("/api/merchant/products/1")
                     .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).findById(any());
         }
@@ -328,10 +324,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
             mockMvc.perform(put("/api/merchant/products/1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(updateData)))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).update(any());
         }
@@ -405,10 +399,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
         void testDeleteProduct_Unauthorized() throws Exception {
             mockMvc.perform(delete("/api/merchant/products/1")
                     .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).delete(any());
         }
@@ -474,8 +466,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .param("status", "enabled")
                     .param("name", "测试")
                     .param("category", "食品")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertPaginatedResponse(result);
             verify(productService).searchProducts(eq(testMerchantId), eq("测试"), eq("enabled"), eq("食品"), any(Pageable.class));
@@ -494,8 +485,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchantId", testMerchantId)
                     .param("page", "0")
                     .param("size", "10")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertPaginatedResponse(result);
             result.andExpect(jsonPath("$.data.hasPrevious").value(false));
@@ -514,8 +504,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchantId", testMerchantId)
                     .param("page", "0")
                     .param("size", "100")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertPaginatedResponse(result);
         }
@@ -525,10 +514,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
         void testGetProductsPaged_Unauthorized() throws Exception {
             mockMvc.perform(get("/api/merchant/products/paged")
                     .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).searchProducts(any(), any(), any(), any(), any());
         }
@@ -554,8 +541,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .param("status", "enabled")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertSuccess(result, "商品状态更新成功");
             result.andExpect(jsonPath("$.data.status").value("enabled"));
@@ -578,8 +564,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .param("status", "disabled")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertSuccess(result, "商品状态更新成功");
             result.andExpect(jsonPath("$.data.status").value("disabled"));
@@ -597,8 +582,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .param("status", "invalid")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertBadRequest(result);
             result.andExpect(jsonPath("$.code").value(400))
@@ -616,8 +600,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .param("status", "enabled")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertNotFound(result);
             result.andExpect(jsonPath("$.code").value(404));
@@ -635,8 +618,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .param("status", "enabled")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result1 -> {});
+                    .contentType(MediaType.APPLICATION_JSON));
 
             assertNotFound(result);
         }
@@ -647,10 +629,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
             mockMvc.perform(put("/api/merchant/products/1/status")
                     .param("status", "enabled")
                     .contentType(MediaType.APPLICATION_JSON))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).enableProduct(any());
             verify(productService, never()).disableProduct(any());
@@ -781,10 +761,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
             mockMvc.perform(put("/api/merchant/products/batch/status")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(request)))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).batchUpdateStatus(any(), any());
         }
@@ -807,23 +785,14 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
             when(productService.findById(2)).thenReturn(product2);
             doNothing().when(productService).batchDelete(Arrays.asList(1, 2));
 
-            var result = performDelete("/api/merchant/products/batch")
-                    .andDo(r -> mockMvc.perform(delete("/api/merchant/products/batch")
-                            .sessionAttr("merchant", testMerchant)
-                            .sessionAttr("merchantId", testMerchantId)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(toJson(request)))
-                            .andDo(result1 -> {}));
-
-            var result2 = mockMvc.perform(delete("/api/merchant/products/batch")
+            var result = mockMvc.perform(delete("/api/merchant/products/batch")
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(request)))
-                    .andDo(r -> {});
+                    .content(toJson(request)));
 
-            assertSuccess(result2, "批量删除成功");
-            result2.andExpect(jsonPath("$.data.deletedCount").value(2));
+            assertSuccess(result, "批量删除成功");
+            result.andExpect(jsonPath("$.data.deletedCount").value(2));
             verify(productService).batchDelete(Arrays.asList(1, 2));
         }
 
@@ -837,8 +806,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(request)))
-                    .andDo(r -> {});
+                    .content(toJson(request)));
 
             assertBadRequest(result);
             result.andExpect(jsonPath("$.code").value(400))
@@ -861,8 +829,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(request)))
-                    .andDo(r -> {});
+                    .content(toJson(request)));
 
             assertNotFound(result);
             result.andExpect(jsonPath("$.code").value(404))
@@ -886,8 +853,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(request)))
-                    .andDo(r -> {});
+                    .content(toJson(request)));
 
             assertNotFound(result);
             result.andExpect(jsonPath("$.code").value(404))
@@ -903,10 +869,8 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
             mockMvc.perform(delete("/api/merchant/products/batch")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(request)))
-                    .andDo(result -> {
-                        result.andExpect(status().isUnauthorized())
-                                .andExpect(jsonPath("$.code").value(401));
-                    });
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(401));
 
             verify(productService, never()).batchDelete(any());
         }
@@ -926,8 +890,7 @@ public class MerchantApiControllerProductsTest extends MerchantApiControllerTest
                     .sessionAttr("merchant", testMerchant)
                     .sessionAttr("merchantId", testMerchantId)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(request)))
-                    .andDo(r -> {});
+                    .content(toJson(request)));
 
             result.andExpect(status().isInternalServerError());
         }

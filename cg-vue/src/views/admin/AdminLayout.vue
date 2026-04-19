@@ -7,9 +7,9 @@ import {
   Shop,
   Service,
   Calendar,
-  Paw,
+  Grid,
   Star,
-  Bullhorn,
+  Notification,
   Setting,
   List,
   Bell,
@@ -28,9 +28,9 @@ const menuItems = [
   { path: '/admin/services', name: '服务管理', icon: Service },
   { path: '/admin/products', name: '商品管理', icon: Goods },
   { path: '/admin/appointments', name: '预约管理', icon: Calendar },
-  { path: '/admin/pets', name: '宠物管理', icon: Paw },
+  { path: '/admin/pets', name: '宠物管理', icon: Grid },
   { path: '/admin/reviews', name: '评价管理', icon: Star },
-  { path: '/admin/announcements', name: '公告管理', icon: Bullhorn },
+  { path: '/admin/announcements', name: '公告管理', icon: Notification },
   { path: '/admin/system', name: '系统设置', icon: Setting }
 ]
 

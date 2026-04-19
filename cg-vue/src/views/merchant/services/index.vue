@@ -1,486 +1,462 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElButton, ElTable, ElTableColumn, ElImage, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElMessageBox, ElSwitch, ElPagination, ElSelect, ElOption, ElInputNumber, ElTag } from 'element-plus'
+import { Plus, Edit, Delete, Search, Refresh } from '@element-plus/icons-vue'
+import { getMerchantServices, deleteService, batchUpdateServiceStatus, type MerchantService } from '@/api/merchant'
+import { useAsync } from '@/composables/useAsync'
+import { usePagination } from '@/composables/usePagination'
+import { useSearch } from '@/composables/useSearch'
 
-// 模拟服务数据
-const services = [
-  {
-    id: 'SVC-001',
-    name: '宠物美容',
-    price: '¥120',
-    duration: '60分钟',
-    description: '专业宠物美容服务，包括洗澡、剪毛、修剪指甲等',
-    status: '启用',
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20pet%20grooming%2C%20clean%20and%20friendly%20environment&image_size=landscape_4_3'
-  },
-  {
-    id: 'SVC-002',
-    name: '宠物寄养',
-    price: '¥80/天',
-    duration: '全天',
-    description: '提供舒适的宠物寄养环境，每天遛狗两次，定期喂食',
-    status: '启用',
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20boarding%20facility%2C%20clean%20cages%2C%20play%20area&image_size=landscape_4_3'
-  },
-  {
-    id: 'SVC-003',
-    name: '宠物医疗',
-    price: '¥200起',
-    duration: '30分钟',
-    description: '专业宠物医疗服务，包括体检、疫苗接种、疾病治疗等',
-    status: '启用',
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=veterinary%20clinic%2C%20professional%20equipment%2C%20clean%20environment&image_size=landscape_4_3'
-  },
-  {
-    id: 'SVC-004',
-    name: '宠物训练',
-    price: '¥180/课时',
-    duration: '45分钟',
-    description: '专业宠物训练服务，包括基本 obedience训练、行为纠正等',
-    status: '启用',
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=dog%20training%20session%2C%20trainer%20working%20with%20dog&image_size=landscape_4_3'
-  },
-  {
-    id: 'SVC-005',
-    name: '宠物用品销售',
-    price: '¥50起',
-    duration: '不限',
-    description: '销售各种宠物用品，包括食品、玩具、窝具等',
-    status: '启用',
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20supply%20store%2C%20various%20products%2C%20organized%20shelves&image_size=landscape_4_3'
-  }
-]
+const router = useRouter()
 
-const searchQuery = ref('')
-const statusFilter = ref('')
+// 服务列表数据
+const services = ref<MerchantService[]>([])
+const loading = ref(false)
+const selectedRows = ref<MerchantService[]>([])
 
-const statusOptions = [
-  { value: '', label: '全部状态' },
-  { value: '启用', label: '启用' },
-  { value: '禁用', label: '禁用' }
-]
+// 编辑弹窗
+const dialogVisible = ref(false)
+const dialogTitle = ref('编辑服务')
+const formData = ref({
+  id: 0,
+  name: '',
+  description: '',
+  price: 0,
+  duration: 0,
+  image: '',
+  status: 'enabled' as 'enabled' | 'disabled'
+})
+const formRef = ref()
 
+// 表单验证规则
+const rules = {
+  name: [{ required: true, message: '请输入服务名称', trigger: 'blur' }],
+  price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
+  duration: [{ required: true, message: '请输入时长', trigger: 'blur' }]
+}
+
+// 搜索和筛选参数
+const { keyword, debouncedKeyword, filters, setKeyword, setFilter, clearFilters } = useSearch(300)
+
+// 价格筛选
+const minPrice = ref<number | undefined>(undefined)
+const maxPrice = ref<number | undefined>(undefined)
+
+// 分页
+const { page, pageSize, total, setTotal, setPage, setPageSize } = usePagination(1, 10)
+
+// 筛选后的服务列表
 const filteredServices = computed(() => {
-  return services.filter(service => {
-    const matchesSearch = service.name.includes(searchQuery.value) || 
-                         service.description.includes(searchQuery.value)
-    const matchesStatus = statusFilter.value ? service.status === statusFilter.value : true
-    return matchesSearch && matchesStatus
-  })
+  let result = [...services.value]
+
+  // 关键字搜索
+  if (debouncedKeyword.value) {
+    const searchLower = debouncedKeyword.value.toLowerCase()
+    result = result.filter(s => 
+      s.name.toLowerCase().includes(searchLower) ||
+      (s.description && s.description.toLowerCase().includes(searchLower))
+    )
+  }
+
+  // 价格区间筛选
+  if (minPrice.value !== undefined) {
+    result = result.filter(s => s.price >= minPrice.value)
+  }
+  if (maxPrice.value !== undefined) {
+    result = result.filter(s => s.price <= maxPrice.value)
+  }
+
+  // 状态筛选
+  if (filters.value.status && filters.value.status !== 'all') {
+    result = result.filter(s => s.status === filters.value.status)
+  }
+
+  return result
 })
 
-// 导入computed
-import { computed } from 'vue'
+// 分页后的服务列表
+const paginatedServices = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredServices.value.slice(start, end)
+})
+
+// 监听筛选结果变化，更新总数
+watch(filteredServices, (newVal) => {
+  setTotal(newVal.length)
+})
+
+// 获取服务列表
+const fetchServices = async () => {
+  loading.value = true
+  try {
+    const res = await getMerchantServices()
+    services.value = res.data || []
+    setTotal(services.value.length)
+  } catch (error) {
+    ElMessage.error('获取服务列表失败')
+    console.error('获取服务列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 跳转到添加服务页面
+const handleAdd = () => {
+  router.push('/merchant/service-edit')
+}
+
+// 跳转到编辑服务页面
+const handleEdit = (row: MerchantService) => {
+  router.push(`/merchant/service-edit?id=${row.id}`)
+}
+
+// 删除服务
+const handleDelete = async (row: MerchantService) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除服务"${row.name}"吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await deleteService(row.id)
+    ElMessage.success('删除成功')
+    fetchServices()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+      console.error('删除失败:', error)
+    }
+  }
+}
+
+// 切换服务状态
+const handleStatusChange = async (row: MerchantService) => {
+  try {
+    await batchUpdateServiceStatus([row.id], row.status as 'enabled' | 'disabled')
+    ElMessage.success(`${row.status === 'enabled' ? '启用' : '禁用'}成功`)
+  } catch (error) {
+    ElMessage.error('状态更新失败')
+    // 恢复原状态
+    row.status = row.status === 'enabled' ? 'disabled' : 'enabled'
+    console.error('状态更新失败:', error)
+  }
+}
+
+// 批量操作
+const handleSelectionChange = (rows: MerchantService[]) => {
+  selectedRows.value = rows
+}
+
+// 批量启用
+const handleBatchEnable = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择服务')
+    return
+  }
+  try {
+    const ids = selectedRows.value.map(row => row.id)
+    await batchUpdateServiceStatus(ids, 'enabled')
+    ElMessage.success('批量启用成功')
+    fetchServices()
+  } catch (error) {
+    ElMessage.error('批量启用失败')
+    console.error('批量启用失败:', error)
+  }
+}
+
+// 批量禁用
+const handleBatchDisable = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择服务')
+    return
+  }
+  try {
+    const ids = selectedRows.value.map(row => row.id)
+    await batchUpdateServiceStatus(ids, 'disabled')
+    ElMessage.success('批量禁用成功')
+    fetchServices()
+  } catch (error) {
+    ElMessage.error('批量禁用失败')
+    console.error('批量禁用失败:', error)
+  }
+}
+
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择服务')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedRows.value.length} 个服务吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    // 逐个删除
+    for (const row of selectedRows.value) {
+      await deleteService(row.id)
+    }
+    ElMessage.success('批量删除成功')
+    fetchServices()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败')
+      console.error('批量删除失败:', error)
+    }
+  }
+}
+
+// 搜索
+const handleSearch = () => {
+  setPage(1)
+}
+
+// 重置筛选
+const handleReset = () => {
+  setKeyword('')
+  minPrice.value = undefined
+  maxPrice.value = undefined
+  clearFilters()
+  setPage(1)
+}
+
+// 分页变化
+const handlePageChange = (newPage: number) => {
+  setPage(newPage)
+}
+
+const handleSizeChange = (newSize: number) => {
+  setPageSize(newSize)
+}
+
+// 格式化价格
+const formatPrice = (price: number) => {
+  return `¥${price.toFixed(2)}`
+}
+
+// 格式化时长
+const formatDuration = (duration: number | undefined) => {
+  if (!duration) return '-'
+  if (duration >= 60) {
+    const hours = Math.floor(duration / 60)
+    const minutes = duration % 60
+    return minutes > 0 ? `${hours}小时${minutes}分钟` : `${hours}小时`
+  }
+  return `${duration}分钟`
+}
+
+// 格式化日期
+const formatDate = (date: string | undefined) => {
+  if (!date) return '-'
+  return new Date(date).toLocaleDateString('zh-CN')
+}
+
+// 初始化
+onMounted(() => {
+  fetchServices()
+})
 </script>
 
 <template>
   <div class="merchant-services">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-800">服务管理</h2>
-      <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition flex items-center gap-2">
-        <i class="fa fa-plus"></i>
-        添加服务
-      </button>
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h2 class="page-title">服务管理</h2>
+      <div class="header-actions">
+        <el-button type="primary" :icon="Plus" @click="handleAdd">添加服务</el-button>
+      </div>
     </div>
-    
+
     <!-- 搜索和筛选 -->
-    <div class="flex flex-col md:flex-row gap-4 mb-6">
-      <div class="flex-1">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="搜索服务名称或描述"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
-      <div class="w-full md:w-48">
-        <select
-          v-model="statusFilter"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </div>
+    <div class="search-form">
+      <el-form :inline="true">
+        <el-form-item label="服务名称">
+          <el-input 
+            v-model="keyword" 
+            placeholder="请输入服务名称或描述" 
+            clearable 
+            style="width: 200px" 
+          />
+        </el-form-item>
+        <el-form-item label="价格区间">
+          <el-input-number 
+            v-model="minPrice" 
+            placeholder="最低价" 
+            :min="0" 
+            :precision="2" 
+            style="width: 120px" 
+          />
+          <span style="margin: 0 8px">-</span>
+          <el-input-number 
+            v-model="maxPrice" 
+            placeholder="最高价" 
+            :min="0" 
+            :precision="2" 
+            style="width: 120px" 
+          />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select 
+            :model-value="filters.status || 'all'" 
+            style="width: 120px"
+            @change="(val: string) => setFilter('status', val)"
+          >
+            <el-option label="全部" value="all" />
+            <el-option label="启用" value="enabled" />
+            <el-option label="禁用" value="disabled" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
     </div>
-    
-    <!-- 服务列表 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div v-for="service in filteredServices" :key="service.id" class="bg-white rounded-lg shadow-md overflow-hidden transition hover:shadow-lg">
-        <img :src="service.image" alt="服务图片" class="w-full h-48 object-cover">
-        <div class="p-6">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-lg font-semibold text-gray-800">{{ service.name }}</h3>
-            <span 
-              class="px-2 py-1 rounded text-xs font-medium"
-              :class="service.status === '启用' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-            >
-              {{ service.status }}
-            </span>
-          </div>
-          <div class="mb-4">
-            <div class="flex items-center mb-1">
-              <i class="fa fa-money text-gray-500 mr-2"></i>
-              <span class="text-gray-700">{{ service.price }}</span>
-            </div>
-            <div class="flex items-center mb-1">
-              <i class="fa fa-clock-o text-gray-500 mr-2"></i>
-              <span class="text-gray-700">{{ service.duration }}</span>
-            </div>
-          </div>
-          <p class="text-gray-600 text-sm mb-4">{{ service.description }}</p>
-          <div class="flex gap-2">
-            <button class="flex-1 bg-primary text-white px-3 py-2 rounded-lg hover:bg-opacity-90 transition text-sm">
-              编辑
-            </button>
-            <button class="flex-1 bg-gray-200 text-gray-800 px-3 py-2 rounded-lg hover:bg-gray-300 transition text-sm">
-              禁用
-            </button>
-            <button class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition text-sm">
-              删除
-            </button>
-          </div>
-        </div>
-      </div>
+
+    <!-- 批量操作 -->
+    <div class="batch-actions">
+      <el-button :disabled="selectedRows.length === 0" @click="handleBatchEnable">批量启用</el-button>
+      <el-button :disabled="selectedRows.length === 0" @click="handleBatchDisable">批量禁用</el-button>
+      <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">批量删除</el-button>
+      <span v-if="selectedRows.length > 0" class="selected-count">已选择 {{ selectedRows.length }} 项</span>
     </div>
-    
+
+    <!-- 服务列表表格 -->
+    <el-table 
+      :data="paginatedServices" 
+      v-loading="loading" 
+      style="width: 100%" 
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="55" />
+      <el-table-column label="服务图片" width="120">
+        <template #default="{ row }">
+          <el-image
+            v-if="row.image"
+            :src="row.image"
+            fit="cover"
+            style="width: 80px; height: 80px; border-radius: 8px;"
+          />
+          <div v-else class="image-placeholder">暂无图片</div>
+        </template>
+      </el-table-column>
+      <el-table-column prop="name" label="服务名称" min-width="150" show-overflow-tooltip />
+      <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
+      <el-table-column label="价格" width="120">
+        <template #default="{ row }">
+          <span class="price-text">{{ formatPrice(row.price) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="时长" width="120">
+        <template #default="{ row }">
+          {{ formatDuration(row.duration) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" width="100">
+        <template #default="{ row }">
+          <el-switch
+            v-model="row.status"
+            active-value="enabled"
+            inactive-value="disabled"
+            @change="handleStatusChange(row)"
+          />
+        </template>
+      </el-table-column>
+      <el-table-column label="创建时间" width="120">
+        <template #default="{ row }">
+          {{ formatDate(row.createdAt) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="150" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link :icon="Edit" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="danger" link :icon="Delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
     <!-- 分页 -->
-    <div class="mt-8 flex justify-center">
-      <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-        <button class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-          <span class="sr-only">上一页</span>
-          <i class="fa fa-chevron-left"></i>
-        </button>
-        <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-primary text-sm font-medium text-white">
-          1
-        </button>
-        <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-          2
-        </button>
-        <button class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-          <span class="sr-only">下一页</span>
-          <i class="fa fa-chevron-right"></i>
-        </button>
-      </nav>
+    <div class="pagination-wrapper">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50]"
+        :total="total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @current-change="handlePageChange"
+        @size-change="handleSizeChange"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
 .merchant-services {
-  font-family: Arial, sans-serif;
+  padding: 0;
 }
 
-.flex {
+.page-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
-.items-center {
+.page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.search-form {
+  background: #f5f7fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.batch-actions {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
   align-items: center;
 }
 
-.justify-between {
-  justify-content: space-between;
+.selected-count {
+  margin-left: 16px;
+  color: #909399;
+  font-size: 14px;
 }
 
-.mb-6 {
-  margin-bottom: 1.5rem;
+.image-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 12px;
 }
 
-.text-2xl {
-  font-size: 1.5rem;
-  line-height: 2rem;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
-.text-gray-800 {
-  color: #1f2937;
-}
-
-.bg-primary {
-  background-color: #4CAF50;
-}
-
-.text-white {
-  color: #ffffff;
-}
-
-.px-4 {
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-.py-2 {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-
-.hover\:bg-opacity-90:hover {
-  background-color: rgba(76, 175, 80, 0.9);
-}
-
-.transition {
-  transition: all 0.3s ease;
-}
-
-.gap-2 {
-  gap: 0.5rem;
-}
-
-.flex-col {
-  flex-direction: column;
-}
-
-.md\:flex-row {
-  flex-direction: row;
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-.flex-1 {
-  flex: 1;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.md\:w-48 {
-  width: 12rem;
-}
-
-.border {
-  border: 1px solid #e5e7eb;
-}
-
-.border-gray-300 {
-  border-color: #d1d5db;
-}
-
-.focus\:outline-none:focus {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-}
-
-.focus\:ring-2:focus {
-  ring-width: 2px;
-}
-
-.focus\:ring-primary:focus {
-  ring-color: #4CAF50;
-}
-
-.grid {
-  display: grid;
-}
-
-.grid-cols-1 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-@media (min-width: 768px) {
-  .md\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .lg\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.gap-6 {
-  gap: 1.5rem;
-}
-
-.shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.hover\:shadow-lg:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.object-cover {
-  object-fit: cover;
-}
-
-.p-6 {
-  padding: 1.5rem;
-}
-
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-}
-
-.font-semibold {
+.price-text {
+  color: #f56c6c;
   font-weight: 600;
 }
 
-.px-2 {
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-}
-
-.py-1 {
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-}
-
-.rounded {
-  border-radius: 0.25rem;
-}
-
-.text-xs {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-.font-medium {
-  font-weight: 500;
-}
-
-.bg-green-100 {
-  background-color: #d1fae5;
-}
-
-.text-green-800 {
-  color: #065f46;
-}
-
-.bg-red-100 {
-  background-color: #fee2e2;
-}
-
-.text-red-800 {
-  color: #991b1b;
-}
-
-.mb-4 {
-  margin-bottom: 1rem;
-}
-
-.mb-1 {
-  margin-bottom: 0.25rem;
-}
-
-.text-gray-500 {
-  color: #6b7280;
-}
-
-.mr-2 {
-  margin-right: 0.5rem;
-}
-
-.text-gray-700 {
-  color: #374151;
-}
-
-.text-gray-600 {
-  color: #4b5563;
-}
-
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
-
-.flex-1 {
-  flex: 1;
-}
-
-.px-3 {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.py-2 {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.bg-gray-200 {
-  background-color: #e5e7eb;
-}
-
-.text-gray-800 {
-  color: #1f2937;
-}
-
-.hover\:bg-gray-300:hover {
-  background-color: #d1d5db;
-}
-
-.bg-red-500 {
-  background-color: #ef4444;
-}
-
-.hover\:bg-red-600:hover {
-  background-color: #dc2626;
-}
-
-.mt-8 {
-  margin-top: 2rem;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.relative {
-  position: relative;
-}
-
-.inline-flex {
-  display: inline-flex;
-}
-
-.rounded-l-md {
-  border-top-left-radius: 0.375rem;
-  border-bottom-left-radius: 0.375rem;
-}
-
-.rounded-r-md {
-  border-top-right-radius: 0.375rem;
-  border-bottom-right-radius: 0.375rem;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
-.shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.-space-x-px > * + * {
-  margin-left: -1px;
-}
-
-.aria-label {
-  aria-label: Pagination;
+.pagination-wrapper {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

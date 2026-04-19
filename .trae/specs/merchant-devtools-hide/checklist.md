@@ -1,0 +1,24 @@
+# Checklist
+
+- [x] Login.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] Register.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] MerchantLayout.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] home/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] services/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] service-edit/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] merchant-products/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] product-edit/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] appointments/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] merchant-appointments/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] merchant-orders/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] merchant-product-orders/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] reviews/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] merchant-reviews/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] categories/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] shop-edit/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] shop-settings/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] stats-appointments/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] stats-revenue/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] merchant-home/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] merchant-services/index.vue 已添加Vue DevTools隐藏规则（通过全局CSS）
+- [x] 所有页面Vue DevTools元素隐藏效果验证通过

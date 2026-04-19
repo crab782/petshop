@@ -75,7 +75,7 @@ Mock.mock(/\/api\/admin\/activities\/\d+/, 'delete', () => ({
   data: { success: true }
 }))
 
-Mock.mock(/\/api\/admin\/activities\/\d+\/toggle/, 'put', () => ({
+Mock.mock(/\/api\/admin\/activities\/\d+\/status/, 'put', () => ({
   code: 200,
   message: '状态切换成功',
   data: { success: true }

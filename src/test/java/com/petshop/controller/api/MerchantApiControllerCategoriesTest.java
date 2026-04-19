@@ -1,6 +1,7 @@
 package com.petshop.controller.api;
 
 import com.petshop.entity.Category;
+import com.petshop.exception.GlobalExceptionHandler;
 import com.petshop.factory.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,7 +36,9 @@ public class MerchantApiControllerCategoriesTest extends MerchantApiControllerTe
         super.setUp();
         controller = new MerchantApiController();
         injectDependencies();
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     private void injectDependencies() {
@@ -215,7 +218,7 @@ public class MerchantApiControllerCategoriesTest extends MerchantApiControllerTe
         }
 
         @Test
-        @DisplayName("服务层异常返回500")
+        @DisplayName("服务层异常返回400")
         void testAddCategory_ServiceException() throws Exception {
             mockMerchantSession();
             
@@ -230,8 +233,9 @@ public class MerchantApiControllerCategoriesTest extends MerchantApiControllerTe
                     .sessionAttr("merchantId", testMerchantId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(newCategory)))
-                    .andExpect(status().isInternalServerError())
-                    .andExpect(jsonPath("$.code").value(500));
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(400))
+                    .andExpect(jsonPath("$.message").value("数据库错误"));
         }
     }
 
@@ -858,8 +862,8 @@ public class MerchantApiControllerCategoriesTest extends MerchantApiControllerTe
                     .sessionAttr("merchantId", testMerchantId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(request)))
-                    .andExpect(status().isInternalServerError())
-                    .andExpect(jsonPath("$.code").value(500));
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(400));
         }
     }
 }

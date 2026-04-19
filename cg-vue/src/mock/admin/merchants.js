@@ -69,11 +69,20 @@ Mock.mock(/\/api\/admin\/merchants\/\d+/, 'get', () => {
   }
 })
 
-Mock.mock(/\/api\/admin\/merchants\/\d+\/audit/, 'post', () => ({
-  code: 200,
-  message: '审核成功',
-  data: { success: true }
-}))
+Mock.mock(/\/api\/admin\/merchants\/\d+\/audit/, 'put', (options) => {
+  const body = JSON.parse(options.body || '{}')
+  const idMatch = options.url.match(/\/api\/admin\/merchants\/(\d+)\/audit/)
+  const id = idMatch ? parseInt(idMatch[1]) : null
+  const merchant = merchants.find(m => m.id === id)
+  if (merchant) {
+    merchant.status = body.status || 'approved'
+  }
+  return {
+    code: 200,
+    message: '审核成功',
+    data: { success: true }
+  }
+})
 
 Mock.mock('/api/admin/merchants/pending', 'get', () => {
   const pending = merchants.filter(m => m.status === 'pending')
@@ -85,8 +94,67 @@ Mock.mock('/api/admin/merchants/pending', 'get', () => {
   }
 })
 
-Mock.mock(/\/api\/admin\/merchants\/\d+/, 'delete', () => ({
-  code: 200,
-  message: '删除成功',
-  data: { success: true }
-}))
+Mock.mock(/\/api\/admin\/merchants\/\d+\/status/, 'put', (options) => {
+  const body = JSON.parse(options.body || '{}')
+  const idMatch = options.url.match(/\/api\/admin\/merchants\/(\d+)\/status/)
+  const id = idMatch ? parseInt(idMatch[1]) : null
+  const merchant = merchants.find(m => m.id === id)
+  if (merchant) {
+    merchant.status = body.status
+  }
+  return {
+    code: 200,
+    message: '状态更新成功',
+    data: { success: true }
+  }
+})
+
+Mock.mock(/\/api\/admin\/merchants\/\d+$/, 'delete', (options) => {
+  const idMatch = options.url.match(/\/api\/admin\/merchants\/(\d+)$/)
+  const id = idMatch ? parseInt(idMatch[1]) : null
+  const index = merchants.findIndex(m => m.id === id)
+  if (index > -1) {
+    merchants.splice(index, 1)
+  }
+  return {
+    code: 200,
+    message: '删除成功',
+    data: { success: true }
+  }
+})
+
+Mock.mock('/api/admin/merchants/batch/status', 'put', (options) => {
+  const body = JSON.parse(options.body || '{}')
+  const { ids, status } = body
+  if (ids && Array.isArray(ids)) {
+    ids.forEach(id => {
+      const merchant = merchants.find(m => m.id === id)
+      if (merchant) {
+        merchant.status = status
+      }
+    })
+  }
+  return {
+    code: 200,
+    message: '批量更新状态成功',
+    data: { success: true }
+  }
+})
+
+Mock.mock('/api/admin/merchants/batch', 'delete', (options) => {
+  const body = JSON.parse(options.body || '{}')
+  const { ids } = body
+  if (ids && Array.isArray(ids)) {
+    ids.forEach(id => {
+      const index = merchants.findIndex(m => m.id === id)
+      if (index > -1) {
+        merchants.splice(index, 1)
+      }
+    })
+  }
+  return {
+    code: 200,
+    message: '批量删除成功',
+    data: { success: true }
+  }
+})

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Location, Calendar, Goods, ArrowRight, StarFilled, Message, Order } from '@element-plus/icons-vue'
+import { Location, Calendar, Goods, ArrowRight, StarFilled, Message, List } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -53,7 +53,7 @@ const quickActions = [
   { title: '我的宠物', icon: Goods, color: '#409eff', route: '/user/pets' },
   { title: '我的预约', icon: Calendar, color: '#67c23a', route: '/user/appointments' },
   { title: '浏览服务', icon: Location, color: '#e6a23c', route: '/user/services' },
-  { title: '我的订单', icon: Order, color: '#f56c6c', route: '/user/orders' }
+  { title: '我的订单', icon: List, color: '#f56c6c', route: '/user/orders' }
 ]
 
 const recommendedServices = ref([

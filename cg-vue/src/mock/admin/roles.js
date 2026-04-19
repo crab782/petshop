@@ -78,6 +78,15 @@ Mock.mock(/\/api\/admin\/roles\/\d+/, 'delete', () => ({
   data: { success: true }
 }))
 
+Mock.mock('/api/admin/roles/batch', 'delete', (options) => {
+  const { ids } = JSON.parse(options.body)
+  return {
+    code: 200,
+    message: '批量删除成功',
+    data: { success: true, count: ids?.length || 0 }
+  }
+})
+
 Mock.mock('/api/admin/permissions', 'get', () => ({
   code: 200,
   message: 'success',

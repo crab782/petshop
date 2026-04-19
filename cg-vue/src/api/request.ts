@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 
 const request: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 10000,
 })
 

@@ -1,8 +1,38 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { ElCard, ElRow, ElCol, ElStatistic, ElTable, ElTableColumn, ElButton, ElTag, ElRate, ElDialog, ElInput, ElMessage, ElPagination, ElDatePicker, ElSelect, ElOption, ElPopconfirm, ElEmpty, ElProgress } from 'element-plus'
+import {
+  ElCard,
+  ElRow,
+  ElCol,
+  ElStatistic,
+  ElTable,
+  ElTableColumn,
+  ElButton,
+  ElTag,
+  ElRate,
+  ElDialog,
+  ElInput,
+  ElMessage,
+  ElPagination,
+  ElDatePicker,
+  ElSelect,
+  ElOption,
+  ElPopconfirm,
+  ElEmpty,
+  ElProgress,
+  ElAvatar,
+  ElIcon
+} from 'element-plus'
 import { Star, ChatDotRound, User, Document, Delete, Search, Refresh } from '@element-plus/icons-vue'
-import { getMerchantReviews, replyReview, deleteReview, type Review, type ReviewQuery, type ReviewListResponse } from '@/api/merchant'
+import {
+  getMerchantReviews,
+  replyReview,
+  deleteReview,
+  type Review,
+  type ReviewQuery,
+  type ReviewListResponse
+} from '@/api/merchant'
+import { usePagination } from '@/composables/usePagination'
 import dayjs from 'dayjs'
 
 const reviews = ref<Review[]>([])
@@ -11,6 +41,8 @@ const dialogVisible = ref(false)
 const currentReview = ref<Review | null>(null)
 const replyContent = ref('')
 const submitting = ref(false)
+
+const { page, pageSize, total, setTotal, setPage, setPageSize } = usePagination(1, 10)
 
 const queryParams = ref<ReviewQuery>({
   page: 1,
@@ -21,7 +53,6 @@ const queryParams = ref<ReviewQuery>({
   keyword: ''
 })
 
-const total = ref(0)
 const ratingDistribution = ref({
   five: 0,
   four: 0,
@@ -49,11 +80,19 @@ const fetchReviews = async () => {
   try {
     const res = await getMerchantReviews(queryParams.value)
     const data = res.data as ReviewListResponse
-    reviews.value = data.list
-    total.value = data.total
-    ratingDistribution.value = data.ratingDistribution
+    reviews.value = data.list || []
+    setTotal(data.total || 0)
+    ratingDistribution.value = data.ratingDistribution || {
+      five: 0,
+      four: 0,
+      three: 0,
+      two: 0,
+      one: 0
+    }
   } catch (error) {
     console.error('获取评价列表失败:', error)
+    ElMessage.error('获取评价列表失败，请稍后重试')
+    reviews.value = []
   } finally {
     loading.value = false
   }
@@ -61,6 +100,7 @@ const fetchReviews = async () => {
 
 const handleSearch = () => {
   queryParams.value.page = 1
+  setPage(1)
   fetchReviews()
 }
 
@@ -73,17 +113,21 @@ const handleReset = () => {
     endDate: '',
     keyword: ''
   }
+  setPage(1)
   fetchReviews()
 }
 
-const handlePageChange = (page: number) => {
-  queryParams.value.page = page
+const handlePageChange = (newPage: number) => {
+  queryParams.value.page = newPage
+  setPage(newPage)
   fetchReviews()
 }
 
-const handleSizeChange = (size: number) => {
-  queryParams.value.pageSize = size
+const handleSizeChange = (newSize: number) => {
+  queryParams.value.pageSize = newSize
+  setPageSize(newSize)
   queryParams.value.page = 1
+  setPage(1)
   fetchReviews()
 }
 
@@ -105,7 +149,8 @@ const handleReply = async () => {
     dialogVisible.value = false
     fetchReviews()
   } catch (error) {
-    ElMessage.error('回复失败')
+    console.error('回复失败:', error)
+    ElMessage.error('回复失败，请稍后重试')
   } finally {
     submitting.value = false
   }
@@ -117,7 +162,8 @@ const handleDelete = async (id: number) => {
     ElMessage.success('删除成功')
     fetchReviews()
   } catch (error) {
-    ElMessage.error('删除失败')
+    console.error('删除失败:', error)
+    ElMessage.error('删除失败，请稍后重试')
   }
 }
 
@@ -125,10 +171,14 @@ const formatDate = (date: string) => {
   return dayjs(date).format('YYYY-MM-DD HH:mm')
 }
 
-const getRatingTagType = (rating: number) => {
-  if (rating >= 4) return 'success'
-  if (rating >= 3) return 'warning'
-  return 'danger'
+const handleDateChange = (val: [string, string] | null) => {
+  if (val) {
+    queryParams.value.startDate = val[0]
+    queryParams.value.endDate = val[1]
+  } else {
+    queryParams.value.startDate = ''
+    queryParams.value.endDate = ''
+  }
 }
 
 onMounted(() => {
@@ -243,21 +293,13 @@ onMounted(() => {
           </el-col>
           <el-col :span="6">
             <el-date-picker
-              v-model="queryParams.startDate"
+              :model-value="queryParams.startDate && queryParams.endDate ? [queryParams.startDate, queryParams.endDate] : null"
               type="daterange"
               range-separator="至"
               start-placeholder="开始日期"
               end-placeholder="结束日期"
               value-format="YYYY-MM-DD"
-              @change="(val: [string, string] | null) => {
-                if (val) {
-                  queryParams.startDate = val[0]
-                  queryParams.endDate = val[1]
-                } else {
-                  queryParams.startDate = ''
-                  queryParams.endDate = ''
-                }
-              }"
+              @update:model-value="handleDateChange"
             />
           </el-col>
           <el-col :span="9">
@@ -267,7 +309,7 @@ onMounted(() => {
         </el-row>
       </div>
 
-      <el-table :data="reviews" v-loading="loading" style="width: 100%" :empty-text="'暂无评价数据'">
+      <el-table :data="reviews" v-loading="loading" style="width: 100%">
         <el-table-column prop="id" label="评价ID" width="90" />
         <el-table-column label="用户信息" width="150">
           <template #default="{ row }">
@@ -318,16 +360,19 @@ onMounted(() => {
             </el-popconfirm>
           </template>
         </el-table-column>
+        <template #empty>
+          <el-empty description="暂无评价数据" />
+        </template>
       </el-table>
 
       <div class="pagination-container" v-if="total > 0">
         <el-pagination
-          v-model:current-page="queryParams.page"
-          v-model:page-size="queryParams.pageSize"
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
-          @change="handlePageChange"
+          @current-change="handlePageChange"
           @size-change="handleSizeChange"
         />
       </div>

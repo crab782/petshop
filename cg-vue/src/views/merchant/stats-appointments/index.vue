@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { ElCard, ElRow, ElCol, ElStatistic, ElSelect, ElOption, ElTable, ElTableColumn, ElTag, ElProgress, ElMessage, ElButton, ElButtonGroup, ElDatePicker } from 'element-plus'
+import { ref, computed, watch } from 'vue'
+import { ElCard, ElRow, ElCol, ElStatistic, ElButton, ElButtonGroup, ElDatePicker, ElTable, ElTableColumn, ElProgress, ElTag, ElMessage, ElEmpty } from 'element-plus'
 import { Calendar, Clock, Check, Close, TrendCharts, PieChart, Star, Download, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
-import { getMerchantAppointmentStats, type AppointmentStats } from '@/api/merchant'
+import { useAsync } from '@/composables'
+import { getMerchantAppointmentStats, exportAppointmentStats, type AppointmentStats } from '@/api/merchant'
 
 type TimeType = 'today' | 'week' | 'month' | 'year' | 'custom'
 
 const timeType = ref<TimeType>('today')
 const customDateRange = ref<[Date, Date] | null>(null)
-const loading = ref(false)
-const statsData = ref<AppointmentStats | null>(null)
+const exporting = ref(false)
 
 const timeButtons = [
   { label: '今日', value: 'today' },
@@ -21,21 +21,19 @@ const timeButtons = [
 
 const sourceColors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399']
 
-const fetchStats = async () => {
-  loading.value = true
-  try {
-    const params: { timeRange: string; startDate?: string; endDate?: string } = { timeRange: timeType.value }
-    if (timeType.value === 'custom' && customDateRange.value) {
-      params.startDate = customDateRange.value[0].toISOString().split('T')[0]
-      params.endDate = customDateRange.value[1].toISOString().split('T')[0]
-    }
-    statsData.value = await getMerchantAppointmentStats(params.timeRange, params.startDate, params.endDate)
-  } catch (error) {
-    ElMessage.error('获取统计数据失败')
-  } finally {
-    loading.value = false
+const {
+  data: statsData,
+  loading,
+  error,
+  execute: fetchStats
+} = useAsync<AppointmentStats>(async () => {
+  const params: { timeRange: string; startDate?: string; endDate?: string } = { timeRange: timeType.value }
+  if (timeType.value === 'custom' && customDateRange.value) {
+    params.startDate = customDateRange.value[0].toISOString().split('T')[0]
+    params.endDate = customDateRange.value[1].toISOString().split('T')[0]
   }
-}
+  return getMerchantAppointmentStats(params.timeRange, params.startDate, params.endDate)
+})
 
 const handleTimeTypeChange = (val: TimeType) => {
   timeType.value = val
@@ -50,25 +48,16 @@ const handleCustomDateChange = () => {
   }
 }
 
-const totalAppointments = computed(() => {
-  if (!statsData.value) return 0
-  return statsData.value.totalCount
+watch(error, (newError) => {
+  if (newError) {
+    ElMessage.error('获取统计数据失败，请稍后重试')
+  }
 })
 
-const pendingAppointments = computed(() => {
-  if (!statsData.value) return 0
-  return statsData.value.pendingCount
-})
-
-const completedAppointments = computed(() => {
-  if (!statsData.value) return 0
-  return statsData.value.completedCount
-})
-
-const cancelledAppointments = computed(() => {
-  if (!statsData.value) return 0
-  return statsData.value.cancelledCount
-})
+const totalAppointments = computed(() => statsData.value?.totalCount ?? 0)
+const pendingAppointments = computed(() => statsData.value?.pendingCount ?? 0)
+const completedAppointments = computed(() => statsData.value?.completedCount ?? 0)
+const cancelledAppointments = computed(() => statsData.value?.cancelledCount ?? 0)
 
 const completionRate = computed(() => {
   if (!statsData.value || statsData.value.totalCount === 0) return 0
@@ -80,10 +69,7 @@ const cancellationRate = computed(() => {
   return Math.round((statsData.value.cancelledCount / statsData.value.totalCount) * 100)
 })
 
-const growthRate = computed(() => {
-  if (!statsData.value) return 0
-  return statsData.value.growthRate || 0
-})
+const growthRate = computed(() => statsData.value?.growthRate ?? 0)
 
 const hourDistribution = computed(() => {
   if (!statsData.value?.hourData) return []
@@ -101,9 +87,7 @@ const peakHour = computed(() => {
   return hourDistribution.value.reduce((max, item) => item.count > max.count ? item : max)
 })
 
-const getSourceColor = (index: number) => {
-  return sourceColors[index % sourceColors.length]
-}
+const getSourceColor = (index: number) => sourceColors[index % sourceColors.length]
 
 const getSourcePercent = (value: number) => {
   if (!statsData.value || statsData.value.totalCount === 0) return 0
@@ -116,36 +100,38 @@ const getBarHeight = (count: number) => {
   return maxCount > 0 ? Math.round((count / maxCount) * 100) : 0
 }
 
-const exportToCSV = () => {
+const handleExport = async () => {
   if (!statsData.value) {
     ElMessage.warning('暂无数据可导出')
     return
   }
-  const headers = ['日期', '预约数量', '完成数量', '取消数量', '完成率', '总金额']
-  const rows = statsData.value.trendData.map(item => {
-    const dayData = statsData.value!.dailyStats?.[item.date] || {}
-    return [
-      item.date,
-      item.count,
-      dayData.completedCount || 0,
-      dayData.cancelledCount || 0,
-      item.count > 0 ? Math.round(((dayData.completedCount || 0) / item.count) * 100) + '%' : '0%',
-      '¥' + ((dayData.totalRevenue || 0).toFixed(2))
-    ]
-  })
 
-  const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n')
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `预约统计_${new Date().toISOString().split('T')[0]}.csv`
-  link.click()
-  ElMessage.success('导出成功')
+  exporting.value = true
+  try {
+    const params: { timeRange: string; startDate?: string; endDate?: string } = { timeRange: timeType.value }
+    if (timeType.value === 'custom' && customDateRange.value) {
+      params.startDate = customDateRange.value[0].toISOString().split('T')[0]
+      params.endDate = customDateRange.value[1].toISOString().split('T')[0]
+    }
+
+    const blob = await exportAppointmentStats(params.timeRange, params.startDate, params.endDate)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `预约统计_${new Date().toISOString().split('T')[0]}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败，请稍后重试')
+  } finally {
+    exporting.value = false
+  }
 }
 
-onMounted(() => {
-  fetchStats()
-})
+fetchStats()
 </script>
 
 <template>
@@ -173,7 +159,9 @@ onMounted(() => {
             end-placeholder="结束日期"
             @change="handleCustomDateChange"
           />
-          <el-button type="success" :icon="Download" @click="exportToCSV">导出数据</el-button>
+          <el-button type="success" :icon="Download" :loading="exporting" @click="handleExport">
+            导出数据
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -291,6 +279,9 @@ onMounted(() => {
                 ¥{{ (statsData?.dailyStats?.[row.date]?.totalRevenue || 0).toFixed(2) }}
               </template>
             </el-table-column>
+            <template #empty>
+              <el-empty description="暂无趋势数据" />
+            </template>
           </el-table>
         </el-card>
       </el-col>
@@ -304,23 +295,23 @@ onMounted(() => {
             </div>
           </template>
           <div class="source-analysis" v-loading="loading">
-            <div
-              v-for="(item, index) in statsData?.sourceData || []"
-              :key="item.name"
-              class="source-item"
-            >
-              <div class="source-label">
-                <span class="source-dot" :style="{ backgroundColor: getSourceColor(index) }"></span>
-                <span class="source-name">{{ item.name }}</span>
+            <template v-if="statsData?.sourceData?.length">
+              <div
+                v-for="(item, index) in statsData.sourceData"
+                :key="item.name"
+                class="source-item"
+              >
+                <div class="source-label">
+                  <span class="source-dot" :style="{ backgroundColor: getSourceColor(index) }"></span>
+                  <span class="source-name">{{ item.name }}</span>
+                </div>
+                <div class="source-value">
+                  <span class="source-count">{{ item.value }}</span>
+                  <span class="source-percent">{{ getSourcePercent(item.value) }}%</span>
+                </div>
               </div>
-              <div class="source-value">
-                <span class="source-count">{{ item.value }}</span>
-                <span class="source-percent">{{ getSourcePercent(item.value) }}%</span>
-              </div>
-            </div>
-            <div v-if="!statsData?.sourceData?.length" class="empty-text">
-              暂无数据
-            </div>
+            </template>
+            <el-empty v-else description="暂无来源数据" />
           </div>
         </el-card>
       </el-col>
@@ -336,26 +327,26 @@ onMounted(() => {
             </div>
           </template>
           <div class="hour-stats" v-loading="loading">
-            <div v-if="peakHour" class="peak-hour-tip">
-              <span class="peak-label">预约高峰时段：</span>
-              <span class="peak-value">{{ peakHour.hour }}:00 - {{ peakHour.hour + 1 }}:00</span>
-              <span class="peak-count">（{{ peakHour.count }}笔预约）</span>
-            </div>
-            <div class="hour-bars">
-              <div v-for="item in hourDistribution" :key="item.hour" class="hour-bar-item">
-                <div class="hour-bar-container">
-                  <div
-                    class="hour-bar"
-                    :style="{ height: `${getBarHeight(item.count)}%` }"
-                  />
-                </div>
-                <div class="hour-label">{{ item.hour }}时</div>
-                <div class="hour-count">{{ item.count }}</div>
+            <template v-if="hourDistribution.length">
+              <div v-if="peakHour" class="peak-hour-tip">
+                <span class="peak-label">预约高峰时段：</span>
+                <span class="peak-value">{{ peakHour.hour }}:00 - {{ peakHour.hour + 1 }}:00</span>
+                <span class="peak-count">（{{ peakHour.count }}笔预约）</span>
               </div>
-            </div>
-            <div v-if="!hourDistribution.length" class="empty-text">
-              暂无时段数据
-            </div>
+              <div class="hour-bars">
+                <div v-for="item in hourDistribution" :key="item.hour" class="hour-bar-item">
+                  <div class="hour-bar-container">
+                    <div
+                      class="hour-bar"
+                      :style="{ height: `${getBarHeight(item.count)}%` }"
+                    />
+                  </div>
+                  <div class="hour-label">{{ item.hour }}时</div>
+                  <div class="hour-count">{{ item.count }}</div>
+                </div>
+              </div>
+            </template>
+            <el-empty v-else description="暂无时段数据" />
           </div>
         </el-card>
       </el-col>
@@ -369,29 +360,29 @@ onMounted(() => {
             </div>
           </template>
           <div class="service-stats" v-loading="loading">
-            <div
-              v-for="(item, index) in statsData?.sourceData || []"
-              :key="item.name"
-              class="service-item"
-            >
-              <div class="service-info">
-                <span class="service-dot" :style="{ backgroundColor: getSourceColor(index) }"></span>
-                <span class="service-name">{{ item.name }}</span>
+            <template v-if="statsData?.sourceData?.length">
+              <div
+                v-for="(item, index) in statsData.sourceData"
+                :key="item.name"
+                class="service-item"
+              >
+                <div class="service-info">
+                  <span class="service-dot" :style="{ backgroundColor: getSourceColor(index) }"></span>
+                  <span class="service-name">{{ item.name }}</span>
+                </div>
+                <div class="service-bar-container">
+                  <div
+                    class="service-bar"
+                    :style="{
+                      width: `${getSourcePercent(item.value)}%`,
+                      backgroundColor: getSourceColor(index)
+                    }"
+                  />
+                </div>
+                <div class="service-count">{{ item.value }}次</div>
               </div>
-              <div class="service-bar-container">
-                <div
-                  class="service-bar"
-                  :style="{
-                    width: `${getSourcePercent(item.value)}%`,
-                    backgroundColor: getSourceColor(index)
-                  }"
-                />
-              </div>
-              <div class="service-count">{{ item.value }}次</div>
-            </div>
-            <div v-if="!statsData?.sourceData?.length" class="empty-text">
-              暂无服务数据
-            </div>
+            </template>
+            <el-empty v-else description="暂无服务数据" />
           </div>
         </el-card>
       </el-col>
@@ -431,6 +422,9 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
+        <template #empty>
+          <el-empty description="暂无热门服务数据" />
+        </template>
       </el-table>
     </el-card>
 
@@ -442,7 +436,7 @@ onMounted(() => {
               <span class="card-title">数据摘要</span>
             </div>
           </template>
-          <div class="summary-content">
+          <div class="summary-content" v-loading="loading">
             <div class="summary-item">
               <span class="summary-label">完成率</span>
               <el-progress
@@ -611,12 +605,6 @@ onMounted(() => {
   color: #909399;
   min-width: 40px;
   text-align: right;
-}
-
-.empty-text {
-  text-align: center;
-  color: #909399;
-  padding: 40px 0;
 }
 
 .hot-services-card {

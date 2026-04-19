@@ -67,3 +67,28 @@ body {
     padding: 0 16px;
   }
 }
+
+/* 隐藏Vue DevTools扩展添加的悬浮面板元素 */
+.vue-devtools__panel {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+.vue-devtools__anchor-btn {
+  display: none !important;
+}
+
+#inspector-container {
+  display: none !important;
+}
+
+.vue-devtools__inspector-button {
+  display: none !important;
+}
+
+.vue-devtools__panel-content {
+  display: none !important;
+}

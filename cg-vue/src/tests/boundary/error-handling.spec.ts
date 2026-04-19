@@ -49,7 +49,7 @@ const mountWithPlugins = async (component: any, options = {}) => {
           props: ['label', 'prop', 'error'],
         },
       },
-      ...((options as any).global || {}),
+      ...(options as any).global,
     },
   })
   

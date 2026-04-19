@@ -176,4 +176,12 @@ public class ProductService {
         product.setStatus("disabled");
         return productRepository.save(product);
     }
+    
+    public Page<Product> findAllByOrderByCreatedAtDesc(Pageable pageable) {
+        return productRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+    
+    public Page<Product> adminSearchProducts(String keyword, String status, Integer merchantId, String category, Pageable pageable) {
+        return productRepository.adminSearchProducts(keyword, status, merchantId, category, pageable);
+    }
 }

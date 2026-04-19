@@ -129,8 +129,16 @@ export const deleteService = (id: number) => {
   return request.delete(`/api/merchant/services/${id}`)
 }
 
+export const getServiceById = (id: number) => {
+  return request.get<MerchantService>(`/api/merchant/services/${id}`)
+}
+
 export const batchUpdateServiceStatus = (ids: number[], status: 'enabled' | 'disabled') => {
   return request.put<MerchantService[]>('/api/merchant/services/batch/status', { ids, status })
+}
+
+export const batchDeleteServices = (ids: number[]) => {
+  return request.delete('/api/merchant/services/batch', { data: { ids } })
 }
 
 export const getMerchantOrders = () => {
@@ -343,6 +351,13 @@ export const getMerchantAppointmentStats = (timeRange: string, startDate?: strin
   return request.get<AppointmentStats>('/api/merchant/appointment-stats', { params: { timeRange, startDate, endDate } })
 }
 
+export const exportAppointmentStats = (timeRange: string, startDate?: string, endDate?: string) => {
+  return request.get<Blob>('/api/merchant/appointment-stats/export', {
+    params: { timeRange, startDate, endDate },
+    responseType: 'blob'
+  })
+}
+
 export interface MerchantSettings {
   businessDays: number[]
   startTime: string
@@ -378,6 +393,8 @@ export interface MerchantInfo {
   address?: string
   logo?: string
   description?: string
+  status?: 'pending' | 'approved' | 'rejected'
+  created_at?: string
 }
 
 export interface ChangePasswordData {
@@ -409,4 +426,45 @@ export const bindEmail = (data: BindEmailData) => {
 
 export const sendVerifyCode = (type: 'phone' | 'email', value: string) => {
   return request.post('/api/merchant/send-verify-code', { type, value })
+}
+
+export interface DashboardStats {
+  todayOrders: number
+  pendingAppointments: number
+  todayRevenue: number
+  avgRating: number
+  orderGrowth: number
+  revenueGrowth: number
+  ratingCount: number
+}
+
+export interface RecentOrder {
+  id: number
+  customerName: string
+  serviceName: string
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  appointmentTime: string
+  totalPrice: number
+}
+
+export interface RecentReview {
+  id: number
+  userName: string
+  userAvatar?: string
+  rating: number
+  content: string
+  serviceName: string
+  reviewTime: string
+}
+
+export const getMerchantDashboard = () => {
+  return request.get<DashboardStats>('/api/merchant/dashboard')
+}
+
+export const getRecentOrders = (limit: number = 5) => {
+  return request.get<RecentOrder[]>('/api/merchant/appointments/recent', { params: { limit } })
+}
+
+export const getRecentReviews = (limit: number = 5) => {
+  return request.get<RecentReview[]>('/api/merchant/reviews/recent', { params: { limit } })
 }

@@ -1,39 +1,36 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { useAsync, useForm } from '@/composables'
 import { getMerchantInfo, updateMerchantInfo, type MerchantInfo } from '@/api/merchant'
 import { Upload, Shop } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
-const loading = ref(false)
 const logoUrl = ref('')
+const logoInputMethod = ref<'url' | 'upload'>('url')
 
-interface ShopInfo {
-  id: number
+interface ShopFormData {
   name: string
-  logo?: string
-  contact_person?: string
-  phone?: string
-  email?: string
-  address?: string
+  logo: string
+  contact_person: string
+  phone: string
+  email: string
+  address: string
 }
 
-const shopForm = reactive<ShopInfo>({
-  id: 0,
+const initialFormData: ShopFormData = {
   name: '',
   logo: '',
   contact_person: '',
   phone: '',
   email: '',
   address: ''
-})
+}
 
-const logoInputMethod = ref<'url' | 'upload'>('url')
-
-const shopRules: FormRules = {
+const rules: FormRules = {
   name: [
     { required: true, message: '请输入店铺名称', trigger: 'blur' },
     { min: 2, max: 100, message: '店铺名称长度为2-100个字符', trigger: 'blur' }
@@ -57,41 +54,56 @@ const shopRules: FormRules = {
   ]
 }
 
+const { formData, isSubmitting, reset: resetForm } = useForm<ShopFormData>(initialFormData)
+
+const {
+  loading: fetchLoading,
+  error: fetchError,
+  execute: executeFetch
+} = useAsync<MerchantInfo>(async () => {
+  return await getMerchantInfo()
+})
+
+const {
+  loading: submitLoading,
+  error: submitError,
+  execute: executeSubmit
+} = useAsync<MerchantInfo>(async (data: Partial<MerchantInfo>) => {
+  return await updateMerchantInfo(data)
+})
+
+const loading = computed(() => fetchLoading.value || submitLoading.value)
+
 const fetchShopInfo = async () => {
-  try {
-    loading.value = true
-    const res = await getMerchantInfo()
-    if (res) {
-      shopForm.id = res.id
-      shopForm.name = res.name || ''
-      shopForm.logo = res.logo || ''
-      shopForm.contact_person = (res as MerchantInfo).contact_person || ''
-      shopForm.phone = res.phone || ''
-      shopForm.email = (res as MerchantInfo).email || ''
-      shopForm.address = res.address || ''
-      logoUrl.value = res.logo || ''
-    }
-  } catch (error: unknown) {
-    const err = error as Error
-    ElMessage.error(err.message || '获取店铺信息失败')
-  } finally {
-    loading.value = false
+  const result = await executeFetch()
+  if (result) {
+    resetForm({
+      name: result.name || '',
+      logo: result.logo || '',
+      contact_person: result.contact_person || '',
+      phone: result.phone || '',
+      email: result.email || '',
+      address: result.address || ''
+    })
+    logoUrl.value = result.logo || ''
+  } else if (fetchError.value) {
+    ElMessage.error(fetchError.value.message || '获取店铺信息失败')
   }
 }
 
 const handleLogoUrlInput = (value: string) => {
   logoUrl.value = value
-  shopForm.logo = value
+  formData.logo = value
 }
 
 const handleLogoUploadChange = (uploadFile: { raw?: File; url?: string }) => {
   if (uploadFile.raw) {
     const url = URL.createObjectURL(uploadFile.raw)
     logoUrl.value = url
-    shopForm.logo = url
+    formData.logo = url
   } else if (uploadFile.url) {
     logoUrl.value = uploadFile.url
-    shopForm.logo = uploadFile.url
+    formData.logo = uploadFile.url
   }
   return false
 }
@@ -99,27 +111,29 @@ const handleLogoUploadChange = (uploadFile: { raw?: File; url?: string }) => {
 const handleSave = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid: boolean) => {
+  try {
+    const valid = await formRef.value.validate()
     if (!valid) return
+  } catch {
+    return
+  }
 
-    try {
-      loading.value = true
-      await updateMerchantInfo({
-        name: shopForm.name,
-        logo: shopForm.logo,
-        contact_person: shopForm.contact_person,
-        phone: shopForm.phone,
-        email: shopForm.email,
-        address: shopForm.address
-      })
-      ElMessage.success('保存成功')
-    } catch (error: unknown) {
-      const err = error as Error
-      ElMessage.error(err.message || '保存失败')
-    } finally {
-      loading.value = false
-    }
-  })
+  const data: Partial<MerchantInfo> = {
+    name: formData.name,
+    logo: formData.logo,
+    contact_person: formData.contact_person,
+    phone: formData.phone,
+    email: formData.email,
+    address: formData.address
+  }
+
+  const result = await executeSubmit(data)
+
+  if (result) {
+    ElMessage.success('保存成功')
+  } else if (submitError.value) {
+    ElMessage.error(submitError.value.message || '保存失败')
+  }
 }
 
 const handleBack = () => {
@@ -140,15 +154,24 @@ onMounted(() => {
         <span>编辑店铺信息</span>
       </template>
 
+      <div v-if="fetchLoading" class="loading-container">
+        <el-skeleton :rows="6" animated />
+      </div>
+
       <el-form
+        v-else
         ref="formRef"
-        :model="shopForm"
-        :rules="shopRules"
+        :model="formData"
+        :rules="rules"
         label-width="100px"
         class="shop-form"
       >
         <el-form-item label="店铺名称" prop="name">
-          <el-input v-model="shopForm.name" placeholder="请输入店铺名称" />
+          <el-input
+            v-model="formData.name"
+            placeholder="请输入店铺名称"
+            :disabled="loading"
+          />
         </el-form-item>
 
         <el-form-item label="店铺Logo">
@@ -161,9 +184,10 @@ onMounted(() => {
             <div class="logo-content">
               <div v-if="logoInputMethod === 'url'" class="logo-url-input">
                 <el-input
-                  v-model="shopForm.logo"
+                  v-model="formData.logo"
                   placeholder="请输入Logo图片URL"
                   @input="handleLogoUrlInput"
+                  :disabled="loading"
                 />
               </div>
 
@@ -172,38 +196,52 @@ onMounted(() => {
                   :show-file-list="false"
                   :on-change="handleLogoUploadChange"
                   accept="image/*"
+                  :disabled="loading"
                 >
-                  <el-button type="primary" :icon="Upload">
+                  <el-button type="primary" :icon="Upload" :disabled="loading">
                     选择图片
                   </el-button>
                 </el-upload>
               </div>
 
               <div class="logo-preview">
-                <el-avatar :size="80" :src="logoUrl" icon="Shop" />
+                <el-avatar :size="80" :src="logoUrl" :icon="Shop" />
               </div>
             </div>
           </div>
         </el-form-item>
 
         <el-form-item label="联系人" prop="contact_person">
-          <el-input v-model="shopForm.contact_person" placeholder="请输入联系人姓名" />
+          <el-input
+            v-model="formData.contact_person"
+            placeholder="请输入联系人姓名"
+            :disabled="loading"
+          />
         </el-form-item>
 
         <el-form-item label="联系电话" prop="phone">
-          <el-input v-model="shopForm.phone" placeholder="请输入联系电话" />
+          <el-input
+            v-model="formData.phone"
+            placeholder="请输入联系电话"
+            :disabled="loading"
+          />
         </el-form-item>
 
         <el-form-item label="邮箱" prop="email">
-          <el-input v-model="shopForm.email" placeholder="请输入邮箱" />
+          <el-input
+            v-model="formData.email"
+            placeholder="请输入邮箱"
+            :disabled="loading"
+          />
         </el-form-item>
 
         <el-form-item label="店铺地址" prop="address">
           <el-input
-            v-model="shopForm.address"
+            v-model="formData.address"
             type="textarea"
             :rows="2"
             placeholder="请输入店铺地址"
+            :disabled="loading"
           />
         </el-form-item>
 
@@ -211,13 +249,15 @@ onMounted(() => {
           <el-button
             type="primary"
             size="large"
-            :loading="loading"
+            :loading="submitLoading"
+            :disabled="loading"
             @click="handleSave"
           >
             保存
           </el-button>
           <el-button
             size="large"
+            :disabled="loading"
             @click="handleBack"
           >
             返回设置
@@ -282,5 +322,9 @@ onMounted(() => {
 .logo-preview span {
   font-size: 12px;
   color: #909399;
+}
+
+.loading-container {
+  padding: 20px 0;
 }
 </style>

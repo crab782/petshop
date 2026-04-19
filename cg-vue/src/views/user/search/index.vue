@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { searchProducts, searchServices, getMerchantInfo, type Product, type Service, type MerchantInfo } from '@/api/user'
+import { searchProducts, searchServices, searchMerchants, type Product, type Service, type MerchantInfo } from '@/api/user'
 import { Search, ShoppingCart, Goods, Shop, Delete, TrendCharts, Clock } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -111,11 +111,6 @@ const fetchMerchants = async () => {
   } finally {
     loadingMerchants.value = false
   }
-}
-
-const searchMerchants = async (kw: string) => {
-  const { default: request } = await import('@/api/request')
-  return request.get('/api/merchants/search', { params: { keyword: kw } })
 }
 
 const handleTabChange = async (tab: string) => {

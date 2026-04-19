@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElButton, ElTable, ElTableColumn, ElImage, ElDialog, ElMessage, ElMessageBox, ElSwitch, ElInput, ElCard, ElForm, ElFormItem, ElSelect, ElOption } from 'element-plus'
 import { Search, Refresh, Edit, Delete, View } from '@element-plus/icons-vue'
-import { getAllProductsForAdmin, updateProductStatus, deleteProduct, getAllMerchants, Merchant, type Product } from '@/api/admin'
+import { getAllProductsForAdmin, updateProductStatus, deleteProduct, getAllMerchants, type Merchant, type Product } from '@/api/admin'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()

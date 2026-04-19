@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElCard, ElButton, ElButtonGroup, ElDatePicker, ElTable, ElTableColumn, ElMessage, ElRow, ElCol, ElProgress, ElTag, ElEmpty } from 'element-plus'
 import { Download, TrendCharts, Money, ShoppingCart, Goods, ArrowUp, ArrowDown, Top, Star } from '@element-plus/icons-vue'
 import { getMerchantRevenueStats, exportRevenueStats, type RevenueStats, type RevenueQuery, type RevenueOrderItem, type TopServiceItem, type TopProductItem } from '@/api/merchant'
+import { useAsync } from '@/composables'
 import dayjs from 'dayjs'
 
 type TimeType = 'today' | 'week' | 'month' | 'year' | 'custom'
 
-const loading = ref(false)
-const exportLoading = ref(false)
-const statsData = ref<RevenueStats | null>(null)
 const timeType = ref<TimeType>('month')
 const customDateRange = ref<[Date, Date] | null>(null)
+const exportLoading = ref(false)
 
 const timeButtons = [
   { label: '今日', value: 'today' },
@@ -32,16 +31,15 @@ const query = computed<RevenueQuery>(() => {
   return { type: timeType.value }
 })
 
-const fetchStats = async () => {
-  loading.value = true
-  try {
-    statsData.value = await getMerchantRevenueStats(query.value)
-  } catch (error) {
+const { data: statsData, loading, error, execute: fetchStats } = useAsync<RevenueStats>(
+  () => getMerchantRevenueStats(query.value)
+)
+
+watch(error, (newError) => {
+  if (newError) {
     ElMessage.error('获取营业额统计数据失败')
-  } finally {
-    loading.value = false
   }
-}
+})
 
 const handleTimeTypeChange = (val: TimeType) => {
   timeType.value = val

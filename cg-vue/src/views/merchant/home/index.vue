@@ -1,101 +1,136 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import { useAsync } from '@/composables'
+import {
+  getMerchantDashboard,
+  getRecentOrders,
+  getRecentReviews,
+  type DashboardStats,
+  type RecentOrder,
+  type RecentReview
+} from '@/api/merchant'
 import MerchantCard from '@/components/MerchantCard.vue'
 import ReviewCard from '@/components/ReviewCard.vue'
 
-// 模拟数据
-const stats = [
-  {
-    title: '本月销售额',
-    value: '¥25,670',
-    subtitle: '较上月增长 12%',
-    icon: 'fa fa-line-chart',
-    iconColor: 'primary'
-  },
-  {
-    title: '新客户',
-    value: '24',
-    subtitle: '较上月增长 8%',
-    icon: 'fa fa-user-plus',
-    iconColor: 'secondary'
-  },
-  {
-    title: '服务完成率',
-    value: '96%',
-    subtitle: '较上月增长 2%',
-    icon: 'fa fa-check-circle',
-    iconColor: 'green-500'
-  },
-  {
-    title: '平均评分',
-    value: '4.8',
-    subtitle: '基于 120 条评价',
-    icon: 'fa fa-star',
-    iconColor: 'blue-500'
-  }
-]
+// 统计数据
+const {
+  data: dashboardData,
+  loading: statsLoading,
+  error: statsError,
+  execute: fetchDashboard
+} = useAsync<DashboardStats>(getMerchantDashboard)
 
-const recentOrders = [
-  {
-    id: 'ORD-2024-001',
-    customer: '张先生',
-    service: '宠物美容',
-    status: '已完成',
-    date: '2024-01-15',
-    amount: '¥120'
-  },
-  {
-    id: 'ORD-2024-002',
-    customer: '李女士',
-    service: '宠物寄养',
-    status: '进行中',
-    date: '2024-01-14',
-    amount: '¥200'
-  },
-  {
-    id: 'ORD-2024-003',
-    customer: '王女士',
-    service: '宠物医疗',
-    status: '已完成',
-    date: '2024-01-13',
-    amount: '¥350'
-  },
-  {
-    id: 'ORD-2024-004',
-    customer: '赵先生',
-    service: '宠物训练',
-    status: '待处理',
-    date: '2024-01-12',
-    amount: '¥180'
-  }
-]
+// 最近订单
+const {
+  data: ordersData,
+  loading: ordersLoading,
+  error: ordersError,
+  execute: fetchOrders
+} = useAsync<RecentOrder[]>(() => getRecentOrders(5))
 
-const recentReviews = [
-  {
-    name: '张先生',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=male%20customer%20avatar%2C%20friendly%20face&image_size=square',
-    rating: 5,
-    date: '2024-01-15',
-    content: '服务非常专业，宠物美容效果很好，下次还会再来！',
-    serviceType: '宠物美容'
-  },
-  {
-    name: '李女士',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=female%20customer%20avatar%2C%20friendly%20face&image_size=square',
-    rating: 4,
-    date: '2024-01-14',
-    content: '宠物寄养服务很贴心，环境干净整洁，工作人员也很负责。',
-    serviceType: '宠物寄养'
-  },
-  {
-    name: '王女士',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=female%20customer%20avatar%2C%20professional%20look&image_size=square',
-    rating: 5,
-    date: '2024-01-13',
-    content: '宠物医疗服务专业可靠，医生很有经验，治疗效果很好。',
-    serviceType: '宠物医疗'
-  }
-]
+// 最近评价
+const {
+  data: reviewsData,
+  loading: reviewsLoading,
+  error: reviewsError,
+  execute: fetchReviews
+} = useAsync<RecentReview[]>(() => getRecentReviews(5))
+
+// 计算统计卡片数据
+const stats = computed(() => {
+  if (!dashboardData.value) return []
+  
+  const data = dashboardData.value
+  return [
+    {
+      title: '今日销售额',
+      value: `¥${data.todayRevenue.toLocaleString()}`,
+      subtitle: `较上月增长 ${data.revenueGrowth}%`,
+      icon: 'fa fa-line-chart',
+      iconColor: 'primary'
+    },
+    {
+      title: '今日订单数',
+      value: data.todayOrders.toString(),
+      subtitle: `较上月增长 ${data.orderGrowth}%`,
+      icon: 'fa fa-shopping-cart',
+      iconColor: 'secondary'
+    },
+    {
+      title: '待处理预约',
+      value: data.pendingAppointments.toString(),
+      subtitle: '待确认处理',
+      icon: 'fa fa-clock-o',
+      iconColor: 'orange-500'
+    },
+    {
+      title: '平均评分',
+      value: data.avgRating.toFixed(1),
+      subtitle: `基于 ${data.ratingCount} 条评价`,
+      icon: 'fa fa-star',
+      iconColor: 'blue-500'
+    }
+  ]
+})
+
+// 订单状态映射
+const orderStatusMap: Record<string, { text: string; class: string }> = {
+  pending: { text: '待处理', class: 'bg-yellow-100 text-yellow-800' },
+  confirmed: { text: '已确认', class: 'bg-blue-100 text-blue-800' },
+  completed: { text: '已完成', class: 'bg-green-100 text-green-800' },
+  cancelled: { text: '已取消', class: 'bg-gray-100 text-gray-800' }
+}
+
+// 获取订单状态显示
+const getOrderStatus = (status: string) => {
+  return orderStatusMap[status] || { text: status, class: 'bg-gray-100 text-gray-800' }
+}
+
+// 格式化日期
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('zh-CN')
+}
+
+// 格式化金额
+const formatPrice = (price: number) => {
+  return `¥${price.toFixed(2)}`
+}
+
+// 加载所有数据
+const loadAllData = async () => {
+  await Promise.all([
+    fetchDashboard(),
+    fetchOrders(),
+    fetchReviews()
+  ])
+}
+
+// 重试加载统计数据
+const retryStats = () => {
+  fetchDashboard()
+}
+
+// 重试加载订单数据
+const retryOrders = () => {
+  fetchOrders()
+}
+
+// 重试加载评价数据
+const retryReviews = () => {
+  fetchReviews()
+}
+
+// 显示错误提示
+const showError = (message: string) => {
+  ElMessage.error(message)
+}
+
+// 监听错误并显示提示
+onMounted(() => {
+  loadAllData()
+})
 </script>
 
 <template>
@@ -104,7 +139,25 @@ const recentReviews = [
     
     <!-- 数据统计卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <!-- 加载状态 -->
+      <template v-if="statsLoading">
+        <div v-for="i in 4" :key="i" class="bg-white rounded-lg shadow-md p-6">
+          <el-skeleton :rows="2" animated />
+        </div>
+      </template>
+      
+      <!-- 错误状态 -->
+      <div v-else-if="statsError" class="col-span-full bg-white rounded-lg shadow-md p-6">
+        <div class="text-center text-gray-500">
+          <i class="fa fa-exclamation-circle text-4xl mb-2"></i>
+          <p class="mb-2">加载统计数据失败</p>
+          <el-button type="primary" size="small" @click="retryStats">重试</el-button>
+        </div>
+      </div>
+      
+      <!-- 正常显示 -->
       <MerchantCard
+        v-else
         v-for="(stat, index) in stats"
         :key="index"
         :title="stat.title"
@@ -120,9 +173,26 @@ const recentReviews = [
       <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-700">最近订单</h3>
-          <a href="/merchant/appointments" class="text-primary hover:underline">查看全部</a>
+          <router-link to="/merchant/appointments" class="text-primary hover:underline">查看全部</router-link>
         </div>
-        <div class="overflow-x-auto">
+        
+        <!-- 加载状态 -->
+        <div v-if="ordersLoading" class="space-y-3">
+          <el-skeleton v-for="i in 3" :key="i" :rows="1" animated />
+        </div>
+        
+        <!-- 错误状态 -->
+        <div v-else-if="ordersError" class="text-center py-8">
+          <i class="fa fa-exclamation-circle text-4xl text-gray-400 mb-2"></i>
+          <p class="text-gray-500 mb-2">加载订单失败</p>
+          <el-button type="primary" size="small" @click="retryOrders">重试</el-button>
+        </div>
+        
+        <!-- 空状态 -->
+        <el-empty v-else-if="!ordersData || ordersData.length === 0" description="暂无订单数据" />
+        
+        <!-- 正常显示 -->
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full">
             <thead>
               <tr class="border-b border-gray-200">
@@ -135,24 +205,20 @@ const recentReviews = [
               </tr>
             </thead>
             <tbody>
-              <tr v-for="order in recentOrders" :key="order.id" class="border-b border-gray-100 hover:bg-gray-50 transition">
+              <tr v-for="order in ordersData" :key="order.id" class="border-b border-gray-100 hover:bg-gray-50 transition">
                 <td class="py-3 px-4 text-sm text-gray-700">{{ order.id }}</td>
-                <td class="py-3 px-4 text-sm text-gray-700">{{ order.customer }}</td>
-                <td class="py-3 px-4 text-sm text-gray-700">{{ order.service }}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">{{ order.customerName }}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">{{ order.serviceName }}</td>
                 <td class="py-3 px-4">
                   <span 
                     class="px-2 py-1 rounded text-xs font-medium"
-                    :class="{
-                      'bg-green-100 text-green-800': order.status === '已完成',
-                      'bg-blue-100 text-blue-800': order.status === '进行中',
-                      'bg-yellow-100 text-yellow-800': order.status === '待处理'
-                    }"
+                    :class="getOrderStatus(order.status).class"
                   >
-                    {{ order.status }}
+                    {{ getOrderStatus(order.status).text }}
                   </span>
                 </td>
-                <td class="py-3 px-4 text-sm text-gray-700">{{ order.date }}</td>
-                <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ order.amount }}</td>
+                <td class="py-3 px-4 text-sm text-gray-700">{{ formatDate(order.appointmentTime) }}</td>
+                <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ formatPrice(order.totalPrice) }}</td>
               </tr>
             </tbody>
           </table>
@@ -163,18 +229,35 @@ const recentReviews = [
       <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-700">最近评价</h3>
-          <a href="/merchant/reviews" class="text-primary hover:underline">查看全部</a>
+          <router-link to="/merchant/reviews" class="text-primary hover:underline">查看全部</router-link>
         </div>
-        <div class="space-y-4">
+        
+        <!-- 加载状态 -->
+        <div v-if="reviewsLoading" class="space-y-3">
+          <el-skeleton v-for="i in 3" :key="i" :rows="2" animated />
+        </div>
+        
+        <!-- 错误状态 -->
+        <div v-else-if="reviewsError" class="text-center py-8">
+          <i class="fa fa-exclamation-circle text-4xl text-gray-400 mb-2"></i>
+          <p class="text-gray-500 mb-2">加载评价失败</p>
+          <el-button type="primary" size="small" @click="retryReviews">重试</el-button>
+        </div>
+        
+        <!-- 空状态 -->
+        <el-empty v-else-if="!reviewsData || reviewsData.length === 0" description="暂无评价数据" />
+        
+        <!-- 正常显示 -->
+        <div v-else class="space-y-4">
           <ReviewCard
-            v-for="(review, index) in recentReviews"
-            :key="index"
-            :name="review.name"
-            :avatar="review.avatar"
+            v-for="review in reviewsData"
+            :key="review.id"
+            :name="review.userName"
+            :avatar="review.userAvatar"
             :rating="review.rating"
-            :date="review.date"
+            :date="formatDate(review.reviewTime)"
             :content="review.content"
-            :service-type="review.serviceType"
+            :service-type="review.serviceName"
           />
         </div>
       </div>
@@ -360,7 +443,49 @@ const recentReviews = [
   color: #92400e;
 }
 
+.bg-gray-100 {
+  background-color: #f3f4f6;
+}
+
+.text-gray-800 {
+  color: #1f2937;
+}
+
 .space-y-4 > * + * {
   margin-top: 1rem;
+}
+
+.space-y-3 > * + * {
+  margin-top: 0.75rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.text-gray-400 {
+  color: #9ca3af;
+}
+
+.text-4xl {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.py-8 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.col-span-full {
+  grid-column: 1 / -1;
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAllProducts, updateProductStatus, deleteProduct, batchUpdateProductStatus, batchDeleteProducts, getAllMerchants, Merchant, type Product } from '@/api/admin'
+import { getAllProducts, updateProductStatus, deleteProduct, batchUpdateProductStatus, batchDeleteProducts, getAllMerchants, type Merchant, type Product } from '@/api/admin'
 import { Search, Refresh, Check, Close, Edit, Delete, View } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 

@@ -16,7 +16,7 @@ const generateOrderNo = () => {
 
 const orderHandlers: MockMethod[] = [
   {
-    url: '/api/orders',
+    url: '/api/user/orders',
     method: 'post',
     response: (req) => {
       const { items, shippingAddress, remark } = req.body
@@ -82,7 +82,7 @@ const orderHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/orders',
+    url: '/api/user/orders',
     method: 'get',
     response: (req) => {
       const { page = 1, size = 10, status } = req.query
@@ -123,7 +123,7 @@ const orderHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/orders/:id',
+    url: '/api/user/orders/:id',
     method: 'get',
     response: (req) => {
       const { id } = req.params
@@ -145,7 +145,7 @@ const orderHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/orders/:id/cancel',
+    url: '/api/user/orders/:id/cancel',
     method: 'put',
     response: (req) => {
       const { id } = req.params
@@ -233,7 +233,7 @@ const orderHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/orders/:id',
+    url: '/api/user/orders/:id',
     method: 'delete',
     response: (req) => {
       const { id } = req.params
@@ -268,8 +268,8 @@ const orderHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/orders/batch-cancel',
-    method: 'post',
+    url: '/api/user/orders/batch-cancel',
+    method: 'put',
     response: (req) => {
       const { ids } = req.body
       
@@ -313,8 +313,8 @@ const orderHandlers: MockMethod[] = [
     }
   },
   {
-    url: '/api/orders/batch-delete',
-    method: 'post',
+    url: '/api/user/orders/batch-delete',
+    method: 'delete',
     response: (req) => {
       const { ids } = req.body
       

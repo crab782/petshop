@@ -60,11 +60,11 @@ const mountWithPlugins = (component: any, options = {}) => {
         'el-pagination': {
           template: `
             <div class="el-pagination">
-              <button class="btn-prev" :class="{ disabled: currentPage === 1 }" @click="$emit(\'prev\')">上一页</button>
+              <button class="btn-prev" :class="{ disabled: currentPage === 1 }" @click="$emit('prev')">上一页</button>
               <ul class="el-pager">
-                <li v-for="page in pages" :key="page" :class="{ \'is-active\': page === currentPage }">{{ page }}</li>
+                <li v-for="page in pages" :key="page" :class="{ 'is-active': page === currentPage }">{{ page }}</li>
               </ul>
-              <button class="btn-next" :class="{ disabled: currentPage === totalPages }" @click="$emit(\'next\')">下一页</button>
+              <button class="btn-next" :class="{ disabled: currentPage === totalPages }" @click="$emit('next')">下一页</button>
               <span v-if="showTotal" class="el-pagination__total">共 {{ total }} 条</span>
               <span v-if="showJumper" class="el-pagination__jump">前往<input type="text" />页</span>
             </div>
@@ -91,7 +91,7 @@ const mountWithPlugins = (component: any, options = {}) => {
           emits: ['current-change', 'prev', 'next'],
         },
       },
-      ...((options as any).global || {}),
+      ...(options as any).global,
     },
   })
 }
