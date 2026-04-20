@@ -1,6 +1,6 @@
 # 登录注册页面功能分离与优化 - 实现计划
 
-## [ ] Task 1: 修改通用登录页（/login）
+## [x] Task 1: 修改通用登录页（/login）
 - **Priority**: P0
 - **Depends On**: None
 - **Description**:
@@ -17,7 +17,7 @@
   - `programmatic` TR-1.4: 普通用户登录功能正常工作
   - `human-judgment` TR-1.5: 页面在不同设备上显示正常
 
-## [ ] Task 2: 修改通用注册页（/register）
+## [x] Task 2: 修改通用注册页（/register）
 - **Priority**: P0
 - **Depends On**: None
 - **Description**:
@@ -33,7 +33,7 @@
   - `programmatic` TR-2.3: 普通用户注册功能正常工作
   - `human-judgment` TR-2.4: 页面在不同设备上显示正常
 
-## [ ] Task 3: 验证商家注册页面（/merchant/register）
+## [x] Task 3: 验证商家注册页面（/merchant/register）
 - **Priority**: P0
 - **Depends On**: None
 - **Description**:
@@ -50,7 +50,7 @@
   - `human-judgment` TR-3.4: UI风格与其他页面保持一致
   - `human-judgment` TR-3.5: 页面在不同设备上显示正常
 
-## [ ] Task 4: 功能验证和测试
+## [x] Task 4: 功能验证和测试
 - **Priority**: P1
 - **Depends On**: Task 1, Task 2, Task 3
 - **Description**:

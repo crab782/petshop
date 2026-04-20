@@ -18,20 +18,36 @@ const currentCancelId = ref<number | null>(null)
 
 const statusOptions = [
   { label: '全部', value: '全部' },
-  { label: '待确认', value: '待确认' },
-  { label: '已确认', value: '已确认' },
-  { label: '已完成', value: '已完成' },
-  { label: '已取消', value: '已取消' }
+  { label: '待确认', value: 'pending' },
+  { label: '已确认', value: 'confirmed' },
+  { label: '已完成', value: 'completed' },
+  { label: '已取消', value: 'cancelled' }
 ]
+
+// 状态映射 - 英文→中文
+const statusLabelMap: Record<string, string> = {
+  'pending': '待确认',
+  'confirmed': '已确认',
+  'completed': '已完成',
+  'cancelled': '已取消'
+}
 
 const statusTagType = (status: string) => {
   const map: Record<string, string> = {
+    'pending': 'warning',
     '待确认': 'warning',
+    'confirmed': 'primary',
     '已确认': 'primary',
+    'completed': 'success',
     '已完成': 'success',
+    'cancelled': 'info',
     '已取消': 'info'
   }
   return map[status] || 'info'
+}
+
+const getStatusLabel = (status: string) => {
+  return statusLabelMap[status] || status
 }
 
 const filteredAppointments = computed(() => {
@@ -47,8 +63,8 @@ const filteredAppointments = computed(() => {
     const keyword = searchKeyword.value.toLowerCase()
     filtered = filtered.filter(item =>
       item.id.toString().includes(keyword) ||
-      item.serviceName.toLowerCase().includes(keyword) ||
-      item.merchantName.toLowerCase().includes(keyword)
+      (item.serviceName && item.serviceName.toLowerCase().includes(keyword)) ||
+      (item.merchantName && item.merchantName.toLowerCase().includes(keyword))
     )
   }
 
@@ -67,9 +83,20 @@ const filteredAppointments = computed(() => {
 const fetchAppointments = async () => {
   loading.value = true
   try {
+    const params: any = {}
+    if (statusFilter.value !== '全部') {
+      params.status = statusFilter.value
+    }
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+    if (dateRange.value) {
+      params.startDate = dateRange.value[0].toISOString()
+      params.endDate = dateRange.value[1].toISOString()
+    }
     // 使用真实API
-    const res = await getUserAppointments()
-    appointments.value = res.data || res || []
+    const res = await getUserAppointments(params)
+    appointments.value = res.data || []
   } catch {
     ElMessage.error('获取预约列表失败')
   } finally {
@@ -78,7 +105,7 @@ const fetchAppointments = async () => {
 }
 
 const handleSearch = () => {
-  // 搜索逻辑已在computed中处理
+  fetchAppointments()
 }
 
 const handleCancel = (row: Appointment) => {
@@ -104,7 +131,7 @@ const handleDetail = (row: Appointment) => {
 }
 
 const canCancel = (status: string) => {
-  return status === '待确认'
+  return status === 'pending' || status === '待确认'
 }
 
 onMounted(() => {
@@ -188,7 +215,7 @@ onMounted(() => {
           <el-table-column label="状态" width="120" align="center">
             <template #default="{ row }">
               <el-tag :type="statusTagType(row.status)" size="small" class="status-tag">
-                {{ row.status }}
+                {{ getStatusLabel(row.status) }}
               </el-tag>
             </template>
           </el-table-column>

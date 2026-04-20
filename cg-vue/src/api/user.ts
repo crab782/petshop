@@ -123,8 +123,21 @@ export const deletePet = (id: number) => {
   return request.delete(`/api/user/pets/${id}`)
 }
 
-export const getUserAppointments = () => {
-  return request.get<Appointment[]>('/api/user/appointments')
+export const getUserAppointments = (params?: {
+  status?: string
+  keyword?: string
+  startDate?: string
+  endDate?: string
+  page?: number
+  pageSize?: number
+}) => {
+  return request.get<{
+    total: number
+    data: Appointment[]
+    totalPages: number
+    pageSize: number
+    page: number
+  }>('/api/user/appointments', { params })
 }
 
 export const cancelAppointment = (id: number) => {
@@ -344,8 +357,21 @@ export interface ProductOrder {
   orderTime: string
 }
 
-export const getProductOrders = () => {
-  return request.get<ProductOrder[]>('/api/user/orders')
+export const getProductOrders = (params?: {
+  status?: string
+  keyword?: string
+  startDate?: string
+  endDate?: string
+  page?: number
+  pageSize?: number
+}) => {
+  return request.get<{
+    total: number
+    data: ProductOrder[]
+    totalPages: number
+    pageSize: number
+    page: number
+  }>('/api/user/orders', { params })
 }
 
 export const payOrder = (orderId: number, payMethod: string) => {

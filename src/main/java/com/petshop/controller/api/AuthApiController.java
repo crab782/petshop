@@ -45,21 +45,17 @@ public class AuthApiController {
         }
     }
 
-    @Operation(summary = "用户注册", description = "注册新用户账号")
+    @Operation(summary = "用户注册", description = "注册新用户账号，手机号必填且唯一，用户名和邮箱可选")
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<LoginResponse>> register(@RequestBody RegisterRequest request) {
         try {
-            if (request.getUsername() == null || request.getUsername().isEmpty()) {
+            if (request.getPhone() == null || request.getPhone().isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Username is required"));
+                        .body(ApiResponse.error(400, "Phone number is required"));
             }
             if (request.getPassword() == null || request.getPassword().length() < 6) {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error(400, "Password must be at least 6 characters"));
-            }
-            if (request.getPhone() == null || request.getPhone().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Phone number is required"));
             }
 
             LoginResponse response = authService.register(request);

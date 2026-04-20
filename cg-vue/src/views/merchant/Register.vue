@@ -9,7 +9,6 @@ import { merchantRegister, type MerchantRegisterData } from '@/api/auth'
 const router = useRouter()
 
 interface FormData {
-  username: string
   email: string
   password: string
   confirmPassword: string
@@ -22,7 +21,6 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
-  username: '',
   email: '',
   password: '',
   confirmPassword: '',
@@ -51,11 +49,6 @@ const registerFormRef = ref()
 const termsDialogVisible = ref(false)
 
 const validationRules: Record<keyof FormData, (value: any) => string | null> = {
-  username: (value: string) => {
-    if (!value) return '请输入用户名'
-    if (value.length < 3 || value.length > 20) return '用户名长度为3-20个字符'
-    return null
-  },
   email: (value: string) => {
     if (!value) return '请输入邮箱'
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -103,10 +96,6 @@ const validationRules: Record<keyof FormData, (value: any) => string | null> = {
 }
 
 const elFormRules = computed(() => ({
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'blur' }
-  ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
@@ -201,7 +190,6 @@ const handleRegister = async () => {
     }
 
     const registerData: MerchantRegisterData = {
-      username: formData.username,
       email: formData.email,
       password: formData.password,
       phone: formData.phone,
@@ -258,18 +246,6 @@ const showTermsDialog = () => {
         class="register-form"
         label-position="top"
       >
-        <el-form-item prop="username">
-          <template #label>
-            <span class="form-label">用户名</span>
-          </template>
-          <el-input
-            v-model="formData.username"
-            placeholder="请输入用户名"
-            :prefix-icon="User"
-            size="large"
-          />
-        </el-form-item>
-
         <el-form-item prop="email">
           <template #label>
             <span class="form-label">邮箱</span>

@@ -283,9 +283,22 @@ const filteredAppointments = computed(() => {
 const fetchProductOrders = async () => {
   productLoading.value = true
   try {
-    const res = await getProductOrders()
-    productOrders.value = res.data || res || []
-    total.value = productOrders.value.length
+    const params: any = {}
+    if (productStatusFilter.value) {
+      params.status = productStatusFilter.value
+    }
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+    if (dateRange.value) {
+      params.startDate = dateRange.value[0].toISOString()
+      params.endDate = dateRange.value[1].toISOString()
+    }
+    params.page = currentPage.value
+    params.pageSize = pageSize.value
+    const res = await getProductOrders(params)
+    productOrders.value = res.data || []
+    total.value = res.total || productOrders.value.length
   } catch (error) {
     console.error('获取商品订单失败:', error)
     ElMessage.error('获取商品订单失败，请稍后重试')
@@ -297,8 +310,21 @@ const fetchProductOrders = async () => {
 const fetchAppointments = async () => {
   appointmentLoading.value = true
   try {
-    const res = await getUserAppointments()
-    appointments.value = res.data || res || []
+    const params: any = {}
+    if (appointmentStatusFilter.value) {
+      params.status = appointmentStatusFilter.value
+    }
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+    if (dateRange.value) {
+      params.startDate = dateRange.value[0].toISOString()
+      params.endDate = dateRange.value[1].toISOString()
+    }
+    params.page = currentPage.value
+    params.pageSize = pageSize.value
+    const res = await getUserAppointments(params)
+    appointments.value = res.data || []
   } catch (error) {
     console.error('获取服务预约订单失败:', error)
     ElMessage.error('获取服务预约订单失败，请稍后重试')

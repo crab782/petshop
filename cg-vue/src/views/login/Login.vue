@@ -2,24 +2,17 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Phone } from '@element-plus/icons-vue'
+import { Lock, Phone, Shop } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 const router = useRouter()
 
 const loginForm = reactive({
   phone: '',
-  password: '',
-  role: 'user'
+  password: ''
 })
 
 const loginFormRef = ref()
-
-const roleOptions = [
-  { label: '用户', value: 'user' },
-  { label: '商家', value: 'merchant' },
-  { label: '管理员', value: 'admin' }
-]
 
 const loginRules = {
   phone: [
@@ -46,19 +39,19 @@ const handleLogin = async () => {
       const response = await axios.post('/api/auth/login', {
         phone: loginForm.phone,
         password: loginForm.password,
-        role: loginForm.role
+        role: 'user'
       })
 
       if (response.data.code === 200 || response.data.code === 0) {
-        ElMessage.success('登录成功')
-
-        const roleRoutes: Record<string, string> = {
-          user: '/user/home',
-          merchant: '/merchant/home',
-          admin: '/admin/dashboard'
+        const result = response.data.data
+        if (result.token) {
+          localStorage.setItem('token', result.token)
         }
-
-        router.push(roleRoutes[loginForm.role] || '/user/home')
+        if (result.user) {
+          localStorage.setItem('userInfo', JSON.stringify(result.user))
+        }
+        ElMessage.success('登录成功')
+        router.push('/user/home')
       } else {
         ElMessage.error(response.data.message || '登录失败')
       }
@@ -72,6 +65,10 @@ const handleLogin = async () => {
 
 const goToRegister = () => {
   router.push('/register')
+}
+
+const goToMerchantLogin = () => {
+  router.push('/merchant/login')
 }
 </script>
 
@@ -95,18 +92,6 @@ const goToRegister = () => {
         class="login-form"
         label-position="top"
       >
-        <el-form-item label="选择角色" prop="role">
-          <el-radio-group v-model="loginForm.role" class="role-group">
-            <el-radio-button
-              v-for="option in roleOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              {{ option.label }}
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-
         <el-form-item prop="phone">
           <template #label>
             <span class="form-label">手机号</span>
@@ -150,6 +135,11 @@ const goToRegister = () => {
         <div class="login-footer">
           <span class="footer-text">还没有账号？</span>
           <el-link type="primary" @click="goToRegister">立即注册</el-link>
+        </div>
+
+        <div class="merchant-login-entry" @click="goToMerchantLogin">
+          <el-icon class="merchant-icon"><Shop /></el-icon>
+          <span class="merchant-text">商家登录</span>
         </div>
       </el-form>
 
@@ -271,27 +261,36 @@ const goToRegister = () => {
   display: block;
 }
 
-/* 角色选择 */
-.role-group {
-  width: 100%;
+/* 商家登录入口 */
+.merchant-login-entry {
   display: flex;
-  margin-bottom: 24px;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-}
-
-.role-group :deep(.el-radio-button__inner) {
-  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
   border-radius: 8px;
-  margin: 0;
+  border: 1px dashed #ff9800;
+  background-color: #fff8e1;
+  cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.role-group :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  background-color: #4CAF50;
-  border-color: #4CAF50;
-  color: white;
+.merchant-login-entry:hover {
+  background-color: #ffecb3;
+  border-color: #f57c00;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.merchant-icon {
+  font-size: 18px;
+  color: #ff9800;
+}
+
+.merchant-text {
+  font-size: 14px;
+  color: #f57c00;
+  font-weight: 500;
 }
 
 /* 表单输入 */
@@ -417,14 +416,6 @@ const goToRegister = () => {
   
   .brand-title {
     font-size: 18px;
-  }
-  
-  .role-group {
-    flex-direction: column;
-  }
-  
-  .role-group :deep(.el-radio-button) {
-    width: 100%;
   }
   
   .login-button {

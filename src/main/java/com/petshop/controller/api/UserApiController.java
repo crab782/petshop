@@ -18,14 +18,17 @@ import com.petshop.service.FavoriteService;
 import com.petshop.service.NotificationService;
 import com.petshop.exception.UnauthorizedException;
 import com.petshop.exception.ResourceNotFoundException;
+import com.petshop.mapper.UserMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -56,78 +59,57 @@ public class UserApiController {
     private FavoriteService favoriteService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private UserMapper userMapper;
 
     @GetMapping("/profile")
-    public ResponseEntity<User> getProfile(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<User> getProfile() {
+        User user = getCurrentUser();
         return ResponseEntity.ok(user);
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<User> updateProfile(@RequestBody User user, HttpSession session) {
-        User currentUser = (User) session.getAttribute("user");
-        if (currentUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<User> updateProfile(@RequestBody User user) {
+        User currentUser = getCurrentUser();
         user.setId(currentUser.getId());
         user.setPassword(currentUser.getPassword());
         User updatedUser = userService.update(user);
-        session.setAttribute("user", updatedUser);
         return ResponseEntity.ok(updatedUser);
     }
 
     @GetMapping("/home/stats")
-    public ResponseEntity<ApiResponse<HomeStatsDTO>> getHomeStats(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            throw new UnauthorizedException("未授权访问，请先登录");
-        }
+    public ResponseEntity<ApiResponse<HomeStatsDTO>> getHomeStats() {
+        User user = getCurrentUser();
         HomeStatsDTO stats = userHomeService.getHomeStats(user.getId());
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 
     @GetMapping("/home/activities")
     public ResponseEntity<ApiResponse<List<ActivityDTO>>> getRecentActivities(
-            @RequestParam(defaultValue = "10") int limit,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            throw new UnauthorizedException("未授权访问，请先登录");
-        }
+            @RequestParam(defaultValue = "10") int limit) {
+        User user = getCurrentUser();
         List<ActivityDTO> activities = userHomeService.getRecentActivities(user.getId(), limit);
         return ResponseEntity.ok(ApiResponse.success(activities));
     }
 
     @GetMapping("/pets")
-    public ResponseEntity<List<Pet>> getPets(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<ApiResponse<List<Pet>>> getPets() {
+        User user = getCurrentUser();
         List<Pet> pets = petService.findByUserId(user.getId());
-        return ResponseEntity.ok(pets);
+        return ResponseEntity.ok(ApiResponse.success(pets));
     }
 
     @PostMapping("/pets")
-    public ResponseEntity<Pet> addPet(@RequestBody Pet pet, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Pet> addPet(@RequestBody Pet pet) {
+        User user = getCurrentUser();
         pet.setUser(user);
         Pet createdPet = petService.create(pet);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdPet);
     }
 
     @PutMapping("/pets/{id}")
-    public ResponseEntity<Pet> updatePet(@PathVariable Integer id, @RequestBody Pet pet, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Pet> updatePet(@PathVariable Integer id, @RequestBody Pet pet) {
+        User user = getCurrentUser();
         Pet existingPet = petService.findById(id);
         if (existingPet == null || !existingPet.getUser().getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -139,11 +121,8 @@ public class UserApiController {
     }
 
     @DeleteMapping("/pets/{id}")
-    public ResponseEntity<Void> deletePet(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Void> deletePet(@PathVariable Integer id) {
+        User user = getCurrentUser();
         Pet pet = petService.findById(id);
         if (pet == null || !pet.getUser().getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -153,11 +132,8 @@ public class UserApiController {
     }
 
     @GetMapping("/pets/{id}")
-    public ResponseEntity<Pet> getPetById(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Pet> getPetById(@PathVariable Integer id) {
+        User user = getCurrentUser();
         Pet pet = petService.findById(id);
         if (pet == null || !pet.getUser().getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -166,29 +142,22 @@ public class UserApiController {
     }
 
     @GetMapping("/appointments")
-    public ResponseEntity<Map<String, Object>> getAppointments(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAppointments(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestParam(defaultValue = "10") int pageSize) {
+        User user = getCurrentUser();
         Map<String, Object> appointmentResult = appointmentService.findByUserIdWithFilters(
                 user.getId(), status, keyword, startDate, endDate, page, pageSize);
-        return ResponseEntity.ok(appointmentResult);
+        return ResponseEntity.ok(ApiResponse.success(appointmentResult));
     }
 
     @GetMapping("/appointments/{id}")
-    public ResponseEntity<AppointmentDTO> getAppointmentById(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<AppointmentDTO> getAppointmentById(@PathVariable Integer id) {
+        User user = getCurrentUser();
         AppointmentDTO appointment = appointmentService.findByIdAndUserId(id, user.getId());
         if (appointment == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -198,12 +167,8 @@ public class UserApiController {
 
     @PostMapping("/appointments")
     public ResponseEntity<Map<String, Object>> createAppointment(
-            @RequestBody CreateAppointmentRequest request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestBody CreateAppointmentRequest request) {
+        User user = getCurrentUser();
 
         com.petshop.entity.Service service = serviceService.findById(request.getServiceId());
         if (service == null) {
@@ -236,11 +201,8 @@ public class UserApiController {
     }
 
     @PutMapping("/appointments/{id}/cancel")
-    public ResponseEntity<Void> cancelAppointment(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Void> cancelAppointment(@PathVariable Integer id) {
+        User user = getCurrentUser();
 
         boolean success = appointmentService.cancelAppointment(id, user.getId());
         if (!success) {
@@ -250,59 +212,43 @@ public class UserApiController {
     }
 
     @GetMapping("/appointments/stats")
-    public ResponseEntity<Map<String, Long>> getAppointmentStats(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Map<String, Long>> getAppointmentStats() {
+        User user = getCurrentUser();
         Map<String, Long> stats = appointmentService.getAppointmentStats(user.getId());
         return ResponseEntity.ok(stats);
     }
 
     @GetMapping("/orders")
-    public ResponseEntity<PageResponse<OrderDTO>> getOrders(
+    public ResponseEntity<ApiResponse<PageResponse<OrderDTO>>> getOrders(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        User user = getCurrentUser();
         PageResponse<OrderDTO> orders = productOrderService.getUserOrders(
                 user.getId(), status, keyword, startDate, endDate, page, pageSize);
-        return ResponseEntity.ok(orders);
+        return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
     @GetMapping("/orders/{id}")
-    public ResponseEntity<OrderDTO> getOrderById(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<OrderDTO> getOrderById(@PathVariable Integer id) {
+        User user = getCurrentUser();
         OrderDTO order = productOrderService.getOrderDetail(id, user.getId());
         return ResponseEntity.ok(order);
     }
 
     @PostMapping("/orders")
-    public ResponseEntity<CreateOrderResponse> createOrder(@RequestBody CreateOrderRequest request, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<CreateOrderResponse> createOrder(@RequestBody CreateOrderRequest request) {
+        User user = getCurrentUser();
         CreateOrderResponse response = productOrderService.createOrder(user.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/orders/preview")
-    public ResponseEntity<OrderPreviewDTO> previewOrder(@RequestBody PreviewOrderRequest request, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<OrderPreviewDTO> previewOrder(@RequestBody PreviewOrderRequest request) {
+        User user = getCurrentUser();
         OrderPreviewDTO preview = productOrderService.previewOrder(user.getId(), request);
         return ResponseEntity.ok(preview);
     }
@@ -310,32 +256,22 @@ public class UserApiController {
     @PostMapping("/orders/{id}/pay")
     public ResponseEntity<PayResponse> payOrder(
             @PathVariable Integer id,
-            @RequestBody PayOrderRequest request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestBody PayOrderRequest request) {
+        User user = getCurrentUser();
         PayResponse response = productOrderService.payOrder(id, user.getId(), request.getPayMethod());
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/orders/{id}/pay/status")
-    public ResponseEntity<PayStatusResponse> getPayStatus(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<PayStatusResponse> getPayStatus(@PathVariable Integer id) {
+        User user = getCurrentUser();
         PayStatusResponse response = productOrderService.getPayStatus(id, user.getId());
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/orders/{id}/cancel")
-    public ResponseEntity<Void> cancelOrder(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Void> cancelOrder(@PathVariable Integer id) {
+        User user = getCurrentUser();
         productOrderService.cancelOrder(id, user.getId());
         return ResponseEntity.ok().build();
     }
@@ -343,88 +279,62 @@ public class UserApiController {
     @PostMapping("/orders/{id}/refund")
     public ResponseEntity<Void> refundOrder(
             @PathVariable Integer id,
-            @RequestBody RefundOrderRequest request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestBody RefundOrderRequest request) {
+        User user = getCurrentUser();
         productOrderService.refundOrder(id, user.getId(), request.getReason());
         return ResponseEntity.ok().build();
     }
 
     @PutMapping("/orders/{id}/confirm")
-    public ResponseEntity<Void> confirmReceive(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Void> confirmReceive(@PathVariable Integer id) {
+        User user = getCurrentUser();
         productOrderService.confirmReceive(id, user.getId());
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/orders/{id}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Void> deleteOrder(@PathVariable Integer id) {
+        User user = getCurrentUser();
         productOrderService.deleteOrder(id, user.getId());
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/orders/batch-cancel")
-    public ResponseEntity<Void> batchCancelOrders(@RequestBody BatchOperationRequest request, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Void> batchCancelOrders(@RequestBody BatchOperationRequest request) {
+        User user = getCurrentUser();
         productOrderService.batchCancel(request.getIds(), user.getId());
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/orders/batch-delete")
-    public ResponseEntity<Void> batchDeleteOrders(@RequestBody BatchOperationRequest request, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+    public ResponseEntity<Void> batchDeleteOrders(@RequestBody BatchOperationRequest request) {
+        User user = getCurrentUser();
         productOrderService.batchDelete(request.getIds(), user.getId());
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/services")
-    public ResponseEntity<Map<String, Object>> getServices(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getServices(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestParam(defaultValue = "10") int pageSize) {
+        User user = getCurrentUser();
         Map<String, Object> serviceResult = appointmentService.findPurchasedServices(
                 user.getId(), keyword, status, page, pageSize);
-        return ResponseEntity.ok(serviceResult);
+        return ResponseEntity.ok(ApiResponse.success(serviceResult));
     }
 
     @GetMapping("/addresses")
-    public ResponseEntity<ApiResponse<List<AddressDTO>>> getAddresses(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            throw new UnauthorizedException("未授权访问");
-        }
+    public ResponseEntity<ApiResponse<List<AddressDTO>>> getAddresses() {
+        User user = getCurrentUser();
         List<AddressDTO> addresses = addressService.findByUserId(user.getId());
         return ResponseEntity.ok(ApiResponse.success(addresses));
     }
 
     @PostMapping("/addresses")
-    public ResponseEntity<ApiResponse<AddressDTO>> addAddress(@RequestBody Address address, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            throw new UnauthorizedException("未授权访问");
-        }
+    public ResponseEntity<ApiResponse<AddressDTO>> addAddress(@RequestBody Address address) {
+        User user = getCurrentUser();
         address.setUser(user);
         List<AddressDTO> existingAddresses = addressService.findByUserId(user.getId());
         if (existingAddresses.isEmpty()) {
@@ -437,12 +347,8 @@ public class UserApiController {
     @PutMapping("/addresses/{id}")
     public ResponseEntity<ApiResponse<AddressDTO>> updateAddress(
             @PathVariable Integer id,
-            @RequestBody Address address,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            throw new UnauthorizedException("未授权访问");
-        }
+            @RequestBody Address address) {
+        User user = getCurrentUser();
         Address existingAddress = addressService.findByIdEntity(id);
         if (existingAddress == null || !existingAddress.getUser().getId().equals(user.getId())) {
             throw new ResourceNotFoundException("地址不存在");
@@ -455,11 +361,8 @@ public class UserApiController {
     }
 
     @DeleteMapping("/addresses/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteAddress(@PathVariable Integer id, HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            throw new UnauthorizedException("未授权访问");
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteAddress(@PathVariable Integer id) {
+        User user = getCurrentUser();
         Address existingAddress = addressService.findByIdEntity(id);
         if (existingAddress == null || !existingAddress.getUser().getId().equals(user.getId())) {
             throw new ResourceNotFoundException("地址不存在");
@@ -470,12 +373,8 @@ public class UserApiController {
 
     @PutMapping("/addresses/{id}/default")
     public ResponseEntity<ApiResponse<AddressDTO>> setDefaultAddress(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            throw new UnauthorizedException("未授权访问");
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
         Address existingAddress = addressService.findByIdEntity(id);
         if (existingAddress == null || !existingAddress.getUser().getId().equals(user.getId())) {
             throw new ResourceNotFoundException("地址不存在");
@@ -486,13 +385,8 @@ public class UserApiController {
 
     @PostMapping("/reviews")
     public ResponseEntity<ApiResponse<Review>> addReview(
-            @RequestBody Map<String, Object> request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Object> request) {
+        User user = getCurrentUser();
 
         Integer appointmentId = (Integer) request.get("appointmentId");
         Integer rating = (Integer) request.get("rating");
@@ -552,13 +446,8 @@ public class UserApiController {
     public ResponseEntity<ApiResponse<Page<ReviewDTO>>> getReviews(
             @RequestParam(required = false) Integer rating,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(defaultValue = "10") int size) {
+        User user = getCurrentUser();
 
         try {
             com.baomidou.mybatisplus.extension.plugins.pagination.Page<ReviewDTO> reviews = reviewService.findByUserIdWithPaging(user.getId(), rating, page, size);
@@ -571,13 +460,8 @@ public class UserApiController {
 
     @GetMapping("/reviews/{id}")
     public ResponseEntity<ApiResponse<Review>> getReviewById(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
 
         Review review = reviewService.findById(id);
         if (review == null) {
@@ -596,13 +480,8 @@ public class UserApiController {
     @PutMapping("/reviews/{id}")
     public ResponseEntity<ApiResponse<Review>> updateReview(
             @PathVariable Integer id,
-            @RequestBody Map<String, Object> request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Object> request) {
+        User user = getCurrentUser();
 
         Review review = reviewService.findById(id);
         if (review == null) {
@@ -641,13 +520,8 @@ public class UserApiController {
 
     @DeleteMapping("/reviews/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteReview(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
 
         Review review = reviewService.findById(id);
         if (review == null) {
@@ -670,12 +544,8 @@ public class UserApiController {
     }
 
     @GetMapping("/favorites")
-    public ResponseEntity<ApiResponse<List<com.petshop.dto.FavoriteDTO>>> getFavoriteMerchants(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<List<com.petshop.dto.FavoriteDTO>>> getFavoriteMerchants() {
+        User user = getCurrentUser();
         try {
             List<com.petshop.dto.FavoriteDTO> favorites = favoriteService.getFavoriteMerchants(user.getId());
             return ResponseEntity.ok(ApiResponse.success(favorites));
@@ -687,13 +557,8 @@ public class UserApiController {
 
     @PostMapping("/favorites")
     public ResponseEntity<ApiResponse<com.petshop.dto.FavoriteDTO>> addMerchantFavorite(
-            @RequestBody Map<String, Integer> request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Integer> request) {
+        User user = getCurrentUser();
         Integer merchantId = request.get("merchantId");
         if (merchantId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -718,13 +583,8 @@ public class UserApiController {
 
     @DeleteMapping("/favorites/{id}")
     public ResponseEntity<ApiResponse<Void>> removeMerchantFavorite(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
         try {
             favoriteService.removeMerchantFavorite(user.getId(), id);
             return ResponseEntity.ok(ApiResponse.success("删除收藏成功", null));
@@ -739,12 +599,8 @@ public class UserApiController {
     }
 
     @GetMapping("/favorites/services")
-    public ResponseEntity<ApiResponse<List<com.petshop.dto.FavoriteServiceDTO>>> getFavoriteServices(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<List<com.petshop.dto.FavoriteServiceDTO>>> getFavoriteServices() {
+        User user = getCurrentUser();
         try {
             List<com.petshop.dto.FavoriteServiceDTO> favorites = favoriteService.getFavoriteServices(user.getId());
             return ResponseEntity.ok(ApiResponse.success(favorites));
@@ -756,13 +612,8 @@ public class UserApiController {
 
     @PostMapping("/favorites/services")
     public ResponseEntity<ApiResponse<com.petshop.dto.FavoriteServiceDTO>> addServiceFavorite(
-            @RequestBody Map<String, Integer> request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Integer> request) {
+        User user = getCurrentUser();
         Integer serviceId = request.get("serviceId");
         if (serviceId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -787,13 +638,8 @@ public class UserApiController {
 
     @DeleteMapping("/favorites/services/{id}")
     public ResponseEntity<ApiResponse<Void>> removeServiceFavorite(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
         try {
             favoriteService.removeServiceFavorite(user.getId(), id);
             return ResponseEntity.ok(ApiResponse.success("删除收藏成功", null));
@@ -809,13 +655,8 @@ public class UserApiController {
 
     @PostMapping("/favorites/products")
     public ResponseEntity<ApiResponse<com.petshop.dto.FavoriteProductDTO>> addProductFavorite(
-            @RequestBody Map<String, Integer> request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Integer> request) {
+        User user = getCurrentUser();
         Integer productId = request.get("productId");
         if (productId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -840,13 +681,8 @@ public class UserApiController {
 
     @DeleteMapping("/favorites/products/{id}")
     public ResponseEntity<ApiResponse<Void>> removeProductFavorite(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
         try {
             favoriteService.removeProductFavorite(user.getId(), id);
             return ResponseEntity.ok(ApiResponse.success("删除收藏成功", null));
@@ -862,13 +698,8 @@ public class UserApiController {
 
     @GetMapping("/favorites/products/{id}/check")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkProductFavoriteStatus(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
         try {
             boolean favorited = favoriteService.isProductFavorited(user.getId(), id);
             Map<String, Boolean> response = new HashMap<>();
@@ -883,13 +714,8 @@ public class UserApiController {
     @GetMapping("/notifications")
     public ResponseEntity<ApiResponse<List<NotificationDTO>>> getNotifications(
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) Boolean isRead,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(required = false) Boolean isRead) {
+        User user = getCurrentUser();
         try {
             List<NotificationDTO> notifications = notificationService.findByUserId(user.getId(), type, isRead);
             return ResponseEntity.ok(ApiResponse.success(notifications));
@@ -901,13 +727,8 @@ public class UserApiController {
 
     @PutMapping("/notifications/{id}/read")
     public ResponseEntity<ApiResponse<Void>> markNotificationAsRead(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
         try {
             if (!notificationService.isOwner(id, user.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -922,12 +743,8 @@ public class UserApiController {
     }
 
     @PutMapping("/notifications/read-all")
-    public ResponseEntity<ApiResponse<Void>> markAllNotificationsAsRead(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Void>> markAllNotificationsAsRead() {
+        User user = getCurrentUser();
         try {
             notificationService.markAllAsRead(user.getId());
             return ResponseEntity.ok(ApiResponse.success("全部标记已读成功", null));
@@ -939,13 +756,8 @@ public class UserApiController {
 
     @PutMapping("/notifications/batch-read")
     public ResponseEntity<ApiResponse<Void>> batchMarkNotificationsAsRead(
-            @RequestBody BatchOperationRequest request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody BatchOperationRequest request) {
+        User user = getCurrentUser();
         try {
             notificationService.markBatchAsRead(request.getIds(), user.getId());
             return ResponseEntity.ok(ApiResponse.success("批量标记已读成功", null));
@@ -957,13 +769,8 @@ public class UserApiController {
 
     @DeleteMapping("/notifications/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(
-            @PathVariable Integer id,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        User user = getCurrentUser();
         try {
             if (!notificationService.isOwner(id, user.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -979,13 +786,8 @@ public class UserApiController {
 
     @DeleteMapping("/notifications/batch")
     public ResponseEntity<ApiResponse<Void>> batchDeleteNotifications(
-            @RequestBody BatchOperationRequest request,
-            HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody BatchOperationRequest request) {
+        User user = getCurrentUser();
         try {
             notificationService.deleteBatch(request.getIds(), user.getId());
             return ResponseEntity.ok(ApiResponse.success("批量删除通知成功", null));
@@ -996,12 +798,8 @@ public class UserApiController {
     }
 
     @GetMapping("/notifications/unread-count")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getUnreadNotificationCount(HttpSession session) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUnreadNotificationCount() {
+        User user = getCurrentUser();
         try {
             Map<String, Object> response = notificationService.getUnreadCountResponse(user.getId());
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -1009,5 +807,23 @@ public class UserApiController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error(500, "获取未读通知数量失败：" + e.getMessage()));
         }
+    }
+
+    private User getCurrentUser() {
+        org.springframework.security.core.Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new UnauthorizedException("未授权访问，请先登录");
+        }
+        String phone;
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            phone = ((UserDetails) authentication.getPrincipal()).getUsername();
+        } else {
+            phone = authentication.getPrincipal().toString();
+        }
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getPhone, phone));
+        if (user == null) {
+            throw new UnauthorizedException("用户不存在");
+        }
+        return user;
     }
 }

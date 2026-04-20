@@ -66,8 +66,8 @@ const fetchPets = async () => {
   try {
     // 使用真实API
     const res = await getUserPets()
-    allPets.value = res.data || res || []
-    pets.value = res.data || res || []
+    allPets.value = res || []
+    pets.value = res || []
   } catch {
     ElMessage.error('获取宠物列表失败')
   } finally {

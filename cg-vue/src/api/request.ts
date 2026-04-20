@@ -11,7 +11,7 @@ request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('token') || localStorage.getItem('merchant_token') || sessionStorage.getItem('token') || sessionStorage.getItem('merchant_token')
     if (token && config.headers) {
-      config.headers.Authorization = token
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },

@@ -1,8 +1,11 @@
+cd d:\j\cg\cg && mvn spring-boot:run -D"maven.test.skip"=true
+
 用户
 13412340001
 123456
 
-
+13412340002
+123456
 
 
 

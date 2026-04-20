@@ -27,12 +27,10 @@ const validateConfirmPassword = (rule: any, value: any, callback: any) => {
 
 const registerRules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'blur' }
+    { required: false }
   ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { required: false }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -82,6 +80,10 @@ const handleRegister = async () => {
 
 const goToLogin = () => {
   router.push('/login')
+}
+
+const goToMerchantRegister = () => {
+  router.push('/merchant/register')
 }
 </script>
 
@@ -186,8 +188,13 @@ const goToLogin = () => {
           <span class="footer-text">已有账号？</span>
           <el-link type="primary" @click="goToLogin">立即登录</el-link>
         </div>
+
+        <div class="merchant-entry">
+          <span class="footer-text">是商家？</span>
+          <el-link type="primary" @click="goToMerchantRegister">商家入驻</el-link>
+        </div>
       </el-form>
-      
+
       <!-- 用户端特色 -->
       <div class="user-features">
         <div class="feature-item">
@@ -348,6 +355,14 @@ const goToLogin = () => {
   margin-top: 20px;
 }
 
+.merchant-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .footer-text {
   color: #666;
   font-size: 14px;
@@ -393,19 +408,19 @@ const goToLogin = () => {
   .register-card {
     padding: 30px 20px;
   }
-  
+
   .register-title {
     font-size: 20px;
   }
-  
+
   .brand-title {
     font-size: 18px;
   }
-  
+
   :deep(.el-input__wrapper) {
     height: 40px;
   }
-  
+
   .register-button {
     height: 44px;
     font-size: 14px;

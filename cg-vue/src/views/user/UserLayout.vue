@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   User,
@@ -20,9 +20,24 @@ import {
 const router = useRouter()
 const isCollapse = ref(false)
 const searchQuery = ref('')
+const userInfo = ref<any>(null)
+
+const username = computed(() => {
+  if (userInfo.value?.username) {
+    return userInfo.value.username
+  }
+  if (userInfo.value?.phone) {
+    return userInfo.value.phone
+  }
+  return '用户'
+})
 
 const handleCommand = (command: string) => {
   if (command === 'logout') {
+    localStorage.removeItem('token')
+    localStorage.removeItem('userInfo')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('userInfo')
     router.push('/login')
   }
 }
@@ -30,6 +45,17 @@ const handleCommand = (command: string) => {
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
     router.push({ path: '/user/search', query: { keyword: searchQuery.value } })
+  }
+}
+
+const loadUserInfo = () => {
+  const stored = localStorage.getItem('userInfo')
+  if (stored) {
+    try {
+      userInfo.value = JSON.parse(stored)
+    } catch (e) {
+      console.error('Failed to parse userInfo:', e)
+    }
   }
 }
 
@@ -42,6 +68,10 @@ const menuItems = [
   { key: '/user/favorites', icon: Star, label: '收藏评价' },
   { key: '/user/profile', icon: Setting, label: '个人中心' }
 ]
+
+onMounted(() => {
+  loadUserInfo()
+})
 </script>
 
 <template>
@@ -94,7 +124,7 @@ const menuItems = [
           <el-dropdown @command="handleCommand">
             <span class="user-info">
               <el-avatar :size="32" icon="UserFilled" />
-              <span class="username">用户名</span>
+              <span class="username">{{ username }}</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
