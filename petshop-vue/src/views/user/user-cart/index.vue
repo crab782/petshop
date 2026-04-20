@@ -5,40 +5,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, ShoppingTrolley } from '@element-plus/icons-vue'
 import { getCart, updateCartItem, removeFromCart, type CartItem } from '@/api/user'
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockCartItems: CartItem[] = [
-  {
-    id: 1,
-    productId: 1,
-    productName: '宠物天然粮',
-    productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20package%2C%20professional%20product%20photography&image_size=square',
-    price: 128,
-    quantity: 2,
-    merchantId: 1,
-    merchantName: '爱心宠物会所'
-  },
-  {
-    id: 2,
-    productId: 2,
-    productName: '宠物玩具套装',
-    productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toys%20set%2C%20professional%20product%20photography&image_size=square',
-    price: 88,
-    quantity: 1,
-    merchantId: 1,
-    merchantName: '爱心宠物会所'
-  },
-  {
-    id: 3,
-    productId: 3,
-    productName: '宠物牵引绳',
-    productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20leash%2C%20professional%20product%20photography&image_size=square',
-    price: 45,
-    quantity: 1,
-    merchantId: 1,
-    merchantName: '爱心宠物会所'
-  }
-]
-
 const router = useRouter()
 
 const loading = ref(false)

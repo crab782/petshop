@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Location, Calendar, Goods, ArrowRight, StarFilled, Message, List, Loading } from '@element-plus/icons-vue'
-import { getHomeStats, getRecentActivities, getRecommendedServices, type HomeStats, type Activity, type Service } from '@/api/user'
+import { getHomeStats, getRecentActivities, getRecommendedServices, getMerchantList, type HomeStats, type Activity, type Service, type MerchantListItem } from '@/api/user'
 
 const router = useRouter()
 
@@ -36,14 +36,21 @@ const quickActions = [
 
 const recommendedServices = ref<Service[]>([])
 
+const merchants = ref<MerchantListItem[]>([])
+const merchantsLoading = ref(false)
+
 const goToQuickAction = (route: string) => {
   router.push(route)
 }
 
+const goToMerchant = (id: number) => {
+  router.push('/user/shop/' + id)
+}
+
 const loadHomeData = async () => {
   loading.value = true
+  merchantsLoading.value = true
   try {
-    // 加载统计数据
     const statsResponse = await getHomeStats()
     const statsData = statsResponse.data || statsResponse
     if (statsData) {
@@ -52,14 +59,12 @@ const loadHomeData = async () => {
       stats.value[2].value = (statsData.reviewCount || 0).toString()
     }
 
-    // 加载最近活动
     const activitiesResponse = await getRecentActivities(5)
     const activitiesData = activitiesResponse.data || activitiesResponse
     if (activitiesData) {
       recentActivities.value = activitiesData
     }
 
-    // 加载推荐服务
     const servicesResponse = await getRecommendedServices(4)
     const servicesData = servicesResponse.data || servicesResponse
     if (servicesData) {
@@ -69,6 +74,20 @@ const loadHomeData = async () => {
     console.error('加载首页数据失败:', error)
   } finally {
     loading.value = false
+  }
+
+  try {
+    const merchantResult = await getMerchantList({ page: 1, pageSize: 8 })
+    const merchantData = merchantResult.data || merchantResult
+    if (Array.isArray(merchantData)) {
+      merchants.value = merchantData
+    } else if (merchantData && Array.isArray(merchantData.data)) {
+      merchants.value = merchantData.data
+    }
+  } catch (error) {
+    console.error('加载商家列表失败:', error)
+  } finally {
+    merchantsLoading.value = false
   }
 }
 
@@ -88,6 +107,38 @@ onMounted(() => {
         <p class="welcome-subtitle">为您提供专业、贴心的宠物服务</p>
       </div>
     </el-card>
+
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">商店浏览</h2>
+        <router-link to="/user/services/list" class="view-all-link">查看全部 <el-icon><ArrowRight /></el-icon></router-link>
+      </div>
+      <el-row :gutter="16" v-loading="merchantsLoading">
+        <el-col v-for="merchant in merchants" :key="merchant.id" :xs="24" :sm="12" :md="6">
+          <el-card class="merchant-card" shadow="hover" @click="goToMerchant(merchant.id)">
+            <div class="merchant-card-content">
+              <el-avatar :size="64" :src="merchant.logo" class="merchant-avatar">
+                {{ merchant.name?.charAt(0) }}
+              </el-avatar>
+              <div class="merchant-info">
+                <h3 class="merchant-name">{{ merchant.name }}</h3>
+                <div class="merchant-address" v-if="merchant.address">
+                  <el-icon><Location /></el-icon>
+                  <span>{{ merchant.address }}</span>
+                </div>
+                <div class="merchant-rating">
+                  <el-rate :model-value="merchant.rating || 0" disabled :size="12" />
+                </div>
+              </div>
+              <el-badge :value="merchant.serviceCount + '项服务'" class="merchant-service-badge" type="success" />
+            </div>
+          </el-card>
+        </el-col>
+        <el-col v-if="merchants.length === 0 && !merchantsLoading" :span="24">
+          <el-empty description="暂无商家" />
+        </el-col>
+      </el-row>
+    </div>
 
     <div class="section">
       <h2 class="section-title">统计概览</h2>
@@ -315,6 +366,109 @@ onMounted(() => {
   display: inline-block;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+}
+
+.view-all-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #4CAF50;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.view-all-link:hover {
+  color: #388E3C;
+}
+
+.merchant-card {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.merchant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.merchant-card :deep(.el-card__body) {
+  padding: 16px;
+}
+
+.merchant-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.merchant-avatar {
+  background-color: #4CAF50;
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.merchant-info {
+  text-align: center;
+  width: 100%;
+}
+
+.merchant-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: #333333;
+  margin: 0 0 6px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.merchant-address {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #999999;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.merchant-address span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.merchant-rating {
+  display: flex;
+  justify-content: center;
+}
+
+.merchant-service-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
 .quick-actions {
   margin-bottom: 8px;
 }
@@ -470,6 +624,15 @@ onMounted(() => {
   .service-image {
     font-size: 36px;
     padding: 12px 0;
+  }
+
+  .merchant-avatar {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .merchant-name {
+    font-size: 13px;
   }
 }
 

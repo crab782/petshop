@@ -1,58 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage, ElDialog } from 'element-plus'
-import { getAddresses, purchaseProduct, type Product } from '@/api/user'
-
-// 硬编码测试数据 - 仅在开发环境使用
-const mockAddresses = [
-  {
-    id: 1,
-    name: '张三',
-    phone: '13800138000',
-    address: '北京市朝阳区建国路88号'  
-  },
-  {
-    id: 2,
-    name: '李四',
-    phone: '13900139000',
-    address: '上海市浦东新区陆家嘴100号'
-  }
-]
-
-const mockProducts: Product[] = [
-  {
-    id: 1,
-    name: '宠物天然粮',
-    description: '天然成分，营养均衡，适合各种宠物',
-    price: 128,
-    stock: 50,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20package%2C%20professional%20product%20photography&image_size=square',
-    merchantId: 1,
-    merchantName: '爱心宠物会所'
-  },
-  {
-    id: 2,
-    name: '宠物玩具套装',
-    description: '包含多种玩具，适合不同年龄段的宠物',
-    price: 88,
-    stock: 30,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toys%20set%2C%20professional%20product%20photography&image_size=square',
-    merchantId: 1,
-    merchantName: '爱心宠物会所'
-  }
-]
-
-interface Address {
-  id: number
-  name: string
-  phone: string
-  address: string
-}
+import { ElMessage } from 'element-plus'
+import { getAddresses, createOrder, type Address } from '@/api/user'
 
 interface CartItem {
-  product: Product
+  productId: number
+  productName: string
+  productImage?: string
+  price: number
   quantity: number
+  merchantId: number
+  merchantName: string
 }
 
 const router = useRouter()
@@ -64,7 +23,6 @@ const addresses = ref<Address[]>([])
 const selectedAddressId = ref<number | null>(null)
 const remark = ref('')
 const selectedPaymentMethod = ref('wechat')
-const addressDialogVisible = ref(false)
 
 const cartItems = ref<CartItem[]>([])
 
@@ -75,7 +33,7 @@ const paymentMethods = [
 ]
 
 const productTotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
 })
 
 const shippingFee = computed(() => {
@@ -89,21 +47,11 @@ const orderTotal = computed(() => {
 const fetchAddresses = async () => {
   loading.value = true
   try {
-    // 在开发环境下使用硬编码测试数据
-    if (import.meta.env.DEV) {
-      // 模拟API延迟
-      await new Promise(resolve => setTimeout(resolve, 300))
-      addresses.value = mockAddresses
-      if (addresses.value.length > 0 && !selectedAddressId.value) {
-        selectedAddressId.value = addresses.value[0].id
-      }
-    } else {
-      // 在生产环境下使用真实API
-      const res = await getAddresses()
-      addresses.value = res.data || []
-      if (addresses.value.length > 0 && !selectedAddressId.value) {
-        selectedAddressId.value = addresses.value[0].id
-      }
+    const data = await getAddresses()
+    addresses.value = data || []
+    if (addresses.value.length > 0 && !selectedAddressId.value) {
+      const defaultAddr = addresses.value.find(a => a.isDefault)
+      selectedAddressId.value = defaultAddr ? defaultAddr.id! : addresses.value[0].id!
     }
   } catch {
     ElMessage.error('获取收货地址失败')
@@ -112,8 +60,11 @@ const fetchAddresses = async () => {
   }
 }
 
+const formatAddress = (addr: Address) => {
+  return `${addr.province}${addr.city}${addr.district}${addr.detailAddress}`
+}
+
 const handleAddAddress = () => {
-  // 跳转到地址管理页面添加新地址
   router.push('/user/addresses')
 }
 
@@ -128,17 +79,28 @@ const handleSubmitOrder = async () => {
   }
   submitting.value = true
   try {
-    // 模拟创建订单
-    const orderId = Math.floor(Math.random() * 1000000)
-    // 跳转到支付页面
-    router.push({
-      path: '/user/pay',
-      query: {
-        orderId: orderId.toString(),
-        amount: orderTotal.value.toString(),
-        paymentMethod: selectedPaymentMethod.value
+    let firstOrderId: number | null = null
+    for (const item of cartItems.value) {
+      const result = await createOrder({
+        productId: item.productId,
+        addressId: selectedAddressId.value!,
+        quantity: item.quantity
+      })
+      if (!firstOrderId) {
+        firstOrderId = result?.id ?? result
       }
-    })
+    }
+    if (firstOrderId) {
+      router.push({
+        path: '/user/pay',
+        query: {
+          orderId: firstOrderId.toString(),
+          paymentMethod: selectedPaymentMethod.value
+        }
+      })
+    } else {
+      ElMessage.error('订单提交失败')
+    }
   } catch {
     ElMessage.error('订单提交失败')
   } finally {
@@ -148,32 +110,30 @@ const handleSubmitOrder = async () => {
 
 onMounted(() => {
   fetchAddresses()
-  // 在开发环境下使用硬编码测试数据
-  if (import.meta.env.DEV) {
-    // 模拟购物车数据
-    cartItems.value = [
-      { product: mockProducts[0], quantity: 2 },
-      { product: mockProducts[1], quantity: 1 }
-    ]
+  const itemsData = route.query.items
+  if (itemsData) {
+    try {
+      cartItems.value = JSON.parse(itemsData as string)
+    } catch {
+      cartItems.value = []
+    }
   } else {
-    // 在生产环境下使用真实数据
-    const cartData = route.query.cart
-    if (cartData) {
+    const productData = route.query.product
+    const quantity = parseInt(route.query.quantity as string) || 1
+    if (productData) {
       try {
-        cartItems.value = JSON.parse(cartData as string)
+        const product = JSON.parse(productData as string)
+        cartItems.value = [{
+          productId: product.productId || product.id,
+          productName: product.productName || product.name,
+          productImage: product.productImage || product.image,
+          price: product.price,
+          quantity,
+          merchantId: product.merchantId,
+          merchantName: product.merchantName
+        }]
       } catch {
         cartItems.value = []
-      }
-    } else {
-      const productData = route.query.product
-      const quantity = parseInt(route.query.quantity as string) || 1
-      if (productData) {
-        try {
-          const product = JSON.parse(productData as string)
-          cartItems.value = [{ product, quantity }]
-        } catch {
-          cartItems.value = []
-        }
       }
     }
   }
@@ -203,9 +163,9 @@ onMounted(() => {
               class="address-item"
             >
               <div class="address-info">
-                <span class="address-name">{{ addr.name }}</span>
+                <span class="address-name">{{ addr.contactName }}</span>
                 <span class="address-phone">{{ addr.phone }}</span>
-                <span class="address-detail">{{ addr.address }}</span>
+                <span class="address-detail">{{ formatAddress(addr) }}</span>
               </div>
             </el-radio>
           </el-radio-group>
@@ -235,20 +195,20 @@ onMounted(() => {
           <template #header>
             <span class="section-title">商品清单</span>
           </template>
-          <div v-for="item in cartItems" :key="item.product.id" class="product-item">
+          <div v-for="item in cartItems" :key="item.productId" class="product-item">
             <el-image
-              :src="item.product.image || 'https://placeholder.com/80x80'"
+              :src="item.productImage || 'https://placeholder.com/80x80'"
               fit="cover"
               class="product-image"
             />
             <div class="product-detail">
-              <h4 class="product-name">{{ item.product.name }}</h4>
-              <p class="product-desc">{{ item.product.description || '暂无描述' }}</p>
+              <h4 class="product-name">{{ item.productName }}</h4>
+              <p class="product-desc">{{ item.merchantName }}</p>
             </div>
             <div class="product-quantity">x{{ item.quantity }}</div>
             <div class="product-price">
-              <span class="unit-price">¥{{ item.product.price }}</span>
-              <span class="subtotal">小计: ¥{{ (item.product.price * item.quantity).toFixed(2) }}</span>
+              <span class="unit-price">¥{{ item.price }}</span>
+              <span class="subtotal">小计: ¥{{ (item.price * item.quantity).toFixed(2) }}</span>
             </div>
           </div>
           <el-empty v-if="cartItems.length === 0" description="购物车为空" />

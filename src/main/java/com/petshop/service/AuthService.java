@@ -111,20 +111,20 @@ public class AuthService {
 
     @Transactional
     public Map<String, String> merchantRegister(MerchantRegisterRequest request) {
-        LambdaQueryWrapper<Merchant> emailWrapper = new LambdaQueryWrapper<>();
-        emailWrapper.eq(Merchant::getEmail, request.getEmail());
-        if (merchantRepository.selectCount(emailWrapper) > 0) {
-            throw new BadRequestException("Email already in use");
+        LambdaQueryWrapper<Merchant> phoneWrapper = new LambdaQueryWrapper<>();
+        phoneWrapper.eq(Merchant::getPhone, request.getPhone());
+        if (merchantRepository.selectCount(phoneWrapper) > 0) {
+            throw new BadRequestException("Phone number already registered");
         }
 
         Merchant merchant = new Merchant();
-        merchant.setName(request.getName());
-        merchant.setEmail(request.getEmail());
+        merchant.setName(request.getName() != null && !request.getName().isEmpty() ? request.getName() : "商家" + request.getPhone());
+        merchant.setEmail(request.getEmail() != null && !request.getEmail().isEmpty() ? request.getEmail() : "");
         merchant.setPassword(passwordEncoder.encode(request.getPassword()));
         merchant.setPhone(request.getPhone());
-        merchant.setContactPerson(request.getContact_person());
+        merchant.setContactPerson(request.getContact_person() != null ? request.getContact_person() : "");
         merchant.setLogo(request.getLogo() != null ? request.getLogo() : "");
-        merchant.setAddress(request.getAddress());
+        merchant.setAddress(request.getAddress() != null ? request.getAddress() : "");
         merchant.setStatus("pending");
         merchant.setCreatedAt(LocalDateTime.now());
         merchant.setUpdatedAt(LocalDateTime.now());

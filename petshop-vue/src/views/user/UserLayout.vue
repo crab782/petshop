@@ -14,13 +14,17 @@ import {
   Search,
   Bell,
   Star,
-  Ticket
+  Ticket,
+  Shop,
+  ShoppingCart
 } from '@element-plus/icons-vue'
+import { getCart } from '@/api/user'
 
 const router = useRouter()
 const isCollapse = ref(false)
 const searchQuery = ref('')
 const userInfo = ref<any>(null)
+const cartCount = ref(0)
 
 const username = computed(() => {
   if (userInfo.value?.username) {
@@ -59,8 +63,17 @@ const loadUserInfo = () => {
   }
 }
 
+const loadCartCount = async () => {
+  try {
+    const data = await getCart()
+    cartCount.value = data.length
+  } catch (e) {
+    console.error('Failed to load cart count:', e)
+  }
+}
+
 const menuItems = [
-  { key: '/user/home', icon: HomeFilled, label: '首页' },
+  { key: '/user/home', icon: Shop, label: '商店浏览' },
   { key: '/user/services', icon: ScaleToOriginal, label: '服务浏览' },
   { key: '/user/pets', icon: Goods, label: '宠物管理' },
   { key: '/user/appointments', icon: Calendar, label: '预约管理' },
@@ -71,6 +84,7 @@ const menuItems = [
 
 onMounted(() => {
   loadUserInfo()
+  loadCartCount()
 })
 </script>
 
@@ -116,6 +130,11 @@ onMounted(() => {
           </div>
         </div>
         <div class="header-right">
+          <el-badge :value="cartCount" :hidden="cartCount === 0" class="cart-badge">
+            <el-button text @click="router.push('/user/cart')" class="cart-btn">
+              <el-icon :size="20"><ShoppingCart /></el-icon>
+            </el-button>
+          </el-badge>
           <el-badge value="3" class="notification-badge">
             <el-button text @click="router.push('/user/notifications')" class="notification-btn">
               <el-icon :size="20"><Bell /></el-icon>
@@ -254,6 +273,20 @@ onMounted(() => {
 
 .notification-badge {
   margin-right: 16px;
+}
+
+.cart-badge {
+  margin-right: 16px;
+}
+
+.cart-btn {
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.cart-btn:hover {
+  color: #f5f5f5;
+  transform: scale(1.1);
 }
 
 .notification-btn {

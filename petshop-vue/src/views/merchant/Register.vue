@@ -49,13 +49,7 @@ const registerFormRef = ref()
 const termsDialogVisible = ref(false)
 
 const validationRules: Record<keyof FormData, (value: any) => string | null> = {
-  email: (value: string) => {
-    if (!value) return '请输入邮箱'
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(value)) return '请输入正确的邮箱格式'
-    if (value.length > 100) return '邮箱最多100个字符'
-    return null
-  },
+  email: () => null,
   password: (value: string) => {
     if (!value) return '请输入密码'
     if (value.length < 6) return '密码至少6个字符'
@@ -73,22 +67,10 @@ const validationRules: Record<keyof FormData, (value: any) => string | null> = {
     if (!phoneRegex.test(value)) return '请输入正确的手机号格式'
     return null
   },
-  contact_person: (value: string) => {
-    if (!value) return '请输入联系人'
-    if (value.length > 50) return '联系人姓名最多50个字符'
-    return null
-  },
-  name: (value: string) => {
-    if (!value) return '请输入商家名称'
-    if (value.length < 2 || value.length > 100) return '商家名称长度为2-100个字符'
-    return null
-  },
+  contact_person: () => null,
+  name: () => null,
   logo: () => null,
-  address: (value: string) => {
-    if (!value) return '请输入地址'
-    if (value.length > 255) return '地址最多255个字符'
-    return null
-  },
+  address: () => null,
   agreeToTerms: (value: boolean) => {
     if (!value) return '请阅读并同意注册协议'
     return null
@@ -96,11 +78,7 @@ const validationRules: Record<keyof FormData, (value: any) => string | null> = {
 }
 
 const elFormRules = computed(() => ({
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
-    { max: 100, message: '邮箱最多100个字符', trigger: 'blur' }
-  ],
+  email: [],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码至少6个字符', trigger: 'blur' }
@@ -135,18 +113,9 @@ const elFormRules = computed(() => ({
       trigger: 'blur'
     }
   ],
-  contact_person: [
-    { required: true, message: '请输入联系人', trigger: 'blur' },
-    { max: 50, message: '联系人姓名最多50个字符', trigger: 'blur' }
-  ],
-  name: [
-    { required: true, message: '请输入商家名称', trigger: 'blur' },
-    { min: 2, max: 100, message: '商家名称长度为2-100个字符', trigger: 'blur' }
-  ],
-  address: [
-    { required: true, message: '请输入地址', trigger: 'blur' },
-    { max: 255, message: '地址最多255个字符', trigger: 'blur' }
-  ]
+  contact_person: [],
+  name: [],
+  address: []
 }))
 
 const {

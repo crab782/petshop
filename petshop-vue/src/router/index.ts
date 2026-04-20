@@ -125,7 +125,7 @@ const router = createRouter({
           redirect: '/user/announcements/detail/1',
         },
         {
-          path: 'shop',
+          path: 'shop/:id',
           name: 'user-shop',
           component: () => import('../views/user/user-shop/index.vue'),
         },
@@ -151,7 +151,7 @@ const router = createRouter({
         },
         {
           path: 'merchant/',
-          redirect: '/user/merchant/1',
+          redirect: '/user/home',
         },
         {
           path: 'favorites',

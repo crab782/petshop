@@ -13,14 +13,13 @@ export interface RegisterData {
 }
 
 export interface MerchantRegisterData {
-  username: string
   password: string
-  email: string
+  email?: string
   phone: string
-  contact_person: string
-  name: string
+  contact_person?: string
+  name?: string
   logo?: string
-  address: string
+  address?: string
 }
 
 export interface UserInfo {

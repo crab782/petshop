@@ -39,10 +39,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                     Collections.singletonList(new SimpleGrantedAuthority("ROLE_user")));
         }
 
-        Merchant merchant = merchantMapper.selectByEmail(username);
+        Merchant merchant = merchantMapper.selectByPhone(username);
+        if (merchant == null) {
+            merchant = merchantMapper.selectByEmail(username);
+        }
         if (merchant != null) {
             return new org.springframework.security.core.userdetails.User(
-                    merchant.getEmail(),
+                    merchant.getPhone(),
                     merchant.getPassword(),
                     Collections.singletonList(new SimpleGrantedAuthority("ROLE_merchant")));
         }

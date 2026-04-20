@@ -1,184 +1,149 @@
-<script>
-// 商家端登录页面 - 使用纯JavaScript实现
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Phone, Lock } from '@element-plus/icons-vue'
+import axios from 'axios'
 
-// DOM元素
-let loginForm, usernameInput, passwordInput, loginButton, buttonText, loadingText, errorMessage;
+const router = useRouter()
 
-// 页面加载完成后初始化
-window.addEventListener('DOMContentLoaded', function() {
-  // 获取DOM元素
-  loginForm = document.getElementById('loginForm');
-  usernameInput = document.getElementById('username');
-  passwordInput = document.getElementById('password');
-  loginButton = document.getElementById('loginButton');
-  buttonText = document.getElementById('buttonText');
-  loadingText = document.getElementById('loadingText');
-  errorMessage = document.getElementById('errorMessage');
-  
-  // 添加表单提交事件
-  if (loginForm) {
-    loginForm.addEventListener('submit', handleLogin);
-  }
-  
-  // 添加回车键提交
-  passwordInput.addEventListener('keyup', function(event) {
-    if (event.key === 'Enter') {
-      handleLogin(event);
+const loginForm = ref({
+  phone: '',
+  password: ''
+})
+const loginLoading = ref(false)
+const loginFormRef = ref()
+
+const loginRules = {
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码至少6个字符', trigger: 'blur' }
+  ]
+}
+
+const handleLogin = async () => {
+  if (!loginFormRef.value) return
+
+  await loginFormRef.value.validate(async (valid: boolean) => {
+    if (!valid) return
+
+    loginLoading.value = true
+
+    try {
+      const response = await axios.post('/api/auth/login', {
+        phone: loginForm.value.phone,
+        password: loginForm.value.password,
+        role: 'merchant'
+      })
+
+      if (response.data.code === 200 || response.data.code === 0) {
+        const result = response.data.data
+        if (result.token) {
+          localStorage.setItem('merchant_token', result.token)
+        }
+        if (result.user) {
+          localStorage.setItem('merchantInfo', JSON.stringify(result.user))
+        }
+        ElMessage.success('登录成功')
+        router.push('/merchant/home')
+      } else {
+        ElMessage.error(response.data.message || '登录失败')
+      }
+    } catch (error: any) {
+      ElMessage.error(error.response?.data?.message || '登录失败，请检查手机号和密码')
+    } finally {
+      loginLoading.value = false
     }
-  });
-});
-
-// 登录处理
-function handleLogin(event) {
-  event.preventDefault();
-  
-  // 表单验证
-  if (!validateForm()) {
-    return;
-  }
-  
-  // 显示加载状态
-  showLoading(true);
-  clearError();
-  
-  // 获取表单数据
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value;
-  
-  // 模拟登录请求（实际项目中应使用真实的API调用）
-  setTimeout(function() {
-    // 模拟登录成功
-    if (username && password) {
-      // 登录成功，跳转到商家端首页
-      window.location.href = '/merchant/home';
-    } else {
-      // 登录失败
-      showError('请输入用户名和密码');
-    }
-    showLoading(false);
-  }, 1000);
+  })
 }
 
-// 表单验证
-function validateForm() {
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value;
-  
-  if (!username) {
-    showError('请输入用户名或邮箱');
-    usernameInput.focus();
-    return false;
-  }
-  
-  if (!password) {
-    showError('请输入密码');
-    passwordInput.focus();
-    return false;
-  }
-  
-  if (password.length < 6) {
-    showError('密码长度至少6位');
-    passwordInput.focus();
-    return false;
-  }
-  
-  return true;
+const goToRegister = () => {
+  router.push('/merchant/register')
 }
 
-// 显示加载状态
-function showLoading(show) {
-  if (show) {
-    buttonText.style.display = 'none';
-    loadingText.style.display = 'inline';
-    loginButton.disabled = true;
-    loginButton.classList.add('loading');
-  } else {
-    buttonText.style.display = 'inline';
-    loadingText.style.display = 'none';
-    loginButton.disabled = false;
-    loginButton.classList.remove('loading');
-  }
-}
-
-// 显示错误信息
-function showError(message) {
-  errorMessage.textContent = message;
-  errorMessage.style.display = 'block';
-  
-  // 3秒后自动清除错误
-  setTimeout(clearError, 3000);
-}
-
-// 清除错误信息
-function clearError() {
-  errorMessage.textContent = '';
-  errorMessage.style.display = 'none';
+const goToUserLogin = () => {
+  router.push('/login')
 }
 </script>
 
 <template>
-  <!-- 商家端登录页面 -->
   <div class="merchant-login-container">
     <div class="login-card">
-      <!-- 登录头部 -->
-      <div class="login-header">
-        <div class="brand-logo">
-          <div class="logo-icon">🐶</div>
-          <h1 class="brand-title">宠物服务平台</h1>
-        </div>
-        <h2 class="login-title">商家端登录</h2>
-        <p class="login-subtitle">欢迎回来，商家朋友</p>
-      </div>
-      
-      <!-- 登录表单 -->
-      <form id="loginForm" class="login-form">
-        <!-- 用户名/邮箱输入 -->
-        <div class="form-group">
-          <label for="username" class="form-label">邮箱 / 用户名</label>
-          <div class="input-container">
-            <span class="input-icon">📧</span>
-            <input 
-              type="text" 
-              id="username" 
-              class="form-input"
-              placeholder="请输入邮箱或用户名"
-              autocomplete="username"
-            >
+      <div class="login-card-inner">
+        <div class="login-header">
+          <div class="brand-logo">
+            <div class="logo-icon">🐶</div>
+            <h1 class="brand-title">宠物服务平台</h1>
           </div>
+          <h2 class="login-title">商家端登录</h2>
+          <p class="login-subtitle">欢迎回来，商家朋友</p>
         </div>
-        
-        <!-- 密码输入 -->
-        <div class="form-group">
-          <label for="password" class="form-label">密码</label>
-          <div class="input-container">
-            <span class="input-icon">🔒</span>
-            <input 
-              type="password" 
-              id="password" 
-              class="form-input"
+
+        <el-form
+          ref="loginFormRef"
+          :model="loginForm"
+          :rules="loginRules"
+          class="login-form"
+          label-position="top"
+        >
+          <el-form-item prop="phone">
+            <template #label>
+              <span class="form-label">手机号</span>
+            </template>
+            <el-input
+              v-model="loginForm.phone"
+              placeholder="请输入手机号"
+              :prefix-icon="Phone"
+              size="large"
+            />
+          </el-form-item>
+
+          <el-form-item prop="password">
+            <template #label>
+              <span class="form-label">密码</span>
+            </template>
+            <el-input
+              v-model="loginForm.password"
+              type="password"
               placeholder="请输入密码"
-              autocomplete="current-password"
+              :prefix-icon="Lock"
+              show-password
+              size="large"
+              @keyup.enter="handleLogin"
+            />
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+              type="primary"
+              size="large"
+              :loading="loginLoading"
+              class="login-button"
+              @click="handleLogin"
             >
+              登录
+            </el-button>
+          </el-form-item>
+
+          <div class="login-footer">
+            <span class="footer-text">还没有账号？</span>
+            <el-link type="primary" @click="goToRegister">立即注册</el-link>
           </div>
-        </div>
-        
-        <!-- 登录按钮 -->
-        <button type="submit" id="loginButton" class="login-button">
-          <span id="buttonText">登录</span>
-          <span id="loadingText" style="display: none;">登录中...</span>
-        </button>
-        
-        <!-- 底部链接 -->
-        <div class="login-footer">
-          <span class="footer-text">还没有账号？</span>
-          <a href="/merchant/register" class="register-link">立即注册</a>
-        </div>
-      </form>
-      
-      <!-- 错误提示 -->
-      <div id="errorMessage" class="error-message"></div>
-      
-      <!-- 商家端特色 -->
+
+          <div class="login-divider">
+            <span>或</span>
+          </div>
+
+          <div class="login-footer">
+            <el-link type="primary" @click="goToUserLogin">用户登录</el-link>
+          </div>
+        </el-form>
+      </div>
+
       <div class="merchant-features">
         <div class="feature-item">
           <span class="feature-icon">📊</span>
@@ -197,22 +162,7 @@ function clearError() {
   </div>
 </template>
 
-<style>
-/* 全局样式重置 */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
-  line-height: 1.6;
-}
-
-/* 登录容器 */
+<style scoped>
 .merchant-login-container {
   min-height: 100vh;
   display: flex;
@@ -220,9 +170,9 @@ body {
   justify-content: center;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* 登录卡片 */
 .login-card {
   width: 100%;
   max-width: 450px;
@@ -234,7 +184,6 @@ body {
   overflow: hidden;
 }
 
-/* 卡片装饰 */
 .login-card::before {
   content: '';
   position: absolute;
@@ -245,13 +194,11 @@ body {
   background: linear-gradient(90deg, #4CAF50, #45a049);
 }
 
-/* 登录头部 */
 .login-header {
   text-align: center;
   margin-bottom: 30px;
 }
 
-/* 品牌标识 */
 .brand-logo {
   display: flex;
   align-items: center;
@@ -270,7 +217,6 @@ body {
   color: #333;
 }
 
-/* 登录标题 */
 .login-title {
   font-size: 24px;
   font-weight: 700;
@@ -284,64 +230,32 @@ body {
   margin-bottom: 20px;
 }
 
-/* 登录表单 */
 .login-form {
   margin-bottom: 20px;
 }
 
-/* 表单组 */
-.form-group {
+:deep(.el-form-item) {
   margin-bottom: 20px;
 }
 
 .form-label {
-  display: block;
   font-size: 14px;
   font-weight: 500;
   color: #555;
   margin-bottom: 8px;
+  display: block;
 }
 
-/* 输入容器 */
-.input-container {
-  position: relative;
-  border: 1px solid #e0e0e0;
+:deep(.el-input__wrapper) {
   border-radius: 8px;
-  overflow: hidden;
   transition: all 0.3s ease;
 }
 
-.input-container:focus-within {
+:deep(.el-input__wrapper.is-focus) {
   border-color: #4CAF50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
-/* 输入图标 */
-.input-icon {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  font-size: 16px;
-}
-
-/* 表单输入 */
-.form-input {
-  width: 100%;
-  padding: 12px 15px 12px 45px;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #333;
-  background: transparent;
-}
-
-.form-input::placeholder {
-  color: #999;
-}
-
-/* 登录按钮 */
 .login-button {
   width: 100%;
   padding: 14px;
@@ -354,8 +268,6 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 10px;
-  position: relative;
-  overflow: hidden;
 }
 
 .login-button:hover:not(:disabled) {
@@ -364,17 +276,6 @@ body {
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
-.login-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.login-button.loading {
-  background: #4CAF50;
-  opacity: 0.8;
-}
-
-/* 底部链接 */
 .login-footer {
   display: flex;
   align-items: center;
@@ -388,33 +289,32 @@ body {
   color: #666;
 }
 
-.register-link {
+:deep(.el-link--primary) {
   font-size: 14px;
   color: #4CAF50;
-  text-decoration: none;
   font-weight: 500;
-  transition: color 0.3s ease;
 }
 
-.register-link:hover {
-  color: #45a049;
-  text-decoration: underline;
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
 }
 
-/* 错误提示 */
-.error-message {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
-  padding: 10px 15px;
-  border-radius: 6px;
-  margin-top: 15px;
-  font-size: 14px;
-  display: none;
-  animation: fadeIn 0.3s ease;
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
 }
 
-/* 商家端特色 */
+.login-divider span {
+  padding: 0 12px;
+  color: #999;
+  font-size: 12px;
+}
+
 .merchant-features {
   display: flex;
   justify-content: space-around;
@@ -439,7 +339,6 @@ body {
   color: #666;
 }
 
-/* 动画 */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -451,76 +350,26 @@ body {
   }
 }
 
-/* 响应式设计 */
 @media (max-width: 480px) {
   .login-card {
     padding: 30px 20px;
   }
-  
+
   .login-title {
     font-size: 20px;
   }
-  
+
   .brand-title {
     font-size: 18px;
   }
-  
-  .form-input {
-    padding: 10px 12px 10px 40px;
+
+  :deep(.el-input__wrapper) {
+    height: 40px;
   }
-  
+
   .login-button {
-    padding: 12px;
+    height: 44px;
     font-size: 14px;
   }
-}
-
-/* 加载动画 */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.login-button.loading::after {
-  content: '';
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  transform: translateY(-50%);
-}
-
-/* 隐藏Vue DevTools面板 */
-.vue-devtools__panel {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  z-index: -1 !important;
-}
-
-/* 隐藏Vue DevTools锚点按钮 */
-.vue-devtools__anchor-btn {
-  display: none !important;
-}
-
-/* 隐藏Vue DevTools检查器容器 */
-#inspector-container {
-  display: none !important;
-}
-
-/* 隐藏Vue DevTools相关元素 */
-.vue-devtools__inspector-button {
-  display: none !important;
-}
-
-/* 隐藏Vue DevTools面板内容 */
-.vue-devtools__panel-content {
-  display: none !important;
 }
 </style>

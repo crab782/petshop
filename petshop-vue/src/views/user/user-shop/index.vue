@@ -2,129 +2,27 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Star, Phone, Location, ChatDotRound, Goods, Service, ChatLineSquare } from '@element-plus/icons-vue'
+import { Star, Phone, Location, Goods, Service, ChatLineSquare, ShoppingCart } from '@element-plus/icons-vue'
 import {
   getMerchantInfo,
   getMerchantServices,
+  getMerchantProducts,
   getMerchantReviews,
   addFavorite,
   removeFavorite,
   getFavorites,
-  getProducts,
+  addToCart,
   type Service as ServiceType,
   type MerchantReview,
   type MerchantInfo,
   type Product
 } from '@/api/user'
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockMerchant: MerchantInfo = {
-  id: 1,
-  name: '爱心宠物会所',
-  logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20shop%20logo%2C%20professional%20design&image_size=square',
-  phone: '13800138000',
-  address: '北京市朝阳区建国路88号',
-  description: '专业的宠物服务机构，提供宠物美容、寄养、训练等全方位服务，拥有专业的团队和设施，为您的宠物提供最优质的护理。',
-  rating: 4.8
-}
-
-const mockServices: ServiceType[] = [
-  {
-    id: 1,
-    name: '宠物洗澡美容套餐',
-    description: '包含洗澡、剪毛、修指甲等全套美容服务',
-    price: 88,
-    duration: 90,
-    merchantId: 1,
-    merchantName: '爱心宠物会所',
-    category: 'beauty'
-  },
-  {
-    id: 2,
-    name: '宠物寄养服务',
-    description: '提供舒适的寄养环境，专业人员照顾',
-    price: 150,
-    duration: 1440,
-    merchantId: 1,
-    merchantName: '爱心宠物会所',
-    category: 'boarding'
-  },
-  {
-    id: 3,
-    name: '宠物spa护理',
-    description: '深层清洁、精油按摩、毛发护理等高端服务',
-    price: 288,
-    duration: 120,
-    merchantId: 1,
-    merchantName: '爱心宠物会所',
-    category: 'beauty'
-  }
-]
-
-const mockProducts: Product[] = [
-  {
-    id: 1,
-    name: '宠物天然粮',
-    description: '天然成分，营养均衡，适合各种宠物',
-    price: 128,
-    stock: 50,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20package%2C%20professional%20product%20photography&image_size=square',
-    merchantId: 1
-  },
-  {
-    id: 2,
-    name: '宠物玩具套装',
-    description: '包含多种玩具，适合不同年龄段的宠物',
-    price: 88,
-    stock: 30,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toys%20set%2C%20professional%20product%20photography&image_size=square',
-    merchantId: 1
-  },
-  {
-    id: 3,
-    name: '宠物牵引绳',
-    description: '舒适耐用，适合各种体型的宠物',
-    price: 45,
-    stock: 40,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20leash%2C%20professional%20product%20photography&image_size=square',
-    merchantId: 1
-  }
-]
-
-const mockReviews: MerchantReview[] = [
-  {
-    id: 1,
-    userId: 1,
-    userName: '张三',
-    merchantId: 1,
-    rating: 5,
-    content: '服务非常好，宠物美容后非常漂亮，店员也很专业，环境干净整洁，下次还会再来！',
-    createTime: '2024-01-15 10:00:00'
-  },
-  {
-    id: 2,
-    userId: 2,
-    userName: '李四',
-    merchantId: 1,
-    rating: 4,
-    content: '寄养服务不错，宠物回来后状态很好，就是价格稍微贵了一点。',
-    createTime: '2024-01-10 14:30:00'
-  },
-  {
-    id: 3,
-    userId: 3,
-    userName: '王五',
-    merchantId: 1,
-    rating: 5,
-    content: 'SPA服务非常棒，宠物很享受，店员态度也很好，强烈推荐！',
-    createTime: '2024-01-05 09:00:00'
-  }
-]
-
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
+const error = ref(false)
 const merchantInfo = ref<MerchantInfo | null>(null)
 const services = ref<ServiceType[]>([])
 const products = ref<Product[]>([])
@@ -134,11 +32,11 @@ const isFavorited = ref(false)
 const activeTab = ref('services')
 
 const merchantId = computed(() => {
-  return Number(route.params.id) || Number(route.query.merchantId)
+  return Number(route.params.id)
 })
 
 const avgRating = computed(() => {
-  if (reviews.value.length === 0) return 0
+  if (reviews.value.length === 0) return merchantInfo.value?.rating || 0
   const sum = reviews.value.reduce((acc, r) => acc + r.rating, 0)
   return (sum / reviews.value.length).toFixed(1)
 })
@@ -146,41 +44,30 @@ const avgRating = computed(() => {
 const fetchMerchantInfo = async () => {
   if (!merchantId.value) {
     ElMessage.error('店铺ID不存在')
+    error.value = true
     return
   }
 
   loading.value = true
+  error.value = false
   try {
-    // 在开发环境下使用硬编码测试数据
-    if (import.meta.env.DEV) {
-      // 模拟API延迟
-      await new Promise(resolve => setTimeout(resolve, 300))
+    const [infoRes, servicesRes, productsRes, reviewsRes, favoritesRes] = await Promise.all([
+      getMerchantInfo(merchantId.value),
+      getMerchantServices(merchantId.value),
+      getMerchantProducts(merchantId.value),
+      getMerchantReviews(merchantId.value),
+      getFavorites()
+    ])
 
-      merchantInfo.value = mockMerchant
-      services.value = mockServices
-      products.value = mockProducts
-      reviews.value = mockReviews
-      isFavorited.value = false
-    } else {
-      // 在生产环境下使用真实API
-      const [infoRes, servicesRes, productsRes, reviewsRes, favoritesRes] = await Promise.all([
-        getMerchantInfo(merchantId.value),
-        getMerchantServices(merchantId.value),
-        getProducts({}),
-        getMerchantReviews(merchantId.value),
-        getFavorites()
-      ])
+    merchantInfo.value = infoRes as unknown as MerchantInfo
+    services.value = (servicesRes as unknown as ServiceType[]) || []
+    products.value = (productsRes as unknown as Product[]) || []
+    reviews.value = (reviewsRes as unknown as MerchantReview[]) || []
 
-      merchantInfo.value = infoRes.data || infoRes || null
-      services.value = servicesRes.data || servicesRes || []
-      const productsData = productsRes.data || productsRes || []
-      products.value = productsData.filter((p: Product) => p.merchantId === merchantId.value)
-      reviews.value = reviewsRes.data || reviewsRes || []
-
-      const favoriteList = favoritesRes.data || favoritesRes || []
-      isFavorited.value = favoriteList.some((f: { merchantId: number }) => f.merchantId === merchantId.value)
-    }
+    const favoriteList = (favoritesRes as unknown as { merchantId: number }[]) || []
+    isFavorited.value = favoriteList.some(f => f.merchantId === merchantId.value)
   } catch {
+    error.value = true
     ElMessage.error('获取店铺信息失败')
   } finally {
     loading.value = false
@@ -213,8 +100,17 @@ const handleBookService = (service: ServiceType) => {
   router.push(`/user/appointments/book?serviceId=${service.id}&merchantId=${merchantId.value}`)
 }
 
-const handleViewProduct = (product: Product) => {
-  router.push(`/user/products/${product.id}`)
+const handleAddToCart = async (product: Product) => {
+  try {
+    await addToCart({ productId: product.id, quantity: 1 })
+    ElMessage.success('已加入购物车')
+  } catch {
+    ElMessage.error('加入购物车失败')
+  }
+}
+
+const handleBuyNow = (product: Product) => {
+  router.push(`/user/product/detail/${product.id}`)
 }
 
 const formatPrice = (price: number) => {
@@ -225,6 +121,10 @@ const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('zh-CN')
 }
 
+const handleRetry = () => {
+  fetchMerchantInfo()
+}
+
 onMounted(() => {
   fetchMerchantInfo()
 })
@@ -233,7 +133,11 @@ onMounted(() => {
 <template>
   <div class="user-shop">
     <div v-loading="loading">
-      <el-empty v-if="!loading && !merchantInfo" description="店铺不存在" />
+      <el-empty v-if="!loading && error" description="获取店铺信息失败">
+        <el-button type="primary" @click="handleRetry">重新加载</el-button>
+      </el-empty>
+
+      <el-empty v-else-if="!loading && !merchantInfo" description="店铺不存在" />
 
       <template v-else-if="merchantInfo">
         <el-card class="shop-header-card">
@@ -369,15 +273,25 @@ onMounted(() => {
                           <span class="product-price">{{ formatPrice(product.price) }}</span>
                           <span class="product-stock">库存: {{ product.stock }}</span>
                         </div>
-                        <el-button
-                          type="primary"
-                          size="small"
-                          class="view-btn"
-                          :disabled="product.stock === 0"
-                          @click="handleViewProduct(product)"
-                        >
-                          {{ product.stock === 0 ? '缺货' : '查看详情' }}
-                        </el-button>
+                        <div class="product-actions">
+                          <el-button
+                            type="warning"
+                            size="small"
+                            :icon="ShoppingCart"
+                            :disabled="product.stock === 0"
+                            @click="handleAddToCart(product)"
+                          >
+                            加入购物车
+                          </el-button>
+                          <el-button
+                            type="primary"
+                            size="small"
+                            :disabled="product.stock === 0"
+                            @click="handleBuyNow(product)"
+                          >
+                            {{ product.stock === 0 ? '缺货' : '立即购买' }}
+                          </el-button>
+                        </div>
                       </div>
                     </el-card>
                   </el-col>
@@ -592,9 +506,17 @@ onMounted(() => {
   color: #909399;
 }
 
-.book-btn,
-.view-btn {
+.book-btn {
   width: 100%;
+}
+
+.product-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.product-actions .el-button {
+  flex: 1;
 }
 
 .product-image {
@@ -697,6 +619,10 @@ onMounted(() => {
   .rating-summary {
     flex-direction: column;
     text-align: center;
+  }
+
+  .product-actions {
+    flex-direction: column;
   }
 }
 </style>

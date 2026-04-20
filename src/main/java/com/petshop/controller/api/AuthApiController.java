@@ -204,37 +204,17 @@ public class AuthApiController {
         }
     }
 
-    @Operation(summary = "商家注册", description = "注册新商家账号")
+    @Operation(summary = "商家注册", description = "注册新商家账号，手机号必填且唯一，邮箱可选")
     @PostMapping("/merchant/register")
     public ResponseEntity<ApiResponse<Map<String, String>>> merchantRegister(@RequestBody MerchantRegisterRequest request) {
         try {
-            if (request.getUsername() == null || request.getUsername().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Username is required"));
-            }
-            if (request.getPassword() == null || request.getPassword().length() < 6) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Password must be at least 6 characters"));
-            }
-            if (request.getEmail() == null || request.getEmail().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Email is required"));
-            }
             if (request.getPhone() == null || request.getPhone().isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error(400, "Phone is required"));
             }
-            if (request.getContact_person() == null || request.getContact_person().isEmpty()) {
+            if (request.getPassword() == null || request.getPassword().length() < 6) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Contact person is required"));
-            }
-            if (request.getName() == null || request.getName().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Merchant name is required"));
-            }
-            if (request.getAddress() == null || request.getAddress().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Address is required"));
+                        .body(ApiResponse.error(400, "Password must be at least 6 characters"));
             }
 
             Map<String, String> response = authService.merchantRegister(request);
