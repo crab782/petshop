@@ -23,6 +23,82 @@ const merchantFavorites = ref<FavoriteMerchant[]>([])
 const serviceFavorites = ref<FavoriteService[]>([])
 const loading = ref(false)
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockMerchantFavorites: FavoriteMerchant[] = [
+  {
+    id: 1,
+    merchantId: 1,
+    merchantName: '爱心宠物美容会所',
+    merchantLogo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20grooming%20salon%20logo%20with%20heart%20icon&image_size=square',
+    merchantAddress: '北京市朝阳区建国路88号',
+    merchantPhone: '13800138001',
+    createdAt: '2024-01-15 10:30:00'
+  },
+  {
+    id: 2,
+    merchantId: 2,
+    merchantName: '宠物健康医院',
+    merchantLogo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20hospital%20logo%20with%20cross%20icon&image_size=square',
+    merchantAddress: '北京市海淀区中关村大街1号',
+    merchantPhone: '13900139002',
+    createdAt: '2024-01-10 14:20:00'
+  },
+  {
+    id: 3,
+    merchantId: 3,
+    merchantName: '快乐宠物寄养中心',
+    merchantLogo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20boarding%20center%20logo%20with%20home%20icon&image_size=square',
+    merchantAddress: '北京市丰台区丰台路100号',
+    merchantPhone: '13700137003',
+    createdAt: '2024-01-05 09:15:00'
+  },
+  {
+    id: 4,
+    merchantId: 4,
+    merchantName: '宠物用品专卖店',
+    merchantLogo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20store%20logo%20with%20shopping%20cart%20icon&image_size=square',
+    merchantAddress: '北京市西城区西单大街120号',
+    merchantPhone: '13600136004',
+    createdAt: '2023-12-28 16:45:00'
+  }
+]
+
+const mockServiceFavorites: FavoriteService[] = [
+  {
+    id: 1,
+    serviceId: 1,
+    serviceName: '宠物洗澡美容套餐',
+    serviceImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20grooming%20service%20with%20bathtub&image_size=landscape_4_3',
+    servicePrice: 88,
+    serviceDuration: 90,
+    merchantId: 1,
+    merchantName: '爱心宠物美容会所',
+    createdAt: '2024-01-12 11:00:00'
+  },
+  {
+    id: 2,
+    serviceId: 2,
+    serviceName: '宠物健康体检',
+    serviceImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20health%20checkup%20at%20veterinary%20clinic&image_size=landscape_4_3',
+    servicePrice: 150,
+    serviceDuration: 60,
+    merchantId: 2,
+    merchantName: '宠物健康医院',
+    createdAt: '2024-01-08 13:30:00'
+  },
+  {
+    id: 3,
+    serviceId: 3,
+    serviceName: '宠物寄养服务',
+    serviceImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20boarding%20service%20with%20comfortable%20cages&image_size=landscape_4_3',
+    servicePrice: 50,
+    serviceDuration: 1440,
+    merchantId: 3,
+    merchantName: '快乐宠物寄养中心',
+    createdAt: '2024-01-03 10:15:00'
+  }
+]
+
 const currentFavorites = computed(() => {
   return activeTab.value === 'merchant' ? merchantFavorites.value : serviceFavorites.value
 })
@@ -30,18 +106,20 @@ const currentFavorites = computed(() => {
 const fetchMerchantFavorites = async () => {
   try {
     const res = await getFavorites()
-    merchantFavorites.value = res.data || []
-  } catch {
-    ElMessage.error('获取商家收藏列表失败')
+    merchantFavorites.value = res.data || res || []
+  } catch (error) {
+    console.error('获取商家收藏列表失败:', error)
+    ElMessage.error('获取商家收藏列表失败，请稍后重试')
   }
 }
 
 const fetchServiceFavorites = async () => {
   try {
     const res = await getServiceFavorites()
-    serviceFavorites.value = res.data || []
-  } catch {
-    ElMessage.error('获取服务收藏列表失败')
+    serviceFavorites.value = res.data || res || []
+  } catch (error) {
+    console.error('获取服务收藏列表失败:', error)
+    ElMessage.error('获取服务收藏列表失败，请稍后重试')
   }
 }
 
@@ -77,10 +155,10 @@ const handleRemoveMerchantFavorite = async (merchant: FavoriteMerchant) => {
     await removeFavorite(merchant.merchantId)
     ElMessage.success('已取消收藏')
     fetchMerchantFavorites()
-  } catch (error: unknown) {
-    const err = error as { message?: string }
-    if (err.message !== 'cancel') {
-      ElMessage.error('取消收藏失败')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('取消收藏失败:', error)
+      ElMessage.error('取消收藏失败，请稍后重试')
     }
   }
 }
@@ -100,10 +178,10 @@ const handleRemoveServiceFavorite = async (service: FavoriteService) => {
     await removeServiceFavorite(service.serviceId)
     ElMessage.success('已取消收藏')
     fetchServiceFavorites()
-  } catch (error: unknown) {
-    const err = error as { message?: string }
-    if (err.message !== 'cancel') {
-      ElMessage.error('取消收藏失败')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('取消收藏失败:', error)
+      ElMessage.error('取消收藏失败，请稍后重试')
     }
   }
 }

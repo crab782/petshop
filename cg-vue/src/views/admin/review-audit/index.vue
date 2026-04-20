@@ -56,10 +56,21 @@ const filteredList = computed(() => {
 const loadReviews = async () => {
   loading.value = true
   try {
-    const data = await getReviewsForAudit()
-    reviewList.value = data || []
-  } catch {
+    const response = await fetch('/api/admin/reviews/pending')
+    if (!response.ok) throw new Error('加载评价列表失败')
+    const data = await response.json()
+    reviewList.value = data.map((review: any) => ({
+      id: review.id,
+      userName: review.user?.username || '',
+      serviceName: review.service?.name || '',
+      merchantName: review.merchant?.name || '',
+      rating: review.rating,
+      comment: review.comment,
+      status: review.status || 'pending'
+    }))
+  } catch (error) {
     ElMessage.error('加载评价列表失败')
+    console.error('Error loading reviews for audit:', error)
   } finally {
     loading.value = false
   }
@@ -76,12 +87,20 @@ const handleApprove = async (row: Review) => {
       cancelButtonText: '取消',
       type: 'success'
     })
-    await approveReview(row.id)
+    const response = await fetch(`/api/admin/reviews/${row.id}/audit`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'approved' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('评价已通过')
     loadReviews()
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error approving review:', err)
     }
   }
 }
@@ -99,12 +118,24 @@ const confirmViolation = async () => {
     return
   }
   try {
-    await markReviewViolation(selectedReview.value!.id, violationReason.value, violationRemark.value)
+    const response = await fetch(`/api/admin/reviews/${selectedReview.value!.id}/audit`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        status: 'violation',
+        reason: violationReason.value,
+        remark: violationRemark.value 
+      })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('已标记为违规')
     loadReviews()
     violationDialogVisible.value = false
-  } catch {
+  } catch (error) {
     ElMessage.error('操作失败')
+    console.error('Error marking review as violation:', error)
   }
 }
 
@@ -119,11 +150,15 @@ const handleDelete = (row: Review) => {
     }
   ).then(async () => {
     try {
-      await deleteReview(row.id)
+      const response = await fetch(`/api/admin/reviews/${row.id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('删除失败')
       ElMessage.success('删除成功')
       loadReviews()
-    } catch {
+    } catch (error) {
       ElMessage.error('删除失败，请重试')
+      console.error('Error deleting review:', error)
     }
   }).catch(() => {})
 }

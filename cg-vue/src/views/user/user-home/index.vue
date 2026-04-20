@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Location, Calendar, Goods, ArrowRight, StarFilled, Message, List } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Location, Calendar, Goods, ArrowRight, StarFilled, Message, List, Loading } from '@element-plus/icons-vue'
+import { getHomeStats, getRecentActivities, getRecommendedServices, type HomeStats, type Activity, type Service } from '@/api/user'
 
 const router = useRouter()
 
@@ -16,38 +18,14 @@ const currentDate = computed(() => {
   return now.toLocaleDateString('zh-CN', options)
 })
 
+const loading = ref(false)
 const stats = ref([
-  { title: '我的宠物', value: '3', icon: Goods, color: '#409eff', route: '/user/pets' },
-  { title: '待处理预约', value: '2', icon: Calendar, color: '#e6a23c', route: '/user/appointments' },
-  { title: '服务评价', value: '5', icon: StarFilled, color: '#67c23a', route: '/user/reviews' }
+  { title: '我的宠物', value: '0', icon: Goods, color: '#409eff', route: '/user/pets' },
+  { title: '待处理预约', value: '0', icon: Calendar, color: '#e6a23c', route: '/user/appointments' },
+  { title: '服务评价', value: '0', icon: StarFilled, color: '#67c23a', route: '/user/reviews' }
 ])
 
-const recentActivities = ref([
-  {
-    id: 1,
-    type: 'appointment',
-    title: '预约宠物洗澡美容',
-    time: '2024-01-20 14:00',
-    status: '已确认',
-    statusColor: 'success'
-  },
-  {
-    id: 2,
-    type: 'review',
-    title: '评价宠物寄养服务',
-    time: '2024-01-19 10:30',
-    status: '已完成',
-    statusColor: 'info'
-  },
-  {
-    id: 3,
-    type: 'appointment',
-    title: '预约宠物体检',
-    time: '2024-01-18 09:00',
-    status: '待处理',
-    statusColor: 'warning'
-  }
-])
+const recentActivities = ref<Activity[]>([])
 
 const quickActions = [
   { title: '我的宠物', icon: Goods, color: '#409eff', route: '/user/pets' },
@@ -56,16 +34,47 @@ const quickActions = [
   { title: '我的订单', icon: List, color: '#f56c6c', route: '/user/orders' }
 ]
 
-const recommendedServices = ref([
-  { id: 1, name: '宠物洗澡美容', price: '88', score: 4.8, image: '🛁' },
-  { id: 2, name: '宠物体检套餐', price: '199', score: 4.9, image: '🏥' },
-  { id: 3, name: '宠物疫苗接种', price: '120', score: 4.7, image: '💉' },
-  { id: 4, name: '宠物寄养服务', price: '150', score: 4.6, image: '🏠' }
-])
+const recommendedServices = ref<Service[]>([])
 
 const goToQuickAction = (route: string) => {
   router.push(route)
 }
+
+const loadHomeData = async () => {
+  loading.value = true
+  try {
+    // 加载统计数据
+    const statsResponse = await getHomeStats()
+    const statsData = statsResponse.data || statsResponse
+    if (statsData) {
+      stats.value[0].value = (statsData.petCount || 0).toString()
+      stats.value[1].value = (statsData.pendingAppointments || 0).toString()
+      stats.value[2].value = (statsData.reviewCount || 0).toString()
+    }
+
+    // 加载最近活动
+    const activitiesResponse = await getRecentActivities(5)
+    const activitiesData = activitiesResponse.data || activitiesResponse
+    if (activitiesData) {
+      recentActivities.value = activitiesData
+    }
+
+    // 加载推荐服务
+    const servicesResponse = await getRecommendedServices(4)
+    const servicesData = servicesResponse.data || servicesResponse
+    if (servicesData) {
+      recommendedServices.value = servicesData
+    }
+  } catch (error) {
+    console.error('加载首页数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadHomeData()
+})
 </script>
 
 <template>
@@ -82,7 +91,7 @@ const goToQuickAction = (route: string) => {
 
     <div class="section">
       <h2 class="section-title">统计概览</h2>
-      <el-row :gutter="16">
+      <el-row :gutter="16" v-loading="loading">
         <el-col v-for="stat in stats" :key="stat.title" :span="8">
           <el-card class="stat-card" :style="{ '--card-color': stat.color }">
             <div class="stat-content">
@@ -101,8 +110,8 @@ const goToQuickAction = (route: string) => {
 
     <div class="section">
       <h2 class="section-title">最近活动</h2>
-      <el-card class="activities-card">
-        <el-timeline>
+      <el-card class="activities-card" v-loading="loading">
+        <el-timeline v-if="recentActivities.length > 0">
           <el-timeline-item
             v-for="activity in recentActivities"
             :key="activity.id"
@@ -116,6 +125,7 @@ const goToQuickAction = (route: string) => {
             </div>
           </el-timeline-item>
         </el-timeline>
+        <el-empty v-else description="暂无活动记录" />
       </el-card>
     </div>
 
@@ -144,21 +154,24 @@ const goToQuickAction = (route: string) => {
 
     <div class="section">
       <h2 class="section-title">推荐服务</h2>
-      <el-row :gutter="16">
+      <el-row :gutter="16" v-loading="loading">
         <el-col v-for="service in recommendedServices" :key="service.id" :span="6">
           <el-card class="service-card" shadow="hover">
-            <div class="service-image">{{ service.image }}</div>
+            <div class="service-image">{{ service.image || '🐾' }}</div>
             <div class="service-info">
               <h3 class="service-name">{{ service.name }}</h3>
               <div class="service-meta">
                 <span class="service-score">
                   <el-icon color="#f5a623"><StarFilled /></el-icon>
-                  {{ service.score }}
+                  {{ service.rating || 0 }}
                 </span>
                 <span class="service-price">¥{{ service.price }}</span>
               </div>
             </div>
           </el-card>
+        </el-col>
+        <el-col v-if="recommendedServices.length === 0" :span="24">
+          <el-empty description="暂无推荐服务" />
         </el-col>
       </el-row>
     </div>
@@ -170,6 +183,8 @@ const goToQuickAction = (route: string) => {
   max-width: 1200px;
   margin: 0 auto;
   font-family: Arial, sans-serif;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .welcome-card {
@@ -178,10 +193,13 @@ const goToQuickAction = (route: string) => {
   margin-bottom: 24px;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .welcome-card :deep(.el-card__body) {
   padding: 32px;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .welcome-header {
@@ -215,6 +233,8 @@ const goToQuickAction = (route: string) => {
   transition: transform 0.2s, box-shadow 0.2s;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+  overflow: hidden;
+  min-height: 120px;
 }
 
 .stat-card:hover {
@@ -226,13 +246,15 @@ const goToQuickAction = (route: string) => {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .stat-icon {
   width: 56px;
   height: 56px;
   border-radius: 12px;
-  background-color: #4CAF50;
+  background-color: var(--card-color, #4CAF50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,6 +324,8 @@ const goToQuickAction = (route: string) => {
   transition: transform 0.2s, box-shadow 0.2s;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+  overflow: hidden;
+  min-height: 120px;
 }
 
 .action-card:hover {
@@ -313,13 +337,15 @@ const goToQuickAction = (route: string) => {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .action-icon {
   width: 56px;
   height: 56px;
   border-radius: 12px;
-  background-color: #4CAF50;
+  background-color: var(--card-color, #4CAF50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -347,6 +373,8 @@ const goToQuickAction = (route: string) => {
   transition: transform 0.2s, box-shadow 0.2s;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+  overflow: hidden;
+  min-height: 200px;
 }
 
 .service-card:hover {
@@ -359,12 +387,13 @@ const goToQuickAction = (route: string) => {
   text-align: center;
   padding: 16px 0;
   background-color: #f5f5f5;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  border-radius: 8px 8px 0 0;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .service-info {
-  padding: 0 4px;
+  padding: 16px;
 }
 
 .service-name {
@@ -398,9 +427,75 @@ const goToQuickAction = (route: string) => {
 :deep(.el-card) {
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+  box-sizing: border-box;
 }
 
 :deep(.el-card__body) {
   padding: 20px;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .user-home {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .welcome-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .welcome-card :deep(.el-card__body) {
+    padding: 20px;
+  }
+
+  .stat-content,
+  .action-content {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .stat-icon,
+  .action-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .service-image {
+    font-size: 36px;
+    padding: 12px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .main {
+    padding: 12px;
+  }
+
+  .welcome-title {
+    font-size: 20px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .service-name {
+    font-size: 12px;
+  }
+
+  .service-price {
+    font-size: 14px;
+  }
 }
 </style>

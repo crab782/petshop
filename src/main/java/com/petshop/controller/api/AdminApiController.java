@@ -89,6 +89,11 @@ public class AdminApiController {
     private SystemConfigRepository systemConfigRepository;
     @Autowired
     private SystemSettingsRepository systemSettingsRepository;
+    @Autowired
+    private ServiceService serviceService;
+    
+    @Autowired
+    private SystemSettingsService systemSettingsService;
 
     @Operation(summary = "获取用户列表", description = "获取系统中所有用户的列表")
     @ApiResponses(value = {
@@ -118,6 +123,138 @@ public class AdminApiController {
         }
         userService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    @Operation(summary = "更新用户状态", description = "更新指定用户的启用/禁用状态")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "用户状态更新成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "用户不存在")
+    })
+    @PutMapping("/users/{id}/status")
+    public ResponseEntity<ApiResponse<User>> updateUserStatus(
+            @Parameter(description = "用户ID", required = true) @PathVariable Integer id, 
+            @Parameter(description = "用户状态（active/disabled）", required = true) @RequestParam String status, 
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        User user = userService.findById(id);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "User not found"));
+        }
+        
+        if (!"active".equals(status) && !"disabled".equals(status)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Invalid status. Must be 'active' or 'disabled'"));
+        }
+        
+        user.setStatus(status);
+        User updatedUser = userService.update(user);
+        return ResponseEntity.ok(ApiResponse.success("User status updated", updatedUser));
+    }
+    
+    @Operation(summary = "批量更新用户状态", description = "批量更新多个用户的启用/禁用状态")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "批量更新成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @PutMapping("/users/batch/status")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> batchUpdateUserStatus(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "批量更新请求，包含用户ID列表和目标状态",
+                    content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3], \"status\": \"active\"}"))
+            )
+            @RequestBody Map<String, Object> request, HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) request.get("ids");
+        String status = (String) request.get("status");
+        
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "User IDs cannot be empty"));
+        }
+        
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Status cannot be empty"));
+        }
+        
+        if (!"active".equals(status) && !"disabled".equals(status)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Invalid status. Must be 'active' or 'disabled'"));
+        }
+        
+        try {
+            int updatedCount = 0;
+            for (Integer id : ids) {
+                User user = userService.findById(id);
+                if (user != null) {
+                    user.setStatus(status);
+                    userService.update(user);
+                    updatedCount++;
+                }
+            }
+            Map<String, Integer> result = new HashMap<>();
+            result.put("updatedCount", updatedCount);
+            return ResponseEntity.ok(ApiResponse.success("Successfully updated " + updatedCount + " users", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "批量删除用户", description = "批量删除多个用户")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "批量删除成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @DeleteMapping("/users/batch")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> batchDeleteUsers(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "批量删除请求，包含用户ID列表",
+                    content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
+            )
+            @RequestBody Map<String, Object> request, HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) request.get("ids");
+        
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "User IDs cannot be empty"));
+        }
+        
+        try {
+            int deletedCount = 0;
+            for (Integer id : ids) {
+                if (userService.findById(id) != null) {
+                    userService.delete(id);
+                    deletedCount++;
+                }
+            }
+            Map<String, Integer> result = new HashMap<>();
+            result.put("deletedCount", deletedCount);
+            return ResponseEntity.ok(ApiResponse.success("Successfully deleted " + deletedCount + " users", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
     }
 
     @Operation(summary = "获取商家列表", description = "获取系统中所有商家的列表")
@@ -369,6 +506,462 @@ public class AdminApiController {
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+    
+    @Operation(summary = "获取最近注册用户", description = "获取最近注册的用户列表")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取用户列表"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/users/recent")
+    public ResponseEntity<ApiResponse<PageResponse<User>>> getRecentUsers(
+            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<User> userPage = userRepository.findAllByOrderByCreatedAtDesc(pageable);
+        
+        PageResponse<User> response = PageResponse.<User>builder()
+                .data(userPage.getContent())
+                .total(userPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .totalPages(userPage.getTotalPages())
+                .build();
+        
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @Operation(summary = "获取待审核商家", description = "获取待审核状态的商家列表")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取待审核商家"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/merchants/pending")
+    public ResponseEntity<ApiResponse<PageResponse<Merchant>>> getPendingMerchants(
+            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "搜索关键字") @RequestParam(required = false) String keyword,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        Page<Merchant> merchantPage = merchantService.getPendingMerchants(keyword, page, pageSize);
+        
+        PageResponse<Merchant> response = PageResponse.<Merchant>builder()
+                .data(merchantPage.getContent())
+                .total(merchantPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .totalPages(merchantPage.getTotalPages())
+                .build();
+        
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @Operation(summary = "获取公告列表", description = "获取系统公告列表")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取公告列表"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/announcements")
+    public ResponseEntity<ApiResponse<PageResponse<Announcement>>> getAnnouncements(
+            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "状态筛选") @RequestParam(required = false) String status,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<Announcement> announcementPage;
+        
+        if (status != null && !status.trim().isEmpty()) {
+            announcementPage = announcementService.findByStatus(status, pageable);
+        } else {
+            announcementPage = announcementService.findAll(pageable);
+        }
+        
+        PageResponse<Announcement> response = PageResponse.<Announcement>builder()
+                .data(announcementPage.getContent())
+                .total(announcementPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .totalPages(announcementPage.getTotalPages())
+                .build();
+        
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @Operation(summary = "创建公告", description = "创建新的系统公告")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "公告创建成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @PostMapping("/announcements")
+    public ResponseEntity<ApiResponse<Announcement>> createAnnouncement(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "公告信息", required = true)
+            @RequestBody Announcement announcement,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        Announcement createdAnnouncement = announcementService.create(announcement);
+        return ResponseEntity.ok(ApiResponse.success("Announcement created successfully", createdAnnouncement));
+    }
+    
+    @Operation(summary = "更新公告", description = "更新指定公告的信息")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "公告更新成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "公告不存在")
+    })
+    @PutMapping("/announcements/{id}")
+    public ResponseEntity<ApiResponse<Announcement>> updateAnnouncement(
+            @Parameter(description = "公告ID", required = true) @PathVariable Integer id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "公告信息", required = true)
+            @RequestBody Announcement announcement,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        try {
+            Announcement updatedAnnouncement = announcementService.update(id, announcement);
+            return ResponseEntity.ok(ApiResponse.success("Announcement updated successfully", updatedAnnouncement));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "删除公告", description = "根据公告ID删除指定公告")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "公告删除成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "公告不存在")
+    })
+    @DeleteMapping("/announcements/{id}")
+    public ResponseEntity<Void> deleteAnnouncement(
+            @Parameter(description = "公告ID", required = true) @PathVariable Integer id,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        try {
+            announcementService.delete(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+    
+    @Operation(summary = "发布公告", description = "发布指定公告")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "公告发布成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "公告不存在")
+    })
+    @PutMapping("/announcements/{id}/publish")
+    public ResponseEntity<ApiResponse<Announcement>> publishAnnouncement(
+            @Parameter(description = "公告ID", required = true) @PathVariable Integer id,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        try {
+            Announcement publishedAnnouncement = announcementService.publish(id);
+            return ResponseEntity.ok(ApiResponse.success("Announcement published successfully", publishedAnnouncement));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "下架公告", description = "下架指定公告")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "公告下架成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "公告不存在")
+    })
+    @PutMapping("/announcements/{id}/unpublish")
+    public ResponseEntity<ApiResponse<Announcement>> unpublishAnnouncement(
+            @Parameter(description = "公告ID", required = true) @PathVariable Integer id,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        try {
+            Announcement unpublishedAnnouncement = announcementService.unpublish(id);
+            return ResponseEntity.ok(ApiResponse.success("Announcement unpublished successfully", unpublishedAnnouncement));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "批量发布公告", description = "批量发布多个公告")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "批量发布成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @PutMapping("/announcements/batch/publish")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> batchPublishAnnouncements(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "批量发布请求，包含公告ID列表",
+                    content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
+            )
+            @RequestBody Map<String, Object> request,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) request.get("ids");
+        
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Announcement IDs cannot be empty"));
+        }
+        
+        try {
+            int publishedCount = announcementService.batchPublish(ids);
+            Map<String, Integer> result = new HashMap<>();
+            result.put("publishedCount", publishedCount);
+            return ResponseEntity.ok(ApiResponse.success("Successfully published " + publishedCount + " announcements", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "批量下架公告", description = "批量下架多个公告")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "批量下架成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @PutMapping("/announcements/batch/unpublish")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> batchUnpublishAnnouncements(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "批量下架请求，包含公告ID列表",
+                    content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
+            )
+            @RequestBody Map<String, Object> request,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) request.get("ids");
+        
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Announcement IDs cannot be empty"));
+        }
+        
+        try {
+            int unpublishedCount = announcementService.batchUnpublish(ids);
+            Map<String, Integer> result = new HashMap<>();
+            result.put("unpublishedCount", unpublishedCount);
+            return ResponseEntity.ok(ApiResponse.success("Successfully unpublished " + unpublishedCount + " announcements", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "批量删除公告", description = "批量删除多个公告")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "批量删除成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @DeleteMapping("/announcements/batch")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> batchDeleteAnnouncements(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "批量删除请求，包含公告ID列表",
+                    content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
+            )
+            @RequestBody Map<String, Object> request,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) request.get("ids");
+        
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Announcement IDs cannot be empty"));
+        }
+        
+        try {
+            int deletedCount = announcementService.batchDelete(ids);
+            Map<String, Integer> result = new HashMap<>();
+            result.put("deletedCount", deletedCount);
+            return ResponseEntity.ok(ApiResponse.success("Successfully deleted " + deletedCount + " announcements", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "获取系统设置", description = "获取系统设置信息")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取系统设置"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/system/settings")
+    public ResponseEntity<ApiResponse<SystemSettings>> getSystemSettings(
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        SystemSettings settings = systemSettingsService.getSystemSettings();
+        return ResponseEntity.ok(ApiResponse.success(settings));
+    }
+    
+    @Operation(summary = "更新系统设置", description = "更新系统设置信息")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功更新系统设置"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @PutMapping("/system/settings")
+    public ResponseEntity<ApiResponse<SystemSettings>> updateSystemSettings(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "系统设置信息", required = true)
+            @RequestBody SystemSettings settings,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        SystemSettings updatedSettings = systemSettingsService.updateSystemSettings(settings);
+        return ResponseEntity.ok(ApiResponse.success("System settings updated successfully", updatedSettings));
+    }
+    
+    @Operation(summary = "获取邮件设置", description = "获取邮件相关设置")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取邮件设置"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/system/settings/email")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getEmailSettings(
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        SystemSettings settings = systemSettingsService.getSystemSettings();
+        Map<String, Object> emailSettings = new HashMap<>();
+        emailSettings.put("smtp", settings.getEmailSmtp());
+        emailSettings.put("port", settings.getEmailPort());
+        emailSettings.put("username", settings.getEmailUsername());
+        emailSettings.put("from", settings.getEmailFrom());
+        
+        return ResponseEntity.ok(ApiResponse.success(emailSettings));
+    }
+    
+    @Operation(summary = "获取短信设置", description = "获取短信相关设置")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取短信设置"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/system/settings/sms")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSmsSettings(
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        SystemSettings settings = systemSettingsService.getSystemSettings();
+        Map<String, Object> smsSettings = new HashMap<>();
+        smsSettings.put("provider", settings.getSmsProvider());
+        smsSettings.put("apiKey", settings.getSmsApiKey());
+        smsSettings.put("signName", settings.getSmsSignName());
+        
+        return ResponseEntity.ok(ApiResponse.success(smsSettings));
+    }
+    
+    @Operation(summary = "获取支付设置", description = "获取支付相关设置")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取支付设置"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/system/settings/payment")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPaymentSettings(
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        SystemSettings settings = systemSettingsService.getSystemSettings();
+        Map<String, Object> paymentSettings = new HashMap<>();
+        
+        Map<String, Object> wechatSettings = new HashMap<>();
+        wechatSettings.put("appId", settings.getWechatAppId());
+        wechatSettings.put("mchId", settings.getWechatMchId());
+        
+        Map<String, Object> alipaySettings = new HashMap<>();
+        alipaySettings.put("appId", settings.getAlipayAppId());
+        alipaySettings.put("notifyUrl", settings.getAlipayNotifyUrl());
+        
+        paymentSettings.put("wechat", wechatSettings);
+        paymentSettings.put("alipay", alipaySettings);
+        
+        return ResponseEntity.ok(ApiResponse.success(paymentSettings));
+    }
+    
+    @Operation(summary = "获取文件上传设置", description = "获取文件上传相关设置")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取文件上传设置"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/system/settings/upload")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUploadSettings(
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问"));
+        }
+        
+        SystemSettings settings = systemSettingsService.getSystemSettings();
+        Map<String, Object> uploadSettings = new HashMap<>();
+        uploadSettings.put("path", settings.getUploadPath());
+        uploadSettings.put("maxFileSize", settings.getMaxFileSize());
+        uploadSettings.put("allowedFileTypes", settings.getAllowedFileTypes());
+        
+        return ResponseEntity.ok(ApiResponse.success(uploadSettings));
     }
 
     @Operation(summary = "获取最近注册用户", description = "分页获取最近注册的用户列表")
@@ -687,6 +1280,198 @@ public class AdminApiController {
             Map<String, Integer> result = new HashMap<>();
             result.put("deletedCount", ids.size());
             return ResponseEntity.ok(ApiResponse.success("Successfully deleted " + ids.size() + " products", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "获取服务列表", description = "分页获取服务列表，支持多条件筛选")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取服务列表"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/services")
+    public ResponseEntity<ApiResponse<PageResponse<com.petshop.entity.Service>>> getServices(
+            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "搜索关键字") @RequestParam(required = false) String keyword,
+            @Parameter(description = "服务状态（enabled/disabled）") @RequestParam(required = false) String status,
+            @Parameter(description = "商家ID") @RequestParam(required = false) Integer merchantId,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<com.petshop.entity.Service> servicePage;
+        
+        // 这里需要根据ServiceService的实际方法来实现
+        // 暂时使用findAll方法
+        servicePage = serviceService.findAll(pageable);
+        
+        PageResponse<com.petshop.entity.Service> response = PageResponse.<com.petshop.entity.Service>builder()
+                .data(servicePage.getContent())
+                .total(servicePage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .totalPages(servicePage.getTotalPages())
+                .build();
+        
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @Operation(summary = "更新服务状态", description = "更新指定服务的启用/禁用状态")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "服务状态更新成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "服务不存在")
+    })
+    @PutMapping("/services/{id}/status")
+    public ResponseEntity<ApiResponse<com.petshop.entity.Service>> updateServiceStatus(
+            @Parameter(description = "服务ID", required = true) @PathVariable Integer id,
+            @Parameter(description = "服务状态（enabled/disabled）", required = true) @RequestParam String status,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        com.petshop.entity.Service service = serviceService.findById(id);
+        if (service == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Service not found"));
+        }
+        
+        if (!"enabled".equals(status) && !"disabled".equals(status)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Invalid status. Must be 'enabled' or 'disabled'"));
+        }
+        
+        service.setStatus(status);
+        com.petshop.entity.Service updatedService = serviceService.update(service);
+        return ResponseEntity.ok(ApiResponse.success("Service status updated", updatedService));
+    }
+    
+    @Operation(summary = "删除服务", description = "根据服务ID删除指定服务")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "服务删除成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "服务不存在")
+    })
+    @DeleteMapping("/services/{id}")
+    public ResponseEntity<Void> deleteService(
+            @Parameter(description = "服务ID", required = true) @PathVariable Integer id, HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        com.petshop.entity.Service service = serviceService.findById(id);
+        if (service == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        
+        serviceService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @Operation(summary = "批量更新服务状态", description = "批量更新多个服务的启用/禁用状态")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "批量更新成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @PutMapping("/services/batch/status")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> batchUpdateServiceStatus(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "批量更新请求，包含服务ID列表和目标状态",
+                    content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3], \"status\": \"enabled\"}"))
+            )
+            @RequestBody Map<String, Object> request,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) request.get("ids");
+        String status = (String) request.get("status");
+        
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Service IDs cannot be empty"));
+        }
+        
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Status cannot be empty"));
+        }
+        
+        if (!"enabled".equals(status) && !"disabled".equals(status)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Invalid status. Must be 'enabled' or 'disabled'"));
+        }
+        
+        try {
+            int updatedCount = 0;
+            for (Integer id : ids) {
+                com.petshop.entity.Service service = serviceService.findById(id);
+                if (service != null) {
+                    service.setStatus(status);
+                    serviceService.update(service);
+                    updatedCount++;
+                }
+            }
+            Map<String, Integer> result = new HashMap<>();
+            result.put("updatedCount", updatedCount);
+            return ResponseEntity.ok(ApiResponse.success("Successfully updated " + updatedCount + " services", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        }
+    }
+    
+    @Operation(summary = "批量删除服务", description = "批量删除多个服务")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "批量删除成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @DeleteMapping("/services/batch")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> batchDeleteServices(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "批量删除请求，包含服务ID列表",
+                    content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
+            )
+            @RequestBody Map<String, Object> request,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) request.get("ids");
+        
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Service IDs cannot be empty"));
+        }
+        
+        try {
+            int deletedCount = 0;
+            for (Integer id : ids) {
+                if (serviceService.findById(id) != null) {
+                    serviceService.delete(id);
+                    deletedCount++;
+                }
+            }
+            Map<String, Integer> result = new HashMap<>();
+            result.put("deletedCount", deletedCount);
+            return ResponseEntity.ok(ApiResponse.success("Successfully deleted " + deletedCount + " services", result));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(400, e.getMessage()));

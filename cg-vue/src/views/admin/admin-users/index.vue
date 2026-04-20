@@ -63,12 +63,16 @@ const handleDelete = async (user: User) => {
         type: 'warning'
       }
     )
-    await deleteUser(user.id)
+    const response = await fetch(`/api/admin/users/${user.id}`, {
+      method: 'DELETE'
+    })
+    if (!response.ok) throw new Error('删除失败')
     ElMessage.success('删除成功')
     loadUsers()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
+      console.error('Error deleting user:', error)
     }
   }
 }
@@ -89,12 +93,20 @@ const handleBatchEnable = async () => {
       }
     )
     const ids = selectedUsers.value.map(u => u.id)
-    await batchUpdateUserStatus(ids, '正常')
+    const response = await fetch('/api/admin/users/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids, status: 'active' })
+    })
+    if (!response.ok) throw new Error('批量启用失败')
     ElMessage.success('批量启用成功')
     loadUsers()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('批量启用失败')
+      console.error('Error batch enabling users:', error)
     }
   }
 }
@@ -115,12 +127,20 @@ const handleBatchDisable = async () => {
       }
     )
     const ids = selectedUsers.value.map(u => u.id)
-    await batchUpdateUserStatus(ids, '禁用')
+    const response = await fetch('/api/admin/users/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids, status: 'disabled' })
+    })
+    if (!response.ok) throw new Error('批量禁用失败')
     ElMessage.success('批量禁用成功')
     loadUsers()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('批量禁用失败')
+      console.error('Error batch disabling users:', error)
     }
   }
 }
@@ -141,19 +161,28 @@ const handleBatchDelete = async () => {
       }
     )
     const ids = selectedUsers.value.map(u => u.id)
-    await batchDeleteUsers(ids)
+    const response = await fetch('/api/admin/users/batch', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids })
+    })
+    if (!response.ok) throw new Error('批量删除失败')
     ElMessage.success('批量删除成功')
     loadUsers()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('批量删除失败')
+      console.error('Error batch deleting users:', error)
     }
   }
 }
 
 const handleStatusChange = async (user: User) => {
   const action = user.status === '正常' ? '禁用' : '启用'
-  const newStatus = user.status === '正常' ? '禁用' : '正常'
+  const newStatus = user.status === '正常' ? 'disabled' : 'active'
+  const displayStatus = user.status === '正常' ? '禁用' : '正常'
 
   try {
     await ElMessageBox.confirm(
@@ -166,17 +195,26 @@ const handleStatusChange = async (user: User) => {
       }
     )
 
-    await updateUserStatus(user.id, newStatus)
+    const response = await fetch(`/api/admin/users/${user.id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: newStatus })
+    })
+    if (!response.ok) throw new Error(`${action}失败`)
+    
     ElMessage.success(`${action}成功`)
 
     const targetUser = userList.value.find(u => u.id === user.id)
     if (targetUser) {
-      targetUser.status = newStatus
+      targetUser.status = displayStatus
     }
     handleSearch()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(`${action}失败`)
+      console.error(`Error ${action} user:`, error)
     }
   }
 }
@@ -184,11 +222,21 @@ const handleStatusChange = async (user: User) => {
 const loadUsers = async () => {
   loading.value = true
   try {
-    const data = await getAllUsers()
-    userList.value = data
+    const response = await fetch('/api/admin/users')
+    if (!response.ok) throw new Error('获取用户列表失败')
+    const users = await response.json()
+    userList.value = users.map((user: any) => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      status: user.status === 'active' ? '正常' : '禁用',
+      createTime: user.createdAt ? new Date(user.createdAt).toLocaleString('zh-CN') : ''
+    }))
     handleSearch()
   } catch (error) {
     ElMessage.error('加载用户列表失败')
+    console.error('Error loading users:', error)
   } finally {
     loading.value = false
   }

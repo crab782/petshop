@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -146,6 +147,19 @@ public class UserApiController {
         }
         petService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/pets/{id}")
+    public ResponseEntity<Pet> getPetById(@PathVariable Integer id, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Pet pet = petService.findById(id);
+        if (pet == null || !pet.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        return ResponseEntity.ok(pet);
     }
 
     @GetMapping("/appointments")
@@ -377,6 +391,24 @@ public class UserApiController {
         }
         productOrderService.batchDelete(request.getIds(), user.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/services")
+    public ResponseEntity<Map<String, Object>> getServices(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // 这里需要实现获取用户购买服务的业务逻辑
+        // 暂时返回空列表，实际实现需要查询数据库
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", new ArrayList<>());
+        response.put("total", 0);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/addresses")

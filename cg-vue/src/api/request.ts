@@ -9,7 +9,7 @@ const request: AxiosInstance = axios.create({
 
 request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || localStorage.getItem('merchant_token') || sessionStorage.getItem('token') || sessionStorage.getItem('merchant_token')
     if (token && config.headers) {
       config.headers.Authorization = token
     }
@@ -22,15 +22,31 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   (response: AxiosResponse) => {
-    return response.data
+    const data = response.data
+    // 处理后端API返回的格式
+    if (data && typeof data === 'object') {
+      if (data.code === 200 || data.code === 0) {
+        // 成功响应，返回data字段
+        return data.data
+      } else {
+        // 失败响应，抛出错误
+        ElMessage.error(data.message || '请求失败')
+        return Promise.reject(new Error(data.message || '请求失败'))
+      }
+    }
+    return data
   },
   (error: AxiosError) => {
     if (error.response) {
-      switch (error.response.status) {
+      const status = error.response.status
+      switch (status) {
         case 401:
           ElMessage.error('未授权，请重新登录')
           localStorage.removeItem('token')
-          window.location.href = '/login'
+          localStorage.removeItem('merchant_token')
+          sessionStorage.removeItem('token')
+          sessionStorage.removeItem('merchant_token')
+          window.location.href = '/merchant/login'
           break
         case 403:
           ElMessage.error('拒绝访问')

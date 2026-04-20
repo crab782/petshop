@@ -42,6 +42,121 @@ const ratingOptions = [
   { label: '1星', value: 1 }
 ]
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockAppointments: Appointment[] = [
+  {
+    id: 1,
+    userId: 1,
+    merchantId: 1,
+    serviceId: 1,
+    petId: 1,
+    appointmentTime: '2024-01-20 14:00:00',
+    status: 'completed',
+    totalPrice: 88,
+    notes: '需要给狗狗剪指甲',
+    serviceName: '宠物洗澡美容套餐',
+    merchantName: '爱心宠物美容会所',
+    petName: '小白',
+    createdAt: '2024-01-18 10:00:00',
+    updatedAt: '2024-01-20 15:00:00'
+  },
+  {
+    id: 2,
+    userId: 1,
+    merchantId: 2,
+    serviceId: 2,
+    petId: 2,
+    appointmentTime: '2024-01-19 10:30:00',
+    status: 'completed',
+    totalPrice: 150,
+    notes: '年度体检',
+    serviceName: '宠物健康体检',
+    merchantName: '宠物健康医院',
+    petName: '小黑',
+    createdAt: '2024-01-17 09:00:00',
+    updatedAt: '2024-01-19 11:30:00'
+  },
+  {
+    id: 3,
+    userId: 1,
+    merchantId: 3,
+    serviceId: 3,
+    petId: 1,
+    appointmentTime: '2024-01-15 09:00:00',
+    status: 'completed',
+    totalPrice: 50,
+    notes: '寄养3天',
+    serviceName: '宠物寄养服务',
+    merchantName: '快乐宠物寄养中心',
+    petName: '小白',
+    createdAt: '2024-01-10 16:00:00',
+    updatedAt: '2024-01-18 10:00:00'
+  },
+  {
+    id: 4,
+    userId: 1,
+    merchantId: 1,
+    serviceId: 1,
+    petId: 2,
+    appointmentTime: '2024-01-25 15:00:00',
+    status: 'confirmed',
+    totalPrice: 88,
+    notes: '需要给猫咪洗澡',
+    serviceName: '宠物洗澡美容套餐',
+    merchantName: '爱心宠物美容会所',
+    petName: '小黑',
+    createdAt: '2024-01-22 11:00:00',
+    updatedAt: '2024-01-22 11:30:00'
+  }
+]
+
+const mockReviews: UserReview[] = [
+  {
+    id: 1,
+    appointmentId: 5,
+    serviceId: 1,
+    merchantId: 1,
+    serviceName: '宠物洗澡美容套餐',
+    merchantName: '爱心宠物美容会所',
+    rating: 5,
+    comment: '服务非常好，狗狗洗得很干净，美容师很专业，态度也很好，下次还会再来！',
+    createdAt: '2024-01-10 16:30:00'
+  },
+  {
+    id: 2,
+    appointmentId: 6,
+    serviceId: 2,
+    merchantId: 2,
+    serviceName: '宠物健康体检',
+    merchantName: '宠物健康医院',
+    rating: 4,
+    comment: '医生很专业，检查很仔细，就是等待时间有点长，总体来说很满意。',
+    createdAt: '2024-01-05 11:20:00'
+  },
+  {
+    id: 3,
+    appointmentId: 7,
+    serviceId: 3,
+    merchantId: 3,
+    serviceName: '宠物寄养服务',
+    merchantName: '快乐宠物寄养中心',
+    rating: 5,
+    comment: '寄养环境很好，工作人员很负责，每天都会发照片和视频，非常放心。',
+    createdAt: '2023-12-30 14:45:00'
+  },
+  {
+    id: 4,
+    appointmentId: 8,
+    serviceId: 1,
+    merchantId: 1,
+    serviceName: '宠物洗澡美容套餐',
+    merchantName: '爱心宠物美容会所',
+    rating: 3,
+    comment: '服务一般，洗得不是很干净，价格有点贵，可能不会再来了。',
+    createdAt: '2023-12-25 10:15:00'
+  }
+]
+
 const completedAppointments = computed(() => {
   const reviewedIds = new Set(reviewList.value.map(r => r.appointmentId))
   return appointments.value.filter(item => item.status === 'completed' && !reviewedIds.has(item.id))
@@ -49,20 +164,20 @@ const completedAppointments = computed(() => {
 
 const filteredReviews = computed(() => {
   let list = [...reviewList.value]
-  
+
   if (ratingFilter.value !== null) {
     list = list.filter(item => item.rating === ratingFilter.value)
   }
-  
+
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    list = list.filter(item => 
+    list = list.filter(item =>
       item.serviceName?.toLowerCase().includes(keyword) ||
       item.merchantName?.toLowerCase().includes(keyword) ||
       item.comment?.toLowerCase().includes(keyword)
     )
   }
-  
+
   if (dateRange.value && dateRange.value.length === 2) {
     const startDate = new Date(dateRange.value[0])
     const endDate = new Date(dateRange.value[1])
@@ -72,7 +187,7 @@ const filteredReviews = computed(() => {
       return reviewDate >= startDate && reviewDate <= endDate
     })
   }
-  
+
   return list
 })
 
@@ -100,9 +215,10 @@ const fetchAppointments = async () => {
   loading.value = true
   try {
     const res = await getUserAppointments()
-    appointments.value = res.data || []
-  } catch {
-    ElMessage.error('获取预约列表失败')
+    appointments.value = res.data || res || []
+  } catch (error) {
+    console.error('获取预约列表失败:', error)
+    ElMessage.error('获取预约列表失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -111,9 +227,11 @@ const fetchAppointments = async () => {
 const fetchReviews = async () => {
   try {
     const res = await getUserReviewsList()
-    reviewList.value = res.data?.data || []
-  } catch {
-    console.error('获取评价列表失败')
+    const data = res.data || res
+    reviewList.value = data.data || data || []
+  } catch (error) {
+    console.error('获取评价列表失败:', error)
+    ElMessage.error('获取评价列表失败，请稍后重试')
   }
 }
 
@@ -139,12 +257,12 @@ const openReviewDialog = (row: Appointment) => {
 
 const submitReview = async () => {
   if (!currentAppointment.value) return
-  
+
   if (!reviewForm.value.comment.trim()) {
     ElMessage.warning('请输入评价内容')
     return
   }
-  
+
   reviewLoading.value = true
   try {
     const data = {
@@ -157,21 +275,12 @@ const submitReview = async () => {
     await addReview(data)
     ElMessage.success('评价提交成功')
     reviewDialogVisible.value = false
-    
-    const newReview: UserReview = {
-      id: Date.now(),
-      appointmentId: currentAppointment.value.id,
-      serviceName: currentAppointment.value.serviceName,
-      merchantName: currentAppointment.value.merchantName,
-      merchantId: currentAppointment.value.merchantId,
-      serviceId: currentAppointment.value.serviceId,
-      rating: reviewForm.value.rating,
-      comment: reviewForm.value.comment,
-      createdAt: new Date().toLocaleString('zh-CN')
-    }
-    reviewList.value = [newReview, ...reviewList.value]
-  } catch {
-    ElMessage.error('评价提交失败')
+
+    // 重新获取评价列表
+    await fetchReviews()
+  } catch (error) {
+    console.error('评价提交失败:', error)
+    ElMessage.error('评价提交失败，请稍后重试')
   } finally {
     reviewLoading.value = false
   }
@@ -192,10 +301,10 @@ const handleDeleteReview = async (review: UserReview) => {
     await deleteReview(review.id)
     ElMessage.success('评价已删除')
     reviewList.value = reviewList.value.filter(item => item.id !== review.id)
-  } catch (error: unknown) {
-    const err = error as { message?: string }
-    if (err.message !== 'cancel') {
-      ElMessage.error('删除评价失败')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除评价失败:', error)
+      ElMessage.error('删除评价失败，请稍后重试')
     }
   }
 }
@@ -297,7 +406,7 @@ onMounted(() => {
                   </template>
                 </el-input>
               </el-form-item>
-              
+
               <el-form-item label="评分">
                 <el-select v-model="ratingFilter" placeholder="全部评分" clearable style="width: 120px">
                   <el-option
@@ -308,7 +417,7 @@ onMounted(() => {
                   />
                 </el-select>
               </el-form-item>
-              
+
               <el-form-item label="日期范围">
                 <el-date-picker
                   v-model="dateRange"
@@ -320,7 +429,7 @@ onMounted(() => {
                   style="width: 260px"
                 />
               </el-form-item>
-              
+
               <el-form-item>
                 <el-button type="primary" @click="handleSearch">搜索</el-button>
                 <el-button @click="handleReset">重置</el-button>

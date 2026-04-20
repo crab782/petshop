@@ -206,4 +206,49 @@ public class AuthApiController {
                     .body(ApiResponse.error(500, "Failed to reset password: " + e.getMessage()));
         }
     }
+
+    @Operation(summary = "商家注册", description = "注册新商家账号")
+    @PostMapping("/merchant/register")
+    public ResponseEntity<ApiResponse<Map<String, String>>> merchantRegister(@RequestBody MerchantRegisterRequest request) {
+        try {
+            if (request.getUsername() == null || request.getUsername().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Username is required"));
+            }
+            if (request.getPassword() == null || request.getPassword().length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Password must be at least 6 characters"));
+            }
+            if (request.getEmail() == null || request.getEmail().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Email is required"));
+            }
+            if (request.getPhone() == null || request.getPhone().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Phone is required"));
+            }
+            if (request.getContact_person() == null || request.getContact_person().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Contact person is required"));
+            }
+            if (request.getName() == null || request.getName().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Merchant name is required"));
+            }
+            if (request.getAddress() == null || request.getAddress().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Address is required"));
+            }
+
+            Map<String, String> response = authService.merchantRegister(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Merchant registration successful", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "Merchant registration failed: " + e.getMessage()));
+        }
+    }
 }

@@ -54,7 +54,15 @@ const {
   loading,
   error,
   execute: fetchOrders
-} = useAsync<ProductOrder[]>(getMerchantProductOrders, [])
+} = useAsync<ProductOrder[]>(async () => {
+  try {
+    const data = await getMerchantProductOrders()
+    return data
+  } catch (err) {
+    ElMessage.error('获取商品订单列表失败')
+    return []
+  }
+}, [])
 
 const dialogVisible = ref(false)
 const currentOrder = ref<ProductOrder | null>(null)

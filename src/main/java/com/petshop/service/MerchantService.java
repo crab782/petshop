@@ -127,4 +127,80 @@ public class MerchantService {
         
         return dto;
     }
+
+    public List<Merchant> searchMerchants(
+            String name, String status, Double minRating, 
+            int page, int pageSize) {
+        // 这里需要实现商家搜索的业务逻辑
+        // 暂时返回所有已批准的商家，实际实现需要根据参数进行筛选
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, pageSize);
+        return merchantRepository.findByStatus("approved", pageable).getContent();
+    }
+
+    public List<Merchant> searchMerchants(
+            String keyword, String sortBy, String sortOrder, 
+            int page, int pageSize) {
+        // 这里需要实现商家搜索的业务逻辑
+        // 暂时返回所有已批准的商家，实际实现需要根据参数进行筛选和排序
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, pageSize);
+        return merchantRepository.findByStatus("approved", pageable).getContent();
+    }
+
+    /**
+     * 修改商家密码
+     * @param id 商家ID
+     * @param oldPassword 原密码
+     * @param newPassword 新密码
+     * @throws RuntimeException 密码验证失败时抛出
+     */
+    public void changePassword(Integer id, String oldPassword, String newPassword) {
+        Merchant merchant = merchantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("商家不存在"));
+        
+        if (!passwordEncoder.matches(oldPassword, merchant.getPassword())) {
+            throw new RuntimeException("原密码错误");
+        }
+        
+        if (newPassword.length() < 6) {
+            throw new RuntimeException("新密码长度至少6位");
+        }
+        
+        merchant.setPassword(passwordEncoder.encode(newPassword));
+        merchant.setUpdatedAt(java.time.LocalDateTime.now());
+        merchantRepository.save(merchant);
+    }
+
+    /**
+     * 更新商家手机号
+     * @param id 商家ID
+     * @param phone 新手机号
+     */
+    public void updatePhone(Integer id, String phone) {
+        Merchant merchant = merchantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("商家不存在"));
+        
+        merchant.setPhone(phone);
+        merchant.setUpdatedAt(java.time.LocalDateTime.now());
+        merchantRepository.save(merchant);
+    }
+
+    /**
+     * 更新商家邮箱
+     * @param id 商家ID
+     * @param email 新邮箱
+     */
+    public void updateEmail(Integer id, String email) {
+        Merchant merchant = merchantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("商家不存在"));
+        
+        // 检查邮箱是否已被其他商家使用
+        Optional<Merchant> existingMerchant = merchantRepository.findByEmail(email);
+        if (existingMerchant.isPresent() && !existingMerchant.get().getId().equals(id)) {
+            throw new RuntimeException("邮箱已被使用");
+        }
+        
+        merchant.setEmail(email);
+        merchant.setUpdatedAt(java.time.LocalDateTime.now());
+        merchantRepository.save(merchant);
+    }
 }

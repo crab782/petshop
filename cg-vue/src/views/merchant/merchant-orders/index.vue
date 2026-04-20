@@ -20,14 +20,19 @@ const dateRange = ref<[Date, Date] | null>(null)
 
 // 使用 useAsync 处理获取订单
 const { loading: fetchLoading, error: fetchError, execute: executeFetchOrders } = useAsync(async () => {
-  const data = await getMerchantOrders()
-  orders.value = data
-  return data
+  try {
+    const data = await getMerchantOrders()
+    orders.value = data
+    return data
+  } catch (err) {
+    ElMessage.error('获取订单列表失败')
+    return []
+  }
 })
 
 // 使用 useAsync 处理状态更新
-const { loading: updateLoading, execute: executeUpdateStatus } = useAsync(async (orderId: number, status: string) => {
-  return await updateOrderStatus(orderId, status)
+const { loading: updateLoading, execute: executeUpdateStatus } = useAsync(async (orderId: number, status: string, rejectReason?: string) => {
+  return await updateOrderStatus(orderId, status, rejectReason)
 })
 
 // 状态选项
@@ -255,7 +260,7 @@ const handleReject = async () => {
       }
     )
     
-    const result = await executeUpdateStatus(currentOrder.value.id, 'cancelled')
+    const result = await executeUpdateStatus(currentOrder.value.id, 'cancelled', rejectReason.value)
     if (result) {
       ElMessage.success('拒单成功')
       currentOrder.value.status = 'cancelled'

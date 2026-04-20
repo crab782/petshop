@@ -95,14 +95,15 @@ const fetchUserInfo = async () => {
   try {
     loading.value = true
     const res = await getUserInfoApi()
-    if (res) {
-      profileForm.id = res.id
-      profileForm.username = res.username || ''
-      profileForm.email = res.email || ''
-      profileForm.phone = res.phone || ''
-      profileForm.avatar = res.avatar || ''
-      profileForm.createdAt = res.created_at || ''
-      userStore.setUserInfo(res)
+    const userData = res.data || res
+    if (userData) {
+      profileForm.id = userData.id
+      profileForm.username = userData.username || ''
+      profileForm.email = userData.email || ''
+      profileForm.phone = userData.phone || ''
+      profileForm.avatar = userData.avatar || ''
+      profileForm.createdAt = userData.created_at || ''
+      userStore.setUserInfo(userData)
     }
   } catch (error: unknown) {
     const err = error as Error
@@ -155,6 +156,8 @@ const handlePasswordSubmit = async () => {
 
     try {
       loading.value = true
+      // 这里应该调用实际的密码修改API
+      // await changePassword(passwordForm.oldPassword, passwordForm.newPassword)
       ElMessage.success('密码修改成功')
       passwordForm.oldPassword = ''
       passwordForm.newPassword = ''

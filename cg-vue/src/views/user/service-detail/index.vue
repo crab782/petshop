@@ -27,6 +27,72 @@ const reviews = ref<MerchantReview[]>([])
 const pets = ref<Pet[]>([])
 const activeTab = ref('description')
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockService: Service = {
+  id: 1,
+  name: '宠物洗澡美容套餐',
+  description: '包含洗澡、剪毛、修指甲等全套美容服务，让您的宠物焕然一新。我们使用专业的宠物美容产品，确保宠物的健康和舒适。',
+  price: 88,
+  duration: 90,
+  merchantId: 1
+}
+
+const mockMerchant: MerchantInfo = {
+  id: 1,
+  name: '爱心宠物美容会所',
+  address: '北京市朝阳区建国路88号',
+  phone: '13800138001',
+  logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20grooming%20salon%20logo&image_size=square',
+  rating: 4.8,
+  description: '专业的宠物美容服务，拥有多年经验的美容师团队，为您的宠物提供最优质的服务。',
+  isFavorited: false
+}
+
+const mockReviews: MerchantReview[] = [
+  {
+    id: 1,
+    userName: '张三',
+    rating: 5,
+    content: '服务非常好，宠物洗得很干净，美容师很专业，下次还会再来。',
+    createTime: '2024-01-15T10:30:00'
+  },
+  {
+    id: 2,
+    userName: '李四',
+    rating: 4,
+    content: '服务不错，环境干净整洁，宠物美容效果很好。',
+    createTime: '2024-01-10T14:20:00'
+  },
+  {
+    id: 3,
+    userName: '王五',
+    rating: 5,
+    content: '非常满意的一次体验，宠物很开心，美容效果超出预期。',
+    createTime: '2024-01-05T09:15:00'
+  }
+]
+
+const mockPets: Pet[] = [
+  {
+    id: 1,
+    name: '小白',
+    type: '狗',
+    breed: '萨摩耶',
+    age: 2,
+    gender: 'male',
+    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=samoyed%20dog%20white%20fluffy&image_size=square'
+  },
+  {
+    id: 2,
+    name: '小花',
+    type: '猫',
+    breed: '英短',
+    age: 1,
+    gender: 'female',
+    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=british%20shorthair%20cat%20blue%20color&image_size=square'
+  }
+]
+
 const selectedPetId = ref<number | null>(null)
 const appointmentTime = ref<string>('')
 const remark = ref('')
@@ -44,12 +110,24 @@ const averageRating = computed(() => {
 
 const fetchService = async () => {
   const id = Number(route.params.id)
-  if (isNaN(id)) {
-    ElMessage.error('无效的服务ID')
-    return
-  }
   loading.value = true
   try {
+    // 开发环境使用模拟数据
+    if (import.meta.env.DEV) {
+      service.value = mockService
+      merchant.value = mockMerchant
+      reviews.value = mockReviews
+      isFavorited.value = mockMerchant.isFavorited || false
+      loading.value = false
+      return
+    }
+    
+    if (isNaN(id)) {
+      ElMessage.error('无效的服务ID')
+      loading.value = false
+      return
+    }
+    
     const res = await getServiceById(id)
     service.value = res.data || res
     if (service.value?.merchantId) {
@@ -84,6 +162,14 @@ const fetchReviews = async (merchantId: number) => {
 
 const fetchPets = async () => {
   try {
+    // 开发环境使用模拟数据
+    if (import.meta.env.DEV) {
+      pets.value = mockPets
+      if (pets.value.length > 0) {
+        selectedPetId.value = pets.value[0].id
+      }
+      return
+    }
     const res = await getUserPets()
     pets.value = res.data || []
     if (pets.value.length > 0) {

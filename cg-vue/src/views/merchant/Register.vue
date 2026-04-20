@@ -239,11 +239,16 @@ const showTermsDialog = () => {
 </script>
 
 <template>
-  <div class="register-container">
+  <div class="merchant-register-container">
     <div class="register-card">
+      <!-- 注册头部 -->
       <div class="register-header">
-        <h1 class="register-title">商家注册</h1>
-        <p class="register-subtitle">创建您的店铺账号</p>
+        <div class="brand-logo">
+          <div class="logo-icon">🐶</div>
+          <h1 class="brand-title">宠物服务平台</h1>
+        </div>
+        <h2 class="register-title">商家注册</h2>
+        <p class="register-subtitle">创建您的店铺账号，开始您的宠物服务之旅</p>
       </div>
 
       <el-form
@@ -420,6 +425,22 @@ const showTermsDialog = () => {
           <el-link type="primary" @click="goToUserRegister">用户注册</el-link>
         </div>
       </el-form>
+      
+      <!-- 商家端特色 -->
+      <div class="merchant-features">
+        <div class="feature-item">
+          <span class="feature-icon">📊</span>
+          <span class="feature-text">数据分析</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🛠️</span>
+          <span class="feature-text">服务管理</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">💳</span>
+          <span class="feature-text">订单处理</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -471,83 +492,176 @@ const showTermsDialog = () => {
 </template>
 
 <style scoped>
-.register-container {
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 注册容器 */
+.merchant-register-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
+/* 注册卡片 */
 .register-card {
   width: 100%;
-  max-width: 420px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  max-width: 450px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   padding: 40px;
+  position: relative;
   overflow: hidden;
 }
 
-.register-header {
-  text-align: center;
-  margin-bottom: 32px;
+/* 卡片装饰 */
+.register-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
 }
 
+/* 注册头部 */
+.register-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* 品牌标识 */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo-icon {
+  font-size: 36px;
+  margin-right: 10px;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 注册标题 */
 .register-title {
   font-size: 24px;
-  font-weight: bold;
-  color: #333333;
-  margin: 0 0 8px 0;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
 }
 
 .register-subtitle {
   font-size: 14px;
-  color: #666666;
-  margin: 0;
+  color: #666;
+  margin-bottom: 20px;
 }
 
+/* 注册表单 */
 .register-form {
-  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* 表单组 */
+:deep(.el-form-item) {
+  margin-bottom: 20px;
 }
 
 .form-label {
-  font-weight: 500;
-  color: #666666;
   font-size: 14px;
+  font-weight: 500;
+  color: #555;
   margin-bottom: 8px;
   display: block;
 }
 
+/* 输入容器 */
+:deep(.el-input__wrapper) {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* 注册按钮 */
 .register-button {
   width: 100%;
-  height: 44px;
+  padding: 14px;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  border-radius: 8px;
   font-size: 16px;
-  margin-top: 16px;
-  background-color: #4CAF50;
-  border-color: #4CAF50;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
 }
 
-.register-button:hover {
-  background-color: #45a049;
-  border-color: #45a049;
+.register-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #45a049, #3d8b40);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
+.register-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.register-button.loading {
+  background: #4CAF50;
+  opacity: 0.8;
+}
+
+/* 底部链接 */
 .register-footer {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 20px;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .footer-text {
-  color: #666666;
   font-size: 14px;
+  color: #666;
 }
 
+:deep(.el-link--primary) {
+  font-size: 14px;
+  color: #4CAF50;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+:deep(.el-link--primary:hover) {
+  color: #45a049;
+  text-decoration: underline;
+}
+
+/* 分隔线 */
 .register-divider {
   display: flex;
   align-items: center;
@@ -564,36 +678,11 @@ const showTermsDialog = () => {
 
 .register-divider span {
   padding: 0 12px;
-  color: #999999;
+  color: #999;
   font-size: 12px;
 }
 
-:deep(.el-input__wrapper) {
-  border-radius: 4px;
-}
-
-:deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #4CAF50 inset;
-}
-
-:deep(.el-button--primary) {
-  background-color: #4CAF50;
-  border-color: #4CAF50;
-}
-
-:deep(.el-button--primary:hover) {
-  background-color: #45a049;
-  border-color: #45a049;
-}
-
-:deep(.el-link--primary) {
-  color: #4CAF50;
-}
-
-:deep(.el-link--primary:hover) {
-  color: #45a049;
-}
-
+/* Logo部分 */
 .logo-section {
   width: 100%;
 }
@@ -628,11 +717,13 @@ const showTermsDialog = () => {
   color: #909399;
 }
 
+/* 协议复选框 */
 .terms-checkbox {
   display: flex;
   align-items: center;
 }
 
+/* 协议内容 */
 .terms-content {
   max-height: 400px;
   overflow-y: auto;
@@ -661,5 +752,86 @@ const showTermsDialog = () => {
   font-size: 14px;
   color: #606266;
   line-height: 1.8;
+}
+
+/* 商家端特色 */
+.merchant-features {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.feature-icon {
+  font-size: 20px;
+}
+
+.feature-text {
+  font-size: 12px;
+  color: #666;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .register-card {
+    padding: 30px 20px;
+  }
+  
+  .register-title {
+    font-size: 20px;
+  }
+  
+  .brand-title {
+    font-size: 18px;
+  }
+  
+  :deep(.el-input__wrapper) {
+    padding: 8px 12px;
+  }
+  
+  .register-button {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* 加载动画 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.register-button:disabled::after {
+  content: '';
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  transform: translateY(-50%);
 }
 </style>

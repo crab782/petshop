@@ -4,6 +4,45 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElDialog } from 'element-plus'
 import { getAddresses, purchaseProduct, type Product } from '@/api/user'
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockAddresses = [
+  {
+    id: 1,
+    name: '张三',
+    phone: '13800138000',
+    address: '北京市朝阳区建国路88号'  
+  },
+  {
+    id: 2,
+    name: '李四',
+    phone: '13900139000',
+    address: '上海市浦东新区陆家嘴100号'
+  }
+]
+
+const mockProducts: Product[] = [
+  {
+    id: 1,
+    name: '宠物天然粮',
+    description: '天然成分，营养均衡，适合各种宠物',
+    price: 128,
+    stock: 50,
+    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20package%2C%20professional%20product%20photography&image_size=square',
+    merchantId: 1,
+    merchantName: '爱心宠物会所'
+  },
+  {
+    id: 2,
+    name: '宠物玩具套装',
+    description: '包含多种玩具，适合不同年龄段的宠物',
+    price: 88,
+    stock: 30,
+    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toys%20set%2C%20professional%20product%20photography&image_size=square',
+    merchantId: 1,
+    merchantName: '爱心宠物会所'
+  }
+]
+
 interface Address {
   id: number
   name: string
@@ -50,10 +89,21 @@ const orderTotal = computed(() => {
 const fetchAddresses = async () => {
   loading.value = true
   try {
-    const res = await getAddresses()
-    addresses.value = res.data || []
-    if (addresses.value.length > 0 && !selectedAddressId.value) {
-      selectedAddressId.value = addresses.value[0].id
+    // 在开发环境下使用硬编码测试数据
+    if (import.meta.env.DEV) {
+      // 模拟API延迟
+      await new Promise(resolve => setTimeout(resolve, 300))
+      addresses.value = mockAddresses
+      if (addresses.value.length > 0 && !selectedAddressId.value) {
+        selectedAddressId.value = addresses.value[0].id
+      }
+    } else {
+      // 在生产环境下使用真实API
+      const res = await getAddresses()
+      addresses.value = res.data || []
+      if (addresses.value.length > 0 && !selectedAddressId.value) {
+        selectedAddressId.value = addresses.value[0].id
+      }
     }
   } catch {
     ElMessage.error('获取收货地址失败')
@@ -98,22 +148,32 @@ const handleSubmitOrder = async () => {
 
 onMounted(() => {
   fetchAddresses()
-  const cartData = route.query.cart
-  if (cartData) {
-    try {
-      cartItems.value = JSON.parse(cartData as string)
-    } catch {
-      cartItems.value = []
-    }
+  // 在开发环境下使用硬编码测试数据
+  if (import.meta.env.DEV) {
+    // 模拟购物车数据
+    cartItems.value = [
+      { product: mockProducts[0], quantity: 2 },
+      { product: mockProducts[1], quantity: 1 }
+    ]
   } else {
-    const productData = route.query.product
-    const quantity = parseInt(route.query.quantity as string) || 1
-    if (productData) {
+    // 在生产环境下使用真实数据
+    const cartData = route.query.cart
+    if (cartData) {
       try {
-        const product = JSON.parse(productData as string)
-        cartItems.value = [{ product, quantity }]
+        cartItems.value = JSON.parse(cartData as string)
       } catch {
         cartItems.value = []
+      }
+    } else {
+      const productData = route.query.product
+      const quantity = parseInt(route.query.quantity as string) || 1
+      if (productData) {
+        try {
+          const product = JSON.parse(productData as string)
+          cartItems.value = [{ product, quantity }]
+        } catch {
+          cartItems.value = []
+        }
       }
     }
   }

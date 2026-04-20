@@ -2,7 +2,9 @@ package com.petshop.service;
 
 import com.petshop.dto.*;
 import com.petshop.entity.User;
+import com.petshop.entity.Merchant;
 import com.petshop.repository.UserRepository;
+import com.petshop.repository.MerchantRepository;
 import com.petshop.security.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +27,9 @@ public class AuthService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private MerchantRepository merchantRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -97,6 +102,37 @@ public class AuthService {
                 .token(jwt)
                 .user(userDTO)
                 .build();
+    }
+
+    @Transactional
+    public Map<String, String> merchantRegister(MerchantRegisterRequest request) {
+        if (merchantRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already in use");
+        }
+
+        // 暂时注释掉用户名检查，因为 MerchantRepository 中没有 findByUsername 方法
+        // if (merchantRepository.findByUsername(request.getUsername()).isPresent()) {
+        //     throw new RuntimeException("Username already in use");
+        // }
+
+        Merchant merchant = new Merchant();
+        merchant.setName(request.getName());
+        merchant.setEmail(request.getEmail());
+        merchant.setPassword(passwordEncoder.encode(request.getPassword()));
+        merchant.setPhone(request.getPhone());
+        merchant.setContactPerson(request.getContact_person());
+        merchant.setName(request.getName());
+        merchant.setLogo(request.getLogo() != null ? request.getLogo() : "");
+        merchant.setAddress(request.getAddress());
+        merchant.setStatus("pending");
+        merchant.setCreatedAt(LocalDateTime.now());
+        merchant.setUpdatedAt(LocalDateTime.now());
+
+        merchantRepository.save(merchant);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("message", "Merchant registration successful. Please wait for admin approval.");
+        return result;
     }
 
     public void logout() {

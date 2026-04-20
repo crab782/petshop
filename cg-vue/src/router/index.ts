@@ -63,6 +63,10 @@ const router = createRouter({
           component: () => import('../views/user/service-detail/index.vue'),
         },
         {
+          path: 'services/detail',
+          redirect: '/user/services/detail/1',
+        },
+        {
           path: 'pets',
           name: 'user-pets',
           component: () => import('../views/user/user-pets/index.vue'),
@@ -76,6 +80,10 @@ const router = createRouter({
           path: 'pets/edit/:id',
           name: 'pet-edit',
           component: () => import('../views/user/pet-edit/index.vue'),
+        },
+        {
+          path: 'pets/edit',
+          redirect: '/user/pets/add',
         },
         {
           path: 'appointments',
@@ -113,6 +121,10 @@ const router = createRouter({
           component: () => import('../views/user/announcement-detail/index.vue'),
         },
         {
+          path: 'announcements/detail',
+          redirect: '/user/announcements/detail/1',
+        },
+        {
           path: 'shop',
           name: 'user-shop',
           component: () => import('../views/user/user-shop/index.vue'),
@@ -138,6 +150,10 @@ const router = createRouter({
           component: () => import('../views/user/user-merchant/index.vue'),
         },
         {
+          path: 'merchant/',
+          redirect: '/user/merchant/1',
+        },
+        {
           path: 'favorites',
           name: 'user-favorites',
           component: () => import('../views/user/user-favorites/index.vue'),
@@ -161,6 +177,10 @@ const router = createRouter({
           path: 'orders/detail/:id',
           name: 'order-detail',
           component: () => import('../views/user/order-detail/index.vue'),
+        },
+        {
+          path: 'orders/detail/',
+          redirect: '/user/orders/detail/1',
         },
         {
           path: 'search',

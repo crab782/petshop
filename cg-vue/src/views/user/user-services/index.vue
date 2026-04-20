@@ -3,53 +3,13 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Calendar, Star } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { getUserPurchasedServices, type UserPurchasedService } from '@/api/user'
 
 const router = useRouter()
 
 const searchKeyword = ref('')
 const selectedStatus = ref('')
-const myServices = ref([
-  {
-    id: 1,
-    name: '宠物洗澡美容',
-    merchant: '宠物乐园',
-    price: 88,
-    purchaseDate: '2024-01-15',
-    expiryDate: '2024-02-15',
-    status: 'active', // active, used, expired
-    category: 'beauty'
-  },
-  {
-    id: 2,
-    name: '宠物体检套餐',
-    merchant: '宠物医院',
-    price: 199,
-    purchaseDate: '2024-01-10',
-    expiryDate: '2024-01-31',
-    status: 'used',
-    category: 'health'
-  },
-  {
-    id: 3,
-    name: '宠物疫苗接种',
-    merchant: '宠物医院',
-    price: 120,
-    purchaseDate: '2023-12-20',
-    expiryDate: '2024-01-20',
-    status: 'expired',
-    category: 'health'
-  },
-  {
-    id: 4,
-    name: '宠物寄养服务',
-    merchant: '宠物酒店',
-    price: 150,
-    purchaseDate: '2024-01-05',
-    expiryDate: '2024-02-05',
-    status: 'active',
-    category: 'boarding'
-  }
-])
+const myServices = ref<UserPurchasedService[]>([])
 
 const loading = ref(false)
 const currentPage = ref(1)
@@ -63,45 +23,50 @@ const statusOptions = [
   { label: '已过期', value: 'expired' }
 ]
 
-const filteredServices = ref([])
+const filteredServices = ref<UserPurchasedService[]>([])
 
-const filterServices = () => {
-  let filtered = [...myServices.value]
+const loadServices = async () => {
+  loading.value = true
+  try {
+    const response = await getUserPurchasedServices({
+      keyword: searchKeyword.value,
+      status: selectedStatus.value,
+      page: currentPage.value - 1,
+      pageSize: pageSize.value
+    })
 
-  if (searchKeyword.value) {
-    filtered = filtered.filter(service =>
-      service.name.toLowerCase().includes(searchKeyword.value.toLowerCase())
-    )
+    const data = response.data || response
+    if (data) {
+      myServices.value = data.data || data || []
+      total.value = data.total || 0
+      filteredServices.value = data.data || data || []
+    }
+  } catch (error) {
+    console.error('加载服务列表失败:', error)
+    ElMessage.error('加载服务列表失败')
+  } finally {
+    loading.value = false
   }
-
-  if (selectedStatus.value) {
-    filtered = filtered.filter(service => service.status === selectedStatus.value)
-  }
-
-  total.value = filtered.length
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  filteredServices.value = filtered.slice(start, end)
 }
 
 const handleSearch = () => {
   currentPage.value = 1
-  filterServices()
+  loadServices()
 }
 
 const handleStatusChange = () => {
   currentPage.value = 1
-  filterServices()
+  loadServices()
 }
 
 const handlePageChange = (page: number) => {
   currentPage.value = page
-  filterServices()
+  loadServices()
 }
 
-const handleDetail = (service: any) => {
+const handleDetail = (service: UserPurchasedService) => {
   // 跳转到服务详情页
-  router.push(`/user/services/detail/${service.id}`)
+  router.push(`/user/services/detail/${service.serviceId}`)
 }
 
 const getStatusLabel = (status: string) => {
@@ -123,7 +88,7 @@ const getStatusType = (status: string) => {
 }
 
 onMounted(() => {
-  filterServices()
+  loadServices()
 })
 </script>
 

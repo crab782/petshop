@@ -94,11 +94,19 @@ export interface ReviewListResponse {
 }
 
 export const getMerchantReviews = (query?: ReviewQuery) => {
-  return request.get<ReviewListResponse>('/api/merchant/reviews', { params: query })
+  const params = {
+    page: query?.page || 0,
+    size: query?.pageSize || 10,
+    sortBy: 'createdAt',
+    sortDir: 'desc',
+    rating: query?.rating,
+    keyword: query?.keyword
+  }
+  return request.get<any>('/api/merchant/reviews', { params })
 }
 
 export const replyReview = (id: number, replyContent: string) => {
-  return request.put<Review>(`/api/merchant/reviews/${id}/reply`, { replyContent })
+  return request.put<Review>(`/api/merchant/reviews/${id}/reply`, { reply: replyContent })
 }
 
 export const deleteReview = (id: number) => {
@@ -142,11 +150,11 @@ export const batchDeleteServices = (ids: number[]) => {
 }
 
 export const getMerchantOrders = () => {
-  return request.get<Order[]>('/api/merchant/orders')
+  return request.get<Order[]>('/api/merchant/appointments')
 }
 
-export const updateOrderStatus = (id: number, status: string) => {
-  return request.put<Order>(`/api/merchant/orders/${id}/status`, { status })
+export const updateOrderStatus = (id: number, status: string, rejectReason?: string) => {
+  return request.put<Order>(`/api/merchant/appointments/${id}/status`, { status, rejectReason })
 }
 
 export const getMerchantProducts = () => {
@@ -186,8 +194,8 @@ export interface ProductListResponse {
   pageSize: number
 }
 
-export const getMerchantProductsPaged = (query: ProductQuery) => {
-  return request.get<ProductListResponse>('/api/merchant/products/paged', { params: query })
+export const getMerchantProductsPaged = (query: any) => {
+  return request.get<any>('/api/merchant/products/paged', { params: query })
 }
 
 export const updateProductStatus = (id: number, status: 'enabled' | 'disabled') => {
@@ -324,12 +332,72 @@ export interface RevenueQuery {
 }
 
 export const getMerchantRevenueStats = (query: RevenueQuery) => {
-  return request.get<RevenueStats>('/api/merchant/revenue-stats', { params: query })
+  // 根据 query 计算日期范围
+  let startDate = query.startDate;
+  let endDate = query.endDate;
+  
+  if (!startDate || !endDate) {
+    const now = new Date();
+    switch (query.type) {
+      case 'today':
+        startDate = now.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        startDate = weekStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = monthStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        startDate = yearStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+    }
+  }
+  
+  return request.get<RevenueStats>('/api/merchant/revenue-stats', { params: { startDate, endDate } })
 }
 
 export const exportRevenueStats = (query: RevenueQuery) => {
+  // 根据 query 计算日期范围
+  let startDate = query.startDate;
+  let endDate = query.endDate;
+  
+  if (!startDate || !endDate) {
+    const now = new Date();
+    switch (query.type) {
+      case 'today':
+        startDate = now.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        startDate = weekStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = monthStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        startDate = yearStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+    }
+  }
+  
   return request.get<Blob>('/api/merchant/revenue-stats/export', {
-    params: query,
+    params: { startDate, endDate },
     responseType: 'blob'
   })
 }
@@ -348,12 +416,72 @@ export interface AppointmentStats {
 }
 
 export const getMerchantAppointmentStats = (timeRange: string, startDate?: string, endDate?: string) => {
-  return request.get<AppointmentStats>('/api/merchant/appointment-stats', { params: { timeRange, startDate, endDate } })
+  // 根据 timeRange 计算日期范围
+  let actualStartDate = startDate;
+  let actualEndDate = endDate;
+  
+  if (!startDate || !endDate) {
+    const now = new Date();
+    switch (timeRange) {
+      case 'today':
+        actualStartDate = now.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        actualStartDate = weekStart.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        actualStartDate = monthStart.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        actualStartDate = yearStart.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+    }
+  }
+  
+  return request.get<AppointmentStats>('/api/merchant/appointment-stats', { params: { startDate: actualStartDate, endDate: actualEndDate } })
 }
 
 export const exportAppointmentStats = (timeRange: string, startDate?: string, endDate?: string) => {
+  // 根据 timeRange 计算日期范围
+  let actualStartDate = startDate;
+  let actualEndDate = endDate;
+  
+  if (!startDate || !endDate) {
+    const now = new Date();
+    switch (timeRange) {
+      case 'today':
+        actualStartDate = now.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        actualStartDate = weekStart.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        actualStartDate = monthStart.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        actualStartDate = yearStart.toISOString().split('T')[0];
+        actualEndDate = now.toISOString().split('T')[0];
+        break;
+    }
+  }
+  
   return request.get<Blob>('/api/merchant/appointment-stats/export', {
-    params: { timeRange, startDate, endDate },
+    params: { startDate: actualStartDate, endDate: actualEndDate },
     responseType: 'blob'
   })
 }

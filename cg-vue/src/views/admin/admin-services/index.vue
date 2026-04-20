@@ -29,21 +29,47 @@ const filteredList = ref<AdminService[]>([])
 
 const loadMerchants = async () => {
   try {
-    const data = await getAllMerchants()
-    merchantList.value = data || []
+    const response = await fetch('/api/admin/merchants')
+    if (!response.ok) throw new Error('加载商家列表失败')
+    const data = await response.json()
+    merchantList.value = data.map((merchant: any) => ({
+      id: merchant.id,
+      name: merchant.name
+    }))
   } catch (error) {
     console.error('加载商家列表失败:', error)
+    ElMessage.error('加载商家列表失败')
   }
 }
 
 const loadServices = async () => {
   loading.value = true
   try {
-    const data = await getAllServices()
-    serviceList.value = data || []
+    const response = await fetch('/api/admin/services')
+    if (!response.ok) throw new Error('加载服务列表失败')
+    const data = await response.json()
+    serviceList.value = data.map((service: any) => ({
+      id: service.id,
+      name: service.name,
+      merchantId: service.merchantId,
+      merchantName: '',
+      price: service.price,
+      duration: service.duration,
+      category: service.category,
+      status: service.status,
+      createdAt: service.createdAt
+    }))
+    // 为服务添加商家名称
+    serviceList.value.forEach(service => {
+      const merchant = merchantList.value.find(m => m.id === service.merchantId)
+      if (merchant) {
+        service.merchantName = merchant.name
+      }
+    })
     filterData()
   } catch (error) {
     ElMessage.error('加载服务列表失败')
+    console.error('Error loading services:', error)
   } finally {
     loading.value = false
   }
@@ -115,11 +141,19 @@ const handleSizeChange = (size: number) => {
 const handleStatusChange = async (row: AdminService, newStatus: boolean) => {
   const status = newStatus ? 'enabled' : 'disabled'
   try {
-    await updateServiceStatus(row.id, status)
+    const response = await fetch(`/api/admin/services/${row.id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    })
+    if (!response.ok) throw new Error('状态更新失败')
     row.status = status as 'enabled' | 'disabled'
     ElMessage.success(`服务已${status === 'enabled' ? '启用' : '禁用'}`)
   } catch (error) {
     ElMessage.error('状态更新失败')
+    console.error('Error updating service status:', error)
     filterData()
   }
 }
@@ -139,11 +173,15 @@ const handleDelete = (row: AdminService) => {
     }
   ).then(async () => {
     try {
-      await deleteService(row.id)
+      const response = await fetch(`/api/admin/services/${row.id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('删除失败')
       ElMessage.success('删除成功')
       loadServices()
     } catch (error) {
       ElMessage.error('删除失败，请重试')
+      console.error('Error deleting service:', error)
     }
   }).catch(() => {})
 }
@@ -164,12 +202,20 @@ const handleBatchEnable = async () => {
       }
     )
     const ids = selectedServices.value.map(s => s.id)
-    await batchUpdateServiceStatus(ids, 'enabled')
+    const response = await fetch('/api/admin/services/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids, status: 'enabled' })
+    })
+    if (!response.ok) throw new Error('批量启用失败')
     ElMessage.success('批量启用成功')
     loadServices()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('批量启用失败')
+      console.error('Error batch enabling services:', error)
     }
   }
 }
@@ -190,12 +236,20 @@ const handleBatchDisable = async () => {
       }
     )
     const ids = selectedServices.value.map(s => s.id)
-    await batchUpdateServiceStatus(ids, 'disabled')
+    const response = await fetch('/api/admin/services/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids, status: 'disabled' })
+    })
+    if (!response.ok) throw new Error('批量禁用失败')
     ElMessage.success('批量禁用成功')
     loadServices()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('批量禁用失败')
+      console.error('Error batch disabling services:', error)
     }
   }
 }
@@ -216,12 +270,20 @@ const handleBatchDelete = async () => {
       }
     )
     const ids = selectedServices.value.map(s => s.id)
-    await batchDeleteServices(ids)
+    const response = await fetch('/api/admin/services/batch', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids })
+    })
+    if (!response.ok) throw new Error('批量删除失败')
     ElMessage.success('批量删除成功')
     loadServices()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('批量删除失败')
+      console.error('Error batch deleting services:', error)
     }
   }
 }

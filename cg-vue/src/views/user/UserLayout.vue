@@ -117,7 +117,8 @@ const menuItems = [
 
 <style scoped>
 .layout-container {
-  height: 100vh;
+  min-height: 100vh;
+  height: 100%;
   font-family: Arial, sans-serif;
 }
 
@@ -149,7 +150,8 @@ const menuItems = [
 .menu {
   border-right: none;
   background-color: #f5f5f5;
-  height: calc(100vh - 60px);
+  height: 100%;
+  min-height: calc(100vh - 60px);
 }
 
 .menu :deep(.el-menu-item) {
@@ -265,7 +267,8 @@ const menuItems = [
   background-color: #f5f5f5;
   padding: 20px;
   overflow-y: auto;
-  min-height: calc(100vh - 60px);
+  flex: 1;
+  min-height: 0;
 }
 
 :deep(.el-avatar) {

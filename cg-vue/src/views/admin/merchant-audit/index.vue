@@ -24,15 +24,27 @@ const total = ref(0)
 const fetchPendingMerchants = async () => {
   loading.value = true
   try {
-    const res = await getPendingMerchants({
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      keyword: searchKeyword.value
-    })
-    merchants.value = res.data || []
-    total.value = res.total || merchants.value.length
-  } catch {
+    const url = new URL('/api/admin/merchants/pending', window.location.origin)
+    url.searchParams.append('page', currentPage.value.toString())
+    url.searchParams.append('pageSize', pageSize.value.toString())
+    if (searchKeyword.value) {
+      url.searchParams.append('keyword', searchKeyword.value)
+    }
+    const response = await fetch(url)
+    if (!response.ok) throw new Error('获取待审核商家列表失败')
+    const data = await response.json()
+    merchants.value = data.map((merchant: any) => ({
+      id: merchant.id,
+      name: merchant.name,
+      contactPerson: merchant.contactPerson,
+      phone: merchant.phone,
+      address: merchant.address,
+      createTime: merchant.createdAt ? new Date(merchant.createdAt).toLocaleString('zh-CN') : ''
+    }))
+    total.value = merchants.value.length
+  } catch (error) {
     ElMessage.error('获取待审核商家列表失败')
+    console.error('Error fetching pending merchants:', error)
   } finally {
     loading.value = false
   }
@@ -70,13 +82,21 @@ const handleBatchApprove = async () => {
     })
     auditLoading.value = true
     for (const row of selectedRows.value) {
-      await auditMerchant(row.id, 'approved')
+      const response = await fetch(`/api/admin/merchants/${row.id}/audit`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'approved' })
+      })
+      if (!response.ok) throw new Error('操作失败')
     }
     ElMessage.success('批量审核已通过')
     fetchPendingMerchants()
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error batch approving merchants:', err)
     }
   } finally {
     auditLoading.value = false
@@ -96,13 +116,21 @@ const handleBatchReject = async () => {
     })
     auditLoading.value = true
     for (const row of selectedRows.value) {
-      await auditMerchant(row.id, 'rejected')
+      const response = await fetch(`/api/admin/merchants/${row.id}/audit`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'rejected' })
+      })
+      if (!response.ok) throw new Error('操作失败')
     }
     ElMessage.success('批量已拒绝')
     fetchPendingMerchants()
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error batch rejecting merchants:', err)
     }
   } finally {
     auditLoading.value = false
@@ -129,7 +157,14 @@ const handleApprove = async () => {
       type: 'success'
     })
     auditLoading.value = true
-    await auditMerchant(selectedMerchant.value.id, 'approved')
+    const response = await fetch(`/api/admin/merchants/${selectedMerchant.value.id}/audit`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'approved' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('商家审核已通过')
     fetchPendingMerchants()
     auditDialogVisible.value = false
@@ -137,6 +172,7 @@ const handleApprove = async () => {
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error approving merchant:', err)
     }
   } finally {
     auditLoading.value = false
@@ -151,13 +187,24 @@ const handleReject = async () => {
   if (!selectedMerchant.value) return
   try {
     auditLoading.value = true
-    await auditMerchant(selectedMerchant.value.id, 'rejected', rejectReason.value)
+    const response = await fetch(`/api/admin/merchants/${selectedMerchant.value.id}/audit`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        status: 'rejected',
+        reason: rejectReason.value 
+      })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('已拒绝该商家')
     fetchPendingMerchants()
     auditDialogVisible.value = false
     detailDialogVisible.value = false
-  } catch {
+  } catch (error) {
     ElMessage.error('操作失败')
+    console.error('Error rejecting merchant:', error)
   } finally {
     auditLoading.value = false
   }

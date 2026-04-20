@@ -7,6 +7,7 @@ import com.petshop.service.MerchantService;
 import com.petshop.service.ServiceService;
 import com.petshop.service.AppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.BeanName;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @Controller
 @RequestMapping("/merchant")
+@BeanName("mvcMerchantController")
 public class MerchantController {
     @Autowired
     private MerchantService merchantService;

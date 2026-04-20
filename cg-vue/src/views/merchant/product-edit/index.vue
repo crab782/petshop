@@ -44,7 +44,7 @@ const {
   execute: fetchProduct
 } = useAsync(async (id: number) => {
   const res = await getProductById(id)
-  return (res as any).data || res
+  return res
 })
 
 // 分类选项

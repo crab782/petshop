@@ -17,6 +17,110 @@ import {
   type Product
 } from '@/api/user'
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockMerchant: MerchantInfo = {
+  id: 1,
+  name: '爱心宠物会所',
+  logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20shop%20logo%2C%20professional%20design&image_size=square',
+  phone: '13800138000',
+  address: '北京市朝阳区建国路88号',
+  description: '专业的宠物服务机构，提供宠物美容、寄养、训练等全方位服务，拥有专业的团队和设施，为您的宠物提供最优质的护理。',
+  rating: 4.8
+}
+
+const mockServices: ServiceType[] = [
+  {
+    id: 1,
+    name: '宠物洗澡美容套餐',
+    description: '包含洗澡、剪毛、修指甲等全套美容服务',
+    price: 88,
+    duration: 90,
+    merchantId: 1,
+    merchantName: '爱心宠物会所',
+    category: 'beauty'
+  },
+  {
+    id: 2,
+    name: '宠物寄养服务',
+    description: '提供舒适的寄养环境，专业人员照顾',
+    price: 150,
+    duration: 1440,
+    merchantId: 1,
+    merchantName: '爱心宠物会所',
+    category: 'boarding'
+  },
+  {
+    id: 3,
+    name: '宠物spa护理',
+    description: '深层清洁、精油按摩、毛发护理等高端服务',
+    price: 288,
+    duration: 120,
+    merchantId: 1,
+    merchantName: '爱心宠物会所',
+    category: 'beauty'
+  }
+]
+
+const mockProducts: Product[] = [
+  {
+    id: 1,
+    name: '宠物天然粮',
+    description: '天然成分，营养均衡，适合各种宠物',
+    price: 128,
+    stock: 50,
+    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20package%2C%20professional%20product%20photography&image_size=square',
+    merchantId: 1
+  },
+  {
+    id: 2,
+    name: '宠物玩具套装',
+    description: '包含多种玩具，适合不同年龄段的宠物',
+    price: 88,
+    stock: 30,
+    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toys%20set%2C%20professional%20product%20photography&image_size=square',
+    merchantId: 1
+  },
+  {
+    id: 3,
+    name: '宠物牵引绳',
+    description: '舒适耐用，适合各种体型的宠物',
+    price: 45,
+    stock: 40,
+    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20leash%2C%20professional%20product%20photography&image_size=square',
+    merchantId: 1
+  }
+]
+
+const mockReviews: MerchantReview[] = [
+  {
+    id: 1,
+    userId: 1,
+    userName: '张三',
+    merchantId: 1,
+    rating: 5,
+    content: '服务非常好，宠物美容后非常漂亮，店员也很专业，环境干净整洁，下次还会再来！',
+    createTime: '2024-01-15 10:00:00'
+  },
+  {
+    id: 2,
+    userId: 2,
+    userName: '李四',
+    merchantId: 1,
+    rating: 4,
+    content: '寄养服务不错，宠物回来后状态很好，就是价格稍微贵了一点。',
+    createTime: '2024-01-10 14:30:00'
+  },
+  {
+    id: 3,
+    userId: 3,
+    userName: '王五',
+    merchantId: 1,
+    rating: 5,
+    content: 'SPA服务非常棒，宠物很享受，店员态度也很好，强烈推荐！',
+    createTime: '2024-01-05 09:00:00'
+  }
+]
+
 const route = useRoute()
 const router = useRouter()
 
@@ -47,21 +151,35 @@ const fetchMerchantInfo = async () => {
 
   loading.value = true
   try {
-    const [infoRes, servicesRes, productsRes, reviewsRes, favoritesRes] = await Promise.all([
-      getMerchantInfo(merchantId.value),
-      getMerchantServices(merchantId.value),
-      getProducts({}),
-      getMerchantReviews(merchantId.value),
-      getFavorites()
-    ])
+    // 在开发环境下使用硬编码测试数据
+    if (import.meta.env.DEV) {
+      // 模拟API延迟
+      await new Promise(resolve => setTimeout(resolve, 300))
 
-    merchantInfo.value = infoRes || null
-    services.value = servicesRes || []
-    products.value = (productsRes || []).filter((p: Product) => p.merchantId === merchantId.value)
-    reviews.value = reviewsRes || []
+      merchantInfo.value = mockMerchant
+      services.value = mockServices
+      products.value = mockProducts
+      reviews.value = mockReviews
+      isFavorited.value = false
+    } else {
+      // 在生产环境下使用真实API
+      const [infoRes, servicesRes, productsRes, reviewsRes, favoritesRes] = await Promise.all([
+        getMerchantInfo(merchantId.value),
+        getMerchantServices(merchantId.value),
+        getProducts({}),
+        getMerchantReviews(merchantId.value),
+        getFavorites()
+      ])
 
-    const favoriteList = favoritesRes || []
-    isFavorited.value = favoriteList.some((f: { merchantId: number }) => f.merchantId === merchantId.value)
+      merchantInfo.value = infoRes.data || infoRes || null
+      services.value = servicesRes.data || servicesRes || []
+      const productsData = productsRes.data || productsRes || []
+      products.value = productsData.filter((p: Product) => p.merchantId === merchantId.value)
+      reviews.value = reviewsRes.data || reviewsRes || []
+
+      const favoriteList = favoritesRes.data || favoritesRes || []
+      isFavorited.value = favoriteList.some((f: { merchantId: number }) => f.merchantId === merchantId.value)
+    }
   } catch {
     ElMessage.error('获取店铺信息失败')
   } finally {

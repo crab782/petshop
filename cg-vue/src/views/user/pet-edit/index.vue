@@ -12,7 +12,7 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const submitting = ref(false)
 
-const petId = computed(() => route.query.id as string | undefined)
+const petId = computed(() => route.params.id as string | undefined)
 const isEdit = computed(() => !!petId.value)
 const pageTitle = computed(() => isEdit.value ? '编辑宠物' : '添加宠物')
 

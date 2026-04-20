@@ -30,20 +30,17 @@ const queryParams = ref<ProductQuery>({
 })
 
 const fetchProducts = async () => {
-  const params: ProductQuery = {
-    page: pagination.page.value,
-    pageSize: pagination.pageSize.value,
+  const params = {
+    page: pagination.page.value - 1, // 后端使用0-based分页
+    size: pagination.pageSize.value,
     name: queryParams.value.name || undefined,
-    minPrice: queryParams.value.minPrice,
-    maxPrice: queryParams.value.maxPrice,
-    stockStatus: queryParams.value.stockStatus,
-    status: queryParams.value.status
+    status: queryParams.value.status === 'all' ? undefined : queryParams.value.status
   }
 
   const result = await execute(params)
   if (result) {
-    products.value = result.list || []
-    pagination.setTotal(result.total)
+    products.value = result.content || []
+    pagination.setTotal(result.totalElements || 0)
   }
 
   if (error.value) {
@@ -275,32 +272,6 @@ onMounted(() => {
             style="width: 180px"
             @keyup.enter="handleSearch"
           />
-        </el-form-item>
-        <el-form-item label="价格区间">
-          <el-input-number
-            v-model="queryParams.minPrice"
-            placeholder="最低价"
-            :min="0"
-            :precision="2"
-            :controls="false"
-            style="width: 100px"
-          />
-          <span style="margin: 0 8px; color: #909399">-</span>
-          <el-input-number
-            v-model="queryParams.maxPrice"
-            placeholder="最高价"
-            :min="0"
-            :precision="2"
-            :controls="false"
-            style="width: 100px"
-          />
-        </el-form-item>
-        <el-form-item label="库存状态">
-          <el-select v-model="queryParams.stockStatus" style="width: 120px" clearable>
-            <el-option label="全部" value="all" />
-            <el-option label="有货" value="in_stock" />
-            <el-option label="缺货" value="out_of_stock" />
-          </el-select>
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="queryParams.status" style="width: 120px" clearable>

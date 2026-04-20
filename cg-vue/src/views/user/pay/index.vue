@@ -79,9 +79,73 @@ const formatCountdown = computed(() => {
 
 const isExpired = computed(() => countdown.value <= 0)
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockOrder: OrderDetail = {
+  id: 1,
+  orderNo: 'PS202401200001',
+  userId: 1,
+  merchantId: 4,
+  totalPrice: 258.9,
+  freight: 10,
+  status: 'pending',
+  createTime: new Date().toISOString(),
+  address: {
+    id: 1,
+    name: '张三',
+    phone: '13800138000',
+    province: '北京市',
+    city: '北京市',
+    district: '朝阳区',
+    address: '建国路88号SOHO现代城A座2301室'
+  },
+  items: [
+    {
+      id: 1,
+      productId: 1,
+      productName: '宠物粮食 成犬专用',
+      productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20bag%20for%20adult%20dogs&image_size=landscape_4_3',
+      price: 129.9,
+      quantity: 1,
+      subtotal: 129.9
+    },
+    {
+      id: 2,
+      productId: 2,
+      productName: '宠物玩具 发声球',
+      productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toy%20squeaky%20ball&image_size=landscape_4_3',
+      price: 39.5,
+      quantity: 2,
+      subtotal: 79
+    },
+    {
+      id: 3,
+      productId: 3,
+      productName: '宠物牵引绳',
+      productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20leash%20for%20dogs&image_size=landscape_4_3',
+      price: 49.9,
+      quantity: 1,
+      subtotal: 49.9
+    }
+  ]
+}
+
 const fetchOrderInfo = async () => {
   loading.value = true
   try {
+    // 开发环境使用模拟数据
+    if (import.meta.env.DEV) {
+      order.value = mockOrder
+      
+      const createTime = new Date(order.value.createTime).getTime()
+      const expireTime = createTime + 30 * 60 * 1000
+      countdown.value = Math.max(0, Math.floor((expireTime - Date.now()) / 1000))
+
+      if (countdown.value > 0) {
+        startCountdown()
+      }
+      return
+    }
+    
     const orderId = Number(route.query.orderId)
     if (!orderId) {
       ElMessage.error('订单参数缺失')

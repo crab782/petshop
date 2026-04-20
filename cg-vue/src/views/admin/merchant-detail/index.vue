@@ -17,10 +17,25 @@ const fetchMerchantDetail = async () => {
   if (!merchantId()) return
   loading.value = true
   try {
-    const res = await getMerchantDetailById(merchantId())
-    merchantDetail.value = res.data
-  } catch {
+    const response = await fetch(`/api/admin/merchants/${merchantId()}`)
+    if (!response.ok) throw new Error('获取店铺详情失败')
+    const merchant = await response.json()
+    merchantDetail.value = {
+      id: merchant.id,
+      name: merchant.name,
+      contactPerson: merchant.contactPerson,
+      phone: merchant.phone,
+      address: merchant.address,
+      status: merchant.status,
+      createTime: merchant.createdAt ? new Date(merchant.createdAt).toLocaleString('zh-CN') : '',
+      serviceCount: 0,
+      productCount: 0,
+      orderCount: 0,
+      rating: '-' 
+    }
+  } catch (error) {
     ElMessage.error('获取店铺详情失败')
+    console.error('Error fetching merchant detail:', error)
   } finally {
     loading.value = false
   }
@@ -37,12 +52,20 @@ const handleDisableMerchant = async () => {
         type: 'warning'
       }
     )
-    await updateMerchantStatus(merchantId(), 'disabled')
+    const response = await fetch(`/api/admin/merchants/${merchantId()}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'disabled' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('店铺已禁用')
     fetchMerchantDetail()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error disabling merchant:', error)
     }
   }
 }
@@ -58,12 +81,20 @@ const handleEnableMerchant = async () => {
         type: 'success'
       }
     )
-    await updateMerchantStatus(merchantId(), 'approved')
+    const response = await fetch(`/api/admin/merchants/${merchantId()}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'approved' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('店铺已启用')
     fetchMerchantDetail()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error enabling merchant:', error)
     }
   }
 }

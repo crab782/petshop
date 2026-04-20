@@ -61,7 +61,13 @@ const {
   error: fetchError,
   execute: executeFetch
 } = useAsync<MerchantInfo>(async () => {
-  return await getMerchantInfo()
+  try {
+    const result = await getMerchantInfo()
+    return result
+  } catch (error) {
+    ElMessage.error('获取店铺信息失败')
+    return null
+  }
 })
 
 const {
@@ -69,7 +75,13 @@ const {
   error: submitError,
   execute: executeSubmit
 } = useAsync<MerchantInfo>(async (data: Partial<MerchantInfo>) => {
-  return await updateMerchantInfo(data)
+  try {
+    const result = await updateMerchantInfo(data)
+    return result
+  } catch (error) {
+    ElMessage.error('更新店铺信息失败')
+    return null
+  }
 })
 
 const loading = computed(() => fetchLoading.value || submitLoading.value)

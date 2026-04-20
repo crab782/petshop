@@ -98,7 +98,7 @@ const handleSizeChange = (size: number) => {
 }
 
 const handleViewDetail = (merchantId: number) => {
-  router.push(`/user/merchant/${merchantId}`)
+  router.push(`/user/shop?id=${merchantId}`)
 }
 
 const handleToggleFavorite = async (merchant: MerchantListItem, event: Event) => {

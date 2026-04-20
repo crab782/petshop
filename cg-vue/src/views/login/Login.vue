@@ -77,8 +77,13 @@ const goToRegister = () => {
 <template>
   <div class="login-container">
     <div class="login-card">
+      <!-- 登录头部 -->
       <div class="login-header">
-        <h1 class="login-title">宠物服务平台</h1>
+        <div class="brand-logo">
+          <div class="logo-icon">🐶</div>
+          <h1 class="brand-title">宠物服务平台</h1>
+        </div>
+        <h2 class="login-title">用户登录</h2>
         <p class="login-subtitle">欢迎回来</p>
       </div>
 
@@ -110,6 +115,7 @@ const goToRegister = () => {
             placeholder="请输入邮箱或用户名"
             :prefix-icon="User"
             size="large"
+            class="form-input"
           />
         </el-form-item>
 
@@ -124,6 +130,7 @@ const goToRegister = () => {
             :prefix-icon="Lock"
             show-password
             size="large"
+            class="form-input"
           />
         </el-form-item>
 
@@ -144,141 +151,284 @@ const goToRegister = () => {
           <el-link type="primary" @click="goToRegister">立即注册</el-link>
         </div>
       </el-form>
+
+      <!-- 用户端特色 -->
+      <div class="user-features">
+        <div class="feature-item">
+          <span class="feature-icon">🐾</span>
+          <span class="feature-text">宠物服务</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📅</span>
+          <span class="feature-text">在线预约</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🛒</span>
+          <span class="feature-text">宠物商城</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 登录容器 */
 .login-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
+/* 登录卡片 */
 .login-card {
   width: 100%;
-  max-width: 420px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  max-width: 450px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   padding: 40px;
+  position: relative;
   overflow: hidden;
 }
 
-.login-header {
-  text-align: center;
-  margin-bottom: 32px;
+/* 卡片装饰 */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
 }
 
+/* 登录头部 */
+.login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* 品牌标识 */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo-icon {
+  font-size: 36px;
+  margin-right: 10px;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+/* 登录标题 */
 .login-title {
   font-size: 24px;
-  font-weight: bold;
-  color: #333333;
-  margin: 0 0 8px 0;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+  margin-top: 0;
 }
 
 .login-subtitle {
   font-size: 14px;
-  color: #666666;
-  margin: 0;
-}
-
-.login-form {
+  color: #666;
+  margin-bottom: 20px;
   margin-top: 0;
 }
 
+/* 登录表单 */
+.login-form {
+  margin-bottom: 20px;
+  margin-top: 0;
+}
+
+/* 表单组 */
 .form-label {
-  font-weight: 500;
-  color: #666666;
   font-size: 14px;
+  font-weight: 500;
+  color: #555;
   margin-bottom: 8px;
   display: block;
 }
 
+/* 角色选择 */
 .role-group {
   width: 100%;
   display: flex;
   margin-bottom: 24px;
+  gap: 8px;
 }
 
 .role-group :deep(.el-radio-button__inner) {
   width: 100%;
-  border-radius: 4px;
-  margin: 0 4px;
-}
-
-.role-group :deep(.el-radio-button:first-child .el-radio-button__inner) {
-  margin-left: 0;
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-}
-
-.role-group :deep(.el-radio-button:last-child .el-radio-button__inner) {
-  margin-right: 0;
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
+  border-radius: 8px;
+  margin: 0;
+  transition: all 0.3s ease;
 }
 
 .role-group :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
   background-color: #4CAF50;
   border-color: #4CAF50;
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
-.login-button {
-  width: 100%;
-  height: 44px;
-  font-size: 16px;
-  margin-top: 16px;
-  background-color: #4CAF50;
-  border-color: #4CAF50;
-}
-
-.login-button:hover {
-  background-color: #45a049;
-  border-color: #45a049;
-}
-
-.login-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-
-.footer-text {
-  color: #666666;
-  font-size: 14px;
+/* 表单输入 */
+.form-input {
+  border-radius: 8px;
+  transition: all 0.3s ease;
 }
 
 :deep(.el-input__wrapper) {
-  border-radius: 4px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
 }
 
 :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #4CAF50 inset;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* 登录按钮 */
+.login-button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 10px;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
+  border-color: #4CAF50;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #45a049, #3d8b40);
+  border-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 :deep(.el-button--primary) {
-  background-color: #4CAF50;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
   border-color: #4CAF50;
 }
 
 :deep(.el-button--primary:hover) {
-  background-color: #45a049;
+  background: linear-gradient(90deg, #45a049, #3d8b40);
   border-color: #45a049;
+}
+
+/* 底部链接 */
+.login-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 8px;
+}
+
+.footer-text {
+  font-size: 14px;
+  color: #666;
 }
 
 :deep(.el-link--primary) {
   color: #4CAF50;
+  font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 :deep(.el-link--primary:hover) {
   color: #45a049;
+  text-decoration: underline;
+}
+
+/* 用户端特色 */
+.user-features {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.feature-icon {
+  font-size: 20px;
+}
+
+.feature-text {
+  font-size: 12px;
+  color: #666;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 30px 20px;
+  }
+  
+  .login-title {
+    font-size: 20px;
+  }
+  
+  .brand-title {
+    font-size: 18px;
+  }
+  
+  .role-group {
+    flex-direction: column;
+  }
+  
+  .role-group :deep(.el-radio-button) {
+    width: 100%;
+  }
+  
+  .login-button {
+    padding: 12px;
+    font-size: 14px;
+  }
 }
 </style>

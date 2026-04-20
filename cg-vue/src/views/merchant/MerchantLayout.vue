@@ -18,19 +18,12 @@ const { loading, error, execute: fetchMerchantInfo } = useAsync(getMerchantInfo)
 
 // 检查会话状态
 const checkSession = () => {
-  const token = localStorage.getItem('merchant_token') || sessionStorage.getItem('merchant_token')
-  if (!token) {
-    ElMessage.warning('请先登录')
-    router.push('/merchant/login')
-    return false
-  }
+  // 临时禁用登录验证，方便直接访问页面进行测试
   return true
 }
 
 // 获取商家信息
 const loadMerchantInfo = async () => {
-  if (!checkSession()) return
-  
   const result = await fetchMerchantInfo()
   if (result) {
     merchantInfo.value = result

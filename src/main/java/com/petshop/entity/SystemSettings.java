@@ -1,10 +1,8 @@
 package com.petshop.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.time.LocalDateTime;
 
-@Data
 @Entity
 @Table(name = "system_settings")
 public class SystemSettings {
@@ -90,5 +88,197 @@ public class SystemSettings {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getEmailSmtp() {
+        return emailSmtp;
+    }
+
+    public void setEmailSmtp(String emailSmtp) {
+        this.emailSmtp = emailSmtp;
+    }
+
+    public Integer getEmailPort() {
+        return emailPort;
+    }
+
+    public void setEmailPort(Integer emailPort) {
+        this.emailPort = emailPort;
+    }
+
+    public String getEmailUsername() {
+        return emailUsername;
+    }
+
+    public void setEmailUsername(String emailUsername) {
+        this.emailUsername = emailUsername;
+    }
+
+    public String getEmailPassword() {
+        return emailPassword;
+    }
+
+    public void setEmailPassword(String emailPassword) {
+        this.emailPassword = emailPassword;
+    }
+
+    public String getEmailFrom() {
+        return emailFrom;
+    }
+
+    public void setEmailFrom(String emailFrom) {
+        this.emailFrom = emailFrom;
+    }
+
+    public String getSmsProvider() {
+        return smsProvider;
+    }
+
+    public void setSmsProvider(String smsProvider) {
+        this.smsProvider = smsProvider;
+    }
+
+    public String getSmsApiKey() {
+        return smsApiKey;
+    }
+
+    public void setSmsApiKey(String smsApiKey) {
+        this.smsApiKey = smsApiKey;
+    }
+
+    public String getSmsApiSecret() {
+        return smsApiSecret;
+    }
+
+    public void setSmsApiSecret(String smsApiSecret) {
+        this.smsApiSecret = smsApiSecret;
+    }
+
+    public String getSmsSignName() {
+        return smsSignName;
+    }
+
+    public void setSmsSignName(String smsSignName) {
+        this.smsSignName = smsSignName;
+    }
+
+    public String getWechatAppId() {
+        return wechatAppId;
+    }
+
+    public void setWechatAppId(String wechatAppId) {
+        this.wechatAppId = wechatAppId;
+    }
+
+    public String getWechatAppSecret() {
+        return wechatAppSecret;
+    }
+
+    public void setWechatAppSecret(String wechatAppSecret) {
+        this.wechatAppSecret = wechatAppSecret;
+    }
+
+    public String getWechatMchId() {
+        return wechatMchId;
+    }
+
+    public void setWechatMchId(String wechatMchId) {
+        this.wechatMchId = wechatMchId;
+    }
+
+    public String getWechatPayKey() {
+        return wechatPayKey;
+    }
+
+    public void setWechatPayKey(String wechatPayKey) {
+        this.wechatPayKey = wechatPayKey;
+    }
+
+    public String getWechatPayCert() {
+        return wechatPayCert;
+    }
+
+    public void setWechatPayCert(String wechatPayCert) {
+        this.wechatPayCert = wechatPayCert;
+    }
+
+    public String getAlipayAppId() {
+        return alipayAppId;
+    }
+
+    public void setAlipayAppId(String alipayAppId) {
+        this.alipayAppId = alipayAppId;
+    }
+
+    public String getAlipayPrivateKey() {
+        return alipayPrivateKey;
+    }
+
+    public void setAlipayPrivateKey(String alipayPrivateKey) {
+        this.alipayPrivateKey = alipayPrivateKey;
+    }
+
+    public String getAlipayPublicKey() {
+        return alipayPublicKey;
+    }
+
+    public void setAlipayPublicKey(String alipayPublicKey) {
+        this.alipayPublicKey = alipayPublicKey;
+    }
+
+    public String getAlipayNotifyUrl() {
+        return alipayNotifyUrl;
+    }
+
+    public void setAlipayNotifyUrl(String alipayNotifyUrl) {
+        this.alipayNotifyUrl = alipayNotifyUrl;
+    }
+
+    public String getUploadPath() {
+        return uploadPath;
+    }
+
+    public void setUploadPath(String uploadPath) {
+        this.uploadPath = uploadPath;
+    }
+
+    public Long getMaxFileSize() {
+        return maxFileSize;
+    }
+
+    public void setMaxFileSize(Long maxFileSize) {
+        this.maxFileSize = maxFileSize;
+    }
+
+    public String getAllowedFileTypes() {
+        return allowedFileTypes;
+    }
+
+    public void setAllowedFileTypes(String allowedFileTypes) {
+        this.allowedFileTypes = allowedFileTypes;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

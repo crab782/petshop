@@ -13,6 +13,50 @@ const formRef = ref<FormInstance>()
 const editingId = ref<number | null>(null)
 const searchKeyword = ref('')
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockAddresses: Address[] = [
+  {
+    id: 1,
+    contactName: '张三',
+    phone: '13800138001',
+    province: '北京市',
+    city: '北京市',
+    district: '朝阳区',
+    detailAddress: '建国路88号SOHO现代城A座2301室',
+    isDefault: true
+  },
+  {
+    id: 2,
+    contactName: '李四',
+    phone: '13900139002',
+    province: '上海市',
+    city: '上海市',
+    district: '浦东新区',
+    detailAddress: '世纪大道100号环球金融中心28楼',
+    isDefault: false
+  },
+  {
+    id: 3,
+    contactName: '王五',
+    phone: '13700137003',
+    province: '广东省',
+    city: '广州市',
+    district: '天河区',
+    detailAddress: '天河路385号太古汇商场4楼',
+    isDefault: false
+  },
+  {
+    id: 4,
+    contactName: '赵六',
+    phone: '13600136004',
+    province: '浙江省',
+    city: '杭州市',
+    district: '西湖区',
+    detailAddress: '西湖大道128号西湖文化广场',
+    isDefault: false
+  }
+]
+
 const addressForm = reactive({
   contactName: '',
   phone: '',
@@ -202,9 +246,10 @@ const fetchAddresses = async () => {
   loading.value = true
   try {
     const res = await getAddresses()
-    addressList.value = res.data || []
-  } catch {
-    ElMessage.error('获取地址列表失败')
+    addressList.value = res || []
+  } catch (error) {
+    console.error('获取地址列表失败:', error)
+    ElMessage.error('获取地址列表失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -266,8 +311,9 @@ const handleSubmit = async () => {
       }
       dialogVisible.value = false
       fetchAddresses()
-    } catch {
-      ElMessage.error(editingId.value ? '修改地址失败' : '添加地址失败')
+    } catch (error) {
+      console.error('保存地址失败:', error)
+      ElMessage.error(editingId.value ? '修改地址失败，请稍后重试' : '添加地址失败，请稍后重试')
     } finally {
       loading.value = false
     }
@@ -284,8 +330,9 @@ const handleDelete = (row: Address) => {
       await deleteAddress(row.id!)
       ElMessage.success('删除成功')
       fetchAddresses()
-    } catch {
-      ElMessage.error('删除失败')
+    } catch (error) {
+      console.error('删除地址失败:', error)
+      ElMessage.error('删除地址失败，请稍后重试')
     }
   }).catch(() => {})
 }
@@ -299,8 +346,9 @@ const handleSetDefault = async (row: Address) => {
     await setDefaultAddress(row.id!)
     ElMessage.success('已设为默认地址')
     fetchAddresses()
-  } catch {
-    ElMessage.error('设置失败')
+  } catch (error) {
+    console.error('设置默认地址失败:', error)
+    ElMessage.error('设置默认地址失败，请稍后重试')
   }
 }
 

@@ -32,6 +32,7 @@ import {
   type ReviewQuery,
   type ReviewListResponse
 } from '@/api/merchant'
+import request from '@/api/request'
 import { usePagination } from '@/composables/usePagination'
 import dayjs from 'dayjs'
 
@@ -78,21 +79,33 @@ const positiveRate = computed(() => {
 const fetchReviews = async () => {
   loading.value = true
   try {
+    // 获取评价列表
     const res = await getMerchantReviews(queryParams.value)
-    const data = res.data as ReviewListResponse
-    reviews.value = data.list || []
-    setTotal(data.total || 0)
-    ratingDistribution.value = data.ratingDistribution || {
+    const data = res.data.data
+    reviews.value = data.content || []
+    setTotal(data.totalElements || 0)
+    
+    // 获取评分分布
+    const statsRes = await request.get('/api/merchant/reviews/statistics')
+    const statsData = statsRes.data.data
+    ratingDistribution.value = {
+      five: statsData.fiveStarCount || 0,
+      four: statsData.fourStarCount || 0,
+      three: statsData.threeStarCount || 0,
+      two: statsData.twoStarCount || 0,
+      one: statsData.oneStarCount || 0
+    }
+  } catch (error) {
+    console.error('获取评价列表失败:', error)
+    ElMessage.error('获取评价列表失败，请稍后重试')
+    reviews.value = []
+    ratingDistribution.value = {
       five: 0,
       four: 0,
       three: 0,
       two: 0,
       one: 0
     }
-  } catch (error) {
-    console.error('获取评价列表失败:', error)
-    ElMessage.error('获取评价列表失败，请稍后重试')
-    reviews.value = []
   } finally {
     loading.value = false
   }

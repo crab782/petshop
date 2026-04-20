@@ -5,6 +5,40 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, ShoppingTrolley } from '@element-plus/icons-vue'
 import { getCart, updateCartItem, removeFromCart, type CartItem } from '@/api/user'
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockCartItems: CartItem[] = [
+  {
+    id: 1,
+    productId: 1,
+    productName: '宠物天然粮',
+    productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20package%2C%20professional%20product%20photography&image_size=square',
+    price: 128,
+    quantity: 2,
+    merchantId: 1,
+    merchantName: '爱心宠物会所'
+  },
+  {
+    id: 2,
+    productId: 2,
+    productName: '宠物玩具套装',
+    productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toys%20set%2C%20professional%20product%20photography&image_size=square',
+    price: 88,
+    quantity: 1,
+    merchantId: 1,
+    merchantName: '爱心宠物会所'
+  },
+  {
+    id: 3,
+    productId: 3,
+    productName: '宠物牵引绳',
+    productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20leash%2C%20professional%20product%20photography&image_size=square',
+    price: 45,
+    quantity: 1,
+    merchantId: 1,
+    merchantName: '爱心宠物会所'
+  }
+]
+
 const router = useRouter()
 
 const loading = ref(false)
@@ -43,10 +77,11 @@ const fetchCart = async () => {
   loading.value = true
   try {
     const res = await getCart()
-    cartItems.value = res.data || []
+    cartItems.value = res.data || res || []
     selectedItems.value = []
-  } catch {
-    ElMessage.error('获取购物车失败')
+  } catch (error) {
+    console.error('获取购物车失败:', error)
+    ElMessage.error('获取购物车失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -57,8 +92,9 @@ const handleQuantityChange = async (item: CartItem, quantity: number) => {
   try {
     await updateCartItem(item.productId, quantity)
     item.quantity = quantity
-  } catch {
-    ElMessage.error('更新数量失败')
+  } catch (error) {
+    console.error('更新数量失败:', error)
+    ElMessage.error('更新数量失败，请稍后重试')
     fetchCart()
   }
 }
@@ -73,8 +109,11 @@ const handleRemove = async (item: CartItem) => {
     await removeFromCart(item.productId)
     ElMessage.success('已移除')
     fetchCart()
-  } catch {
-    // 用户取消
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('移除商品失败:', error)
+      ElMessage.error('移除商品失败，请稍后重试')
+    }
   }
 }
 
@@ -97,8 +136,11 @@ const handleBatchRemove = async () => {
     }
     ElMessage.success('已删除选中商品')
     fetchCart()
-  } catch {
-    // 用户取消
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('批量删除商品失败:', error)
+      ElMessage.error('批量删除商品失败，请稍后重试')
+    }
   }
 }
 

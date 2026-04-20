@@ -30,21 +30,47 @@ const filteredProducts = ref<Product[]>([])
 
 const loadMerchants = async () => {
   try {
-    const data = await getAllMerchants()
-    merchantList.value = data || []
+    const response = await fetch('/api/admin/merchants')
+    if (!response.ok) throw new Error('加载商家列表失败')
+    const data = await response.json()
+    merchantList.value = data.map((merchant: any) => ({
+      id: merchant.id,
+      name: merchant.name
+    }))
   } catch (error) {
     console.error('加载商家列表失败:', error)
+    ElMessage.error('加载商家列表失败')
   }
 }
 
 const loadProducts = async () => {
   loading.value = true
   try {
-    const data = await getAllProducts()
-    productList.value = data || []
+    const response = await fetch('/api/admin/products')
+    if (!response.ok) throw new Error('加载商品列表失败')
+    const data = await response.json()
+    productList.value = data.map((product: any) => ({
+      id: product.id,
+      name: product.name,
+      merchantId: product.merchantId,
+      merchantName: '',
+      price: product.price,
+      stock: product.stock,
+      sales: product.sales || 0,
+      status: product.status,
+      createTime: product.createdAt ? new Date(product.createdAt).toLocaleString('zh-CN') : ''
+    }))
+    // 为商品添加商家名称
+    productList.value.forEach(product => {
+      const merchant = merchantList.value.find(m => m.id === product.merchantId)
+      if (merchant) {
+        product.merchantName = merchant.name
+      }
+    })
     filterData()
   } catch (error) {
     ElMessage.error('加载商品列表失败')
+    console.error('Error loading products:', error)
   } finally {
     loading.value = false
   }
@@ -127,11 +153,19 @@ const handleSizeChange = (size: number) => {
 const handleStatusChange = async (product: Product, newStatus: boolean) => {
   const status = newStatus ? 'active' : 'inactive'
   try {
-    await updateProductStatus(product.id, status)
+    const response = await fetch(`/api/admin/products/${product.id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    })
+    if (!response.ok) throw new Error('更新状态失败')
     product.status = status as 'active' | 'inactive'
     ElMessage.success(`商品已${status === 'active' ? '上架' : '下架'}`)
   } catch (error) {
     ElMessage.error('更新状态失败')
+    console.error('Error updating product status:', error)
     filterData()
   }
 }
@@ -151,11 +185,15 @@ const handleDelete = (product: Product) => {
     }
   ).then(async () => {
     try {
-      await deleteProduct(product.id)
+      const response = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('删除失败')
       ElMessage.success('删除成功')
       loadProducts()
     } catch (error) {
       ElMessage.error('删除失败，请重试')
+      console.error('Error deleting product:', error)
     }
   }).catch(() => {})
 }
@@ -180,12 +218,20 @@ const handleBatchEnable = async () => {
       }
     )
     const ids = selectedProducts.value.map(p => p.id)
-    await batchUpdateProductStatus(ids, 'active')
+    const response = await fetch('/api/admin/products/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids, status: 'active' })
+    })
+    if (!response.ok) throw new Error('批量上架失败')
     ElMessage.success('批量上架成功')
     loadProducts()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('批量上架失败')
+      console.error('Error batch enabling products:', error)
     }
   }
 }
@@ -206,12 +252,20 @@ const handleBatchDisable = async () => {
       }
     )
     const ids = selectedProducts.value.map(p => p.id)
-    await batchUpdateProductStatus(ids, 'inactive')
+    const response = await fetch('/api/admin/products/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids, status: 'inactive' })
+    })
+    if (!response.ok) throw new Error('批量下架失败')
     ElMessage.success('批量下架成功')
     loadProducts()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('批量下架失败')
+      console.error('Error batch disabling products:', error)
     }
   }
 }
@@ -232,12 +286,20 @@ const handleBatchDelete = async () => {
       }
     )
     const ids = selectedProducts.value.map(p => p.id)
-    await batchDeleteProducts(ids)
+    const response = await fetch('/api/admin/products/batch', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids })
+    })
+    if (!response.ok) throw new Error('批量删除失败')
     ElMessage.success('批量删除成功')
     loadProducts()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('批量删除失败')
+      console.error('Error batch deleting products:', error)
     }
   }
 }

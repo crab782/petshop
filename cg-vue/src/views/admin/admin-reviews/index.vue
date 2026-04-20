@@ -50,11 +50,23 @@ const stats = computed(() => {
 const loadReviews = async () => {
   loading.value = true
   try {
-    const data = await getAllReviews()
-    reviewList.value = data || []
+    const response = await fetch('/api/admin/reviews')
+    if (!response.ok) throw new Error('加载评价列表失败')
+    const data = await response.json()
+    reviewList.value = data.map((review: any) => ({
+      id: review.id,
+      serviceName: review.service?.name || '',
+      merchantName: review.merchant?.name || '',
+      userName: review.user?.username || '',
+      rating: review.rating,
+      comment: review.comment,
+      createdAt: review.createdAt ? new Date(review.createdAt).toLocaleString('zh-CN') : '',
+      orderNo: review.appointment?.id || ''
+    }))
     total.value = filteredList.value.length
-  } catch {
+  } catch (error) {
     ElMessage.error('加载评价列表失败')
+    console.error('Error loading reviews:', error)
   } finally {
     loading.value = false
   }
@@ -95,11 +107,15 @@ const handleDelete = (row: Review) => {
     }
   ).then(async () => {
     try {
-      await deleteReview(row.id)
+      const response = await fetch(`/api/admin/reviews/${row.id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('删除失败')
       ElMessage.success('删除成功')
       loadReviews()
-    } catch {
+    } catch (error) {
       ElMessage.error('删除失败，请重试')
+      console.error('Error deleting review:', error)
     }
   }).catch(() => {})
 }

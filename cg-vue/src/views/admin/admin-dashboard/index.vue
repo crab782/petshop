@@ -1,136 +1,45 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import AdminCard from '@/components/AdminCard.vue'
 
 const currentDate = ref('')
+const loading = ref(false)
 
-const stats = [
+const stats = ref([
   {
     title: '总用户数',
-    value: '2,580',
+    value: '0',
     subtitle: '位注册用户',
     icon: 'fa fa-users',
     iconColor: 'primary'
   },
   {
     title: '总商家数',
-    value: '128',
+    value: '0',
     subtitle: '家合作商家',
     icon: 'fa fa-building',
     iconColor: 'secondary'
   },
   {
     title: '本月营收',
-    value: '¥ 156,800',
+    value: '¥ 0',
     subtitle: '本月收入',
     icon: 'fa fa-rmb',
     iconColor: 'green-500'
   },
   {
     title: '今日订单',
-    value: '156',
+    value: '0',
     subtitle: '笔订单',
     icon: 'fa fa-shopping-cart',
     iconColor: 'blue-500'
   }
-]
+])
 
-const recentUsers = [
-  {
-    id: 2580,
-    username: '张先生',
-    phone: '138****1234',
-    email: 'zhangsan@email.com',
-    avatar: '',
-    registerTime: '2026-04-18 10:30'
-  },
-  {
-    id: 2579,
-    username: '李女士',
-    phone: '139****5678',
-    email: 'lisi@email.com',
-    avatar: '',
-    registerTime: '2026-04-18 09:15'
-  },
-  {
-    id: 2578,
-    username: '王先生',
-    phone: '137****9012',
-    email: 'wangwu@email.com',
-    avatar: '',
-    registerTime: '2026-04-17 16:45'
-  },
-  {
-    id: 2577,
-    username: '赵女士',
-    phone: '136****3456',
-    email: 'zhaoliu@email.com',
-    avatar: '',
-    registerTime: '2026-04-17 14:20'
-  },
-  {
-    id: 2576,
-    username: '钱先生',
-    phone: '135****7890',
-    email: 'qianqi@email.com',
-    avatar: '',
-    registerTime: '2026-04-17 11:00'
-  }
-]
-
-const pendingMerchants = [
-  {
-    id: 128,
-    name: '宠物乐园',
-    contact: '陈老板',
-    phone: '138****1234',
-    email: 'petpark@email.com',
-    address: '北京市朝阳区建国路88号',
-    registerTime: '2026-04-17 15:30'
-  },
-  {
-    id: 127,
-    name: '快乐宠物',
-    contact: '周经理',
-    phone: '139****5678',
-    email: 'happy@email.com',
-    address: '上海市浦东新区世纪大道100号',
-    registerTime: '2026-04-16 10:00'
-  },
-  {
-    id: 126,
-    name: '萌宠之家',
-    contact: '吴女士',
-    phone: '137****9012',
-    email: 'meng@email.com',
-    address: '广州市天河区天河路123号',
-    registerTime: '2026-04-15 14:30'
-  }
-]
-
-const announcements = [
-  {
-    id: 1,
-    title: '平台服务升级通知',
-    content: '平台将于本周日凌晨2:00-6:00进行系统升级，届时部分功能将暂停使用，请提前做好准备。',
-    publishTime: '2026-04-18 08:00',
-    publisher: '系统管理员'
-  },
-  {
-    id: 2,
-    title: '新功能上线公告',
-    content: '平台新增商品分类管理和批量操作功能，方便商家更高效地管理商品。',
-    publishTime: '2026-04-15 10:00',
-    publisher: '系统管理员'
-  },
-  {
-    id: 3,
-    title: '五一劳动节放假安排',
-    content: '五一劳动节期间，平台客服服务时间调整为9:00-18:00。',
-    publishTime: '2026-04-10 09:00',
-    publisher: '系统管理员'
-  }
-]
+const recentUsers = ref<any[]>([])
+const pendingMerchants = ref<any[]>([])
+const announcements = ref<any[]>([])
 
 const quickActions = [
   {
@@ -163,6 +72,112 @@ const quickActions = [
   }
 ]
 
+const fetchDashboardStats = async () => {
+  try {
+    const response = await fetch('/api/admin/dashboard')
+    if (!response.ok) throw new Error('获取仪表盘数据失败')
+    const data = await response.json()
+    if (data.code === 200 && data.data) {
+      stats.value = [
+        {
+          title: '总用户数',
+          value: data.data.userCount.toString(),
+          subtitle: '位注册用户',
+          icon: 'fa fa-users',
+          iconColor: 'primary'
+        },
+        {
+          title: '总商家数',
+          value: data.data.merchantCount.toString(),
+          subtitle: '家合作商家',
+          icon: 'fa fa-building',
+          iconColor: 'secondary'
+        },
+        {
+          title: '本月营收',
+          value: '¥ 0',
+          subtitle: '本月收入',
+          icon: 'fa fa-rmb',
+          iconColor: 'green-500'
+        },
+        {
+          title: '今日订单',
+          value: data.data.orderCount.toString(),
+          subtitle: '笔订单',
+          icon: 'fa fa-shopping-cart',
+          iconColor: 'blue-500'
+        }
+      ]
+    }
+  } catch (error) {
+    ElMessage.error('获取仪表盘数据失败')
+    console.error('Error fetching dashboard stats:', error)
+  }
+}
+
+const fetchRecentUsers = async () => {
+  try {
+    const response = await fetch('/api/admin/dashboard/recent-users?page=0&pageSize=5')
+    if (!response.ok) throw new Error('获取最近用户数据失败')
+    const data = await response.json()
+    if (data.code === 200 && data.data && data.data.data) {
+      recentUsers.value = data.data.data.map((user: any) => ({
+        id: user.id,
+        username: user.username,
+        phone: user.phone ? user.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '-',
+        email: user.email || '-',
+        avatar: user.avatar || '',
+        registerTime: user.createdAt ? new Date(user.createdAt).toLocaleString('zh-CN') : ''
+      }))
+    }
+  } catch (error) {
+    ElMessage.error('获取最近用户数据失败')
+    console.error('Error fetching recent users:', error)
+  }
+}
+
+const fetchPendingMerchants = async () => {
+  try {
+    const response = await fetch('/api/admin/dashboard/pending-merchants?page=0&pageSize=3')
+    if (!response.ok) throw new Error('获取待审核商家数据失败')
+    const data = await response.json()
+    if (data.code === 200 && data.data && data.data.data) {
+      pendingMerchants.value = data.data.data.map((merchant: any) => ({
+        id: merchant.id,
+        name: merchant.name,
+        contact: merchant.contactPerson || '-',
+        phone: merchant.phone ? merchant.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '-',
+        email: merchant.email || '-',
+        address: merchant.address || '-',
+        registerTime: merchant.createdAt ? new Date(merchant.createdAt).toLocaleString('zh-CN') : ''
+      }))
+    }
+  } catch (error) {
+    ElMessage.error('获取待审核商家数据失败')
+    console.error('Error fetching pending merchants:', error)
+  }
+}
+
+const fetchAnnouncements = async () => {
+  try {
+    const response = await fetch('/api/admin/dashboard/announcements?page=0&pageSize=3')
+    if (!response.ok) throw new Error('获取公告数据失败')
+    const data = await response.json()
+    if (data.code === 200 && data.data && data.data.data) {
+      announcements.value = data.data.data.map((announcement: any) => ({
+        id: announcement.id,
+        title: announcement.title,
+        content: announcement.content || '',
+        publishTime: announcement.createdAt ? new Date(announcement.createdAt).toLocaleString('zh-CN') : '',
+        publisher: '系统管理员'
+      }))
+    }
+  } catch (error) {
+    ElMessage.error('获取公告数据失败')
+    console.error('Error fetching announcements:', error)
+  }
+}
+
 const handleUserClick = (user: any) => {
   console.log('查看用户:', user)
 }
@@ -179,8 +194,25 @@ const handleQuickAction = (action: any) => {
   console.log('快捷操作:', action)
 }
 
+const fetchAllData = async () => {
+  loading.value = true
+  try {
+    await Promise.all([
+      fetchDashboardStats(),
+      fetchRecentUsers(),
+      fetchPendingMerchants(),
+      fetchAnnouncements()
+    ])
+  } catch (error) {
+    console.error('Error fetching data:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(() => {
   currentDate.value = new Date().toLocaleDateString('zh-CN')
+  fetchAllData()
 })
 </script>
 
@@ -193,7 +225,7 @@ onMounted(() => {
       </el-card>
     </div>
 
-    <div class="stats-section">
+    <div class="stats-section" v-loading="loading">
       <div class="stats-grid">
         <div v-for="(stat, index) in stats" :key="index" class="stat-item">
           <AdminCard
@@ -220,7 +252,7 @@ onMounted(() => {
               </div>
             </template>
             <div class="users-table">
-              <el-table :data="recentUsers" style="width: 100%">
+              <el-table :data="recentUsers" style="width: 100%" v-loading="loading">
                 <el-table-column prop="id" label="用户ID" width="80" />
                 <el-table-column prop="username" label="用户名" width="100" />
                 <el-table-column prop="phone" label="手机号" width="130" />
@@ -234,6 +266,7 @@ onMounted(() => {
                   </template>
                 </el-table-column>
               </el-table>
+              <el-empty v-if="!loading && recentUsers.length === 0" description="暂无最近注册用户" />
             </div>
           </el-card>
         </div>
@@ -249,7 +282,7 @@ onMounted(() => {
               </div>
             </template>
             <div class="merchants-table">
-              <el-table :data="pendingMerchants" style="width: 100%">
+              <el-table :data="pendingMerchants" style="width: 100%" v-loading="loading">
                 <el-table-column prop="id" label="商家ID" width="80" />
                 <el-table-column prop="name" label="商家名称" width="120" />
                 <el-table-column prop="contact" label="联系人" width="100" />
@@ -267,6 +300,7 @@ onMounted(() => {
                   </template>
                 </el-table-column>
               </el-table>
+              <el-empty v-if="!loading && pendingMerchants.length === 0" description="暂无待审核商家" />
             </div>
           </el-card>
         </div>
@@ -307,7 +341,7 @@ onMounted(() => {
                 </el-button>
               </div>
             </template>
-            <div class="announcements-list">
+            <div class="announcements-list" v-loading="loading">
               <div
                 v-for="(announcement, index) in announcements"
                 :key="index"
@@ -323,6 +357,7 @@ onMounted(() => {
                   <span class="announcement-publisher">发布人：{{ announcement.publisher }}</span>
                 </div>
               </div>
+              <el-empty v-if="!loading && announcements.length === 0" description="暂无系统公告" />
             </div>
           </el-card>
         </div>

@@ -68,8 +68,25 @@ const defaultSettings: MerchantSettings = {
   }
 }
 
-const settingsAsync = useAsync(getMerchantSettings, defaultSettings)
-const merchantInfoAsync = useAsync(getMerchantInfo)
+const settingsAsync = useAsync(async () => {
+  try {
+    const result = await getMerchantSettings()
+    return result
+  } catch (error) {
+    ElMessage.error('获取店铺设置失败')
+    return defaultSettings
+  }
+}, defaultSettings)
+
+const merchantInfoAsync = useAsync(async () => {
+  try {
+    const result = await getMerchantInfo()
+    return result
+  } catch (error) {
+    ElMessage.error('获取商家信息失败')
+    return null
+  }
+})
 
 const settingsForm = computed(() => settingsAsync.data.value || defaultSettings)
 const merchantInfo = computed(() => merchantInfoAsync.data.value)
@@ -168,7 +185,7 @@ const handleSave = async () => {
     await updateMerchantSettings(settingsForm.value)
     ElMessage.success('保存成功')
   } catch (error) {
-    ElMessage.error('保存失败')
+    ElMessage.error('保存失败，请稍后重试')
   } finally {
     saving.value = false
   }

@@ -5,6 +5,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Calendar } from '@element-plus/icons-vue'
 import { getUserAppointments, cancelAppointment, type Appointment } from '@/api/user'
 
+
+
 const router = useRouter()
 const loading = ref(false)
 const appointments = ref<Appointment[]>([])
@@ -65,8 +67,9 @@ const filteredAppointments = computed(() => {
 const fetchAppointments = async () => {
   loading.value = true
   try {
+    // 使用真实API
     const res = await getUserAppointments()
-    appointments.value = res.data || []
+    appointments.value = res.data || res || []
   } catch {
     ElMessage.error('获取预约列表失败')
   } finally {

@@ -35,11 +35,22 @@ const statusMap: Record<string, { label: string; type: string }> = {
 const fetchMerchants = async () => {
   loading.value = true
   try {
-    const res = await getAllMerchants()
-    merchants.value = res.data || []
+    const response = await fetch('/api/admin/merchants')
+    if (!response.ok) throw new Error('获取商家列表失败')
+    const data = await response.json()
+    merchants.value = data.map((merchant: any) => ({
+      id: merchant.id,
+      name: merchant.name,
+      contactPerson: merchant.contactPerson,
+      phone: merchant.phone,
+      address: merchant.address,
+      status: merchant.status,
+      createTime: merchant.createdAt ? new Date(merchant.createdAt).toLocaleString('zh-CN') : ''
+    }))
     handleSearch()
-  } catch {
+  } catch (error) {
     ElMessage.error('获取商家列表失败')
+    console.error('Error fetching merchants:', error)
   } finally {
     loading.value = false
   }
@@ -94,13 +105,21 @@ const handleApprove = async (row: Merchant) => {
       cancelButtonText: '取消',
       type: 'success'
     })
-    await auditMerchant(row.id, 'approved')
+    const response = await fetch(`/api/admin/merchants/${row.id}/audit`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'approved' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('商家审核已通过')
     fetchMerchants()
     dialogVisible.value = false
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error approving merchant:', err)
     }
   }
 }
@@ -117,12 +136,23 @@ const confirmReject = async () => {
     return
   }
   try {
-    await auditMerchant(selectedMerchant.value!.id, 'rejected', rejectReason.value)
+    const response = await fetch(`/api/admin/merchants/${selectedMerchant.value!.id}/audit`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        status: 'rejected',
+        reason: rejectReason.value 
+      })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('已拒绝该商家')
     fetchMerchants()
     rejectDialogVisible.value = false
-  } catch {
+  } catch (error) {
     ElMessage.error('操作失败')
+    console.error('Error rejecting merchant:', error)
   }
 }
 
@@ -133,12 +163,16 @@ const handleDelete = async (row: Merchant) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await deleteMerchant(row.id)
+    const response = await fetch(`/api/admin/merchants/${row.id}`, {
+      method: 'DELETE'
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('删除成功')
     fetchMerchants()
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error deleting merchant:', err)
     }
   }
 }
@@ -160,7 +194,14 @@ const handleBatchAudit = async () => {
       type: 'success'
     })
     for (const merchant of pendingSelected) {
-      await auditMerchant(merchant.id, 'approved')
+      const response = await fetch(`/api/admin/merchants/${merchant.id}/audit`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'approved' })
+      })
+      if (!response.ok) throw new Error('操作失败')
     }
     ElMessage.success('批量审核成功')
     selectedIds.value = []
@@ -168,6 +209,7 @@ const handleBatchAudit = async () => {
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error batch auditing merchants:', err)
     }
   }
 }
@@ -183,15 +225,21 @@ const handleBatchEnable = async () => {
       cancelButtonText: '取消',
       type: 'success'
     })
-    for (const id of selectedIds.value) {
-      await updateMerchantStatus(id, 'approved')
-    }
+    const response = await fetch('/api/admin/merchants/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids: selectedIds.value, status: 'approved' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('批量启用成功')
     selectedIds.value = []
     fetchMerchants()
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error batch enabling merchants:', err)
     }
   }
 }
@@ -207,15 +255,21 @@ const handleBatchDisable = async () => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    for (const id of selectedIds.value) {
-      await updateMerchantStatus(id, 'disabled')
-    }
+    const response = await fetch('/api/admin/merchants/batch/status', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids: selectedIds.value, status: 'disabled' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('批量禁用成功')
     selectedIds.value = []
     fetchMerchants()
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error batch disabling merchants:', err)
     }
   }
 }
@@ -231,15 +285,21 @@ const handleBatchDelete = async () => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    for (const id of selectedIds.value) {
-      await deleteMerchant(id)
-    }
+    const response = await fetch('/api/admin/merchants/batch', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ids: selectedIds.value })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('批量删除成功')
     selectedIds.value = []
     fetchMerchants()
   } catch (err: unknown) {
     if (err !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error batch deleting merchants:', err)
     }
   }
 }

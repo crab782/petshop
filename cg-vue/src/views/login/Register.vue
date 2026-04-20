@@ -88,8 +88,14 @@ const goToLogin = () => {
 <template>
   <div class="register-container">
     <div class="register-card">
+      <!-- 卡片装饰 -->
+      <!-- 登录头部 -->
       <div class="register-header">
-        <h1 class="register-title">用户注册</h1>
+        <div class="brand-logo">
+          <div class="logo-icon">🐶</div>
+          <h1 class="brand-title">宠物服务平台</h1>
+        </div>
+        <h2 class="register-title">用户注册</h2>
         <p class="register-subtitle">创建您的账号</p>
       </div>
 
@@ -181,6 +187,22 @@ const goToLogin = () => {
           <el-link type="primary" @click="goToLogin">立即登录</el-link>
         </div>
       </el-form>
+      
+      <!-- 用户端特色 -->
+      <div class="user-features">
+        <div class="feature-item">
+          <span class="feature-icon">🐾</span>
+          <span class="feature-text">宠物管理</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📅</span>
+          <span class="feature-text">在线预约</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🛍️</span>
+          <span class="feature-text">宠物商城</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -191,51 +213,119 @@ const goToLogin = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .register-card {
   width: 100%;
-  max-width: 420px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  padding: 48px 40px;
+  max-width: 450px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 卡片装饰 */
+.register-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
 }
 
 .register-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
+}
+
+/* 品牌标识 */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo-icon {
+  font-size: 36px;
+  margin-right: 10px;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
 }
 
 .register-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #303133;
-  margin: 0 0 12px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
 }
 
 .register-subtitle {
   font-size: 14px;
-  color: #909399;
+  color: #666;
   margin: 0;
 }
 
 .register-form {
   margin-top: 0;
+  margin-bottom: 20px;
 }
 
 .form-label {
   font-weight: 500;
-  color: #606266;
+  color: #555;
+  display: block;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+/* 表单输入 */
+:deep(.el-input__wrapper) {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  border-color: #4CAF50;
+}
+
+:deep(.el-input__prefix-inner) {
+  color: #999;
 }
 
 .register-button {
   width: 100%;
   height: 48px;
   font-size: 16px;
-  margin-top: 8px;
+  font-weight: 600;
+  margin-top: 10px;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.register-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #45a049, #3d8b40);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.register-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .register-footer {
@@ -243,11 +333,88 @@ const goToLogin = () => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 .footer-text {
-  color: #909399;
+  color: #666;
   font-size: 14px;
+}
+
+:deep(.el-link) {
+  color: #4CAF50;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+:deep(.el-link:hover) {
+  color: #45a049;
+}
+
+/* 用户端特色 */
+.user-features {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.feature-icon {
+  font-size: 20px;
+}
+
+.feature-text {
+  font-size: 12px;
+  color: #666;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .register-card {
+    padding: 30px 20px;
+  }
+  
+  .register-title {
+    font-size: 20px;
+  }
+  
+  .brand-title {
+    font-size: 18px;
+  }
+  
+  :deep(.el-input__wrapper) {
+    height: 40px;
+  }
+  
+  .register-button {
+    height: 44px;
+    font-size: 14px;
+  }
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 加载动画 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

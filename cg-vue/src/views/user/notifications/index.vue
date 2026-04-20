@@ -2,14 +2,14 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Message, ShoppingCart, Calendar, ChatDotRound, Check, Delete } from '@element-plus/icons-vue'
-import { 
-  getNotifications, 
-  markAsRead, 
-  markAllAsRead, 
+import {
+  getNotifications,
+  markAsRead,
+  markAllAsRead,
   markBatchAsRead,
   deleteNotification,
   deleteBatchNotifications,
-  type Notification 
+  type Notification
 } from '@/api/notification'
 
 const loading = ref(false)
@@ -31,17 +31,17 @@ const selectedIds = ref<number[]>([])
 
 const filteredList = computed(() => {
   let list = notificationList.value
-  
+
   if (activeTab.value !== 'all') {
     list = list.filter(item => item.type === activeTab.value)
   }
-  
+
   if (readFilter.value === 'unread') {
     list = list.filter(item => !item.isRead)
   } else if (readFilter.value === 'read') {
     list = list.filter(item => item.isRead)
   }
-  
+
   return list
 })
 
@@ -76,7 +76,7 @@ const fetchNotifications = async () => {
   try {
     loading.value = true
     const res = await getNotifications()
-    notificationList.value = res || []
+    notificationList.value = res.data || res || []
   } catch {
     ElMessage.error('获取通知列表失败')
   } finally {
@@ -251,7 +251,7 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="通知内容" min-width="300">
             <template #default="{ row }">
-              <div 
+              <div
                 class="notification-item-row"
                 :class="{ unread: !row.isRead }"
                 @click="handleViewDetail(row)"
@@ -287,11 +287,11 @@ onMounted(() => {
           <el-table-column label="操作" width="180" align="center">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="handleViewDetail(row)">查看</el-button>
-              <el-button 
-                v-if="!row.isRead" 
-                type="success" 
-                link 
-                size="small" 
+              <el-button
+                v-if="!row.isRead"
+                type="success"
+                link
+                size="small"
                 @click="handleMarkAsRead(row)"
               >
                 标记已读

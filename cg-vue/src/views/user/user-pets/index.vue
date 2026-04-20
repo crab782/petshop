@@ -4,6 +4,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserPets, addPet, updatePet, deletePet, type Pet } from '@/api/user'
 import Card from '@/components/Card.vue'
 
+
+
 const loading = ref(false)
 const pets = ref<Pet[]>([])
 const allPets = ref<Pet[]>([])
@@ -62,9 +64,10 @@ const resetForm = () => {
 const fetchPets = async () => {
   loading.value = true
   try {
+    // 使用真实API
     const res = await getUserPets()
-    allPets.value = res.data || []
-    pets.value = res.data || []
+    allPets.value = res.data || res || []
+    pets.value = res.data || res || []
   } catch {
     ElMessage.error('获取宠物列表失败')
   } finally {

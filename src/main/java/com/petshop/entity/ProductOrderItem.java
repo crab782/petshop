@@ -1,10 +1,8 @@
 package com.petshop.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.math.BigDecimal;
 
-@Data
 @Entity
 @Table(name = "product_order_item")
 public class ProductOrderItem {
@@ -25,4 +23,44 @@ public class ProductOrderItem {
     
     @Column(name = "price", columnDefinition = "decimal(10,2)", nullable = false)
     private BigDecimal price;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public ProductOrder getOrder() {
+        return order;
+    }
+
+    public void setOrder(ProductOrder order) {
+        this.order = order;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
 }

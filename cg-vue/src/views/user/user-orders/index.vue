@@ -93,21 +93,152 @@ const appointmentStatusText = (status: string) => {
   return map[status] || status
 }
 
+// 硬编码测试数据 - 仅在开发环境使用
+const mockProductOrders: ProductOrder[] = [
+  {
+    id: 1,
+    orderNo: 'PS202401200001',
+    userId: 1,
+    merchantId: 4,
+    totalPrice: 258.9,
+    status: 'pending',
+    orderTime: '2024-01-20 10:30:00',
+    productName: '宠物粮食 成犬专用',
+    merchantName: '宠物用品专卖店',
+    quantity: 1
+  },
+  {
+    id: 2,
+    orderNo: 'PS202401190002',
+    userId: 1,
+    merchantId: 4,
+    totalPrice: 79,
+    status: 'paid',
+    orderTime: '2024-01-19 14:20:00',
+    productName: '宠物玩具 发声球',
+    merchantName: '宠物用品专卖店',
+    quantity: 2
+  },
+  {
+    id: 3,
+    orderNo: 'PS202401180003',
+    userId: 1,
+    merchantId: 4,
+    totalPrice: 49.9,
+    status: 'shipped',
+    orderTime: '2024-01-18 09:15:00',
+    productName: '宠物牵引绳',
+    merchantName: '宠物用品专卖店',
+    quantity: 1
+  },
+  {
+    id: 4,
+    orderNo: 'PS202401150004',
+    userId: 1,
+    merchantId: 4,
+    totalPrice: 129.9,
+    status: 'completed',
+    orderTime: '2024-01-15 16:45:00',
+    productName: '宠物粮食 幼犬专用',
+    merchantName: '宠物用品专卖店',
+    quantity: 1
+  },
+  {
+    id: 5,
+    orderNo: 'PS202401100005',
+    userId: 1,
+    merchantId: 4,
+    totalPrice: 39.5,
+    status: 'cancelled',
+    orderTime: '2024-01-10 11:00:00',
+    productName: '宠物玩具 啃咬骨',
+    merchantName: '宠物用品专卖店',
+    quantity: 1
+  }
+]
+
+const mockAppointments: Appointment[] = [
+  {
+    id: 1,
+    userId: 1,
+    merchantId: 1,
+    serviceId: 1,
+    petId: 1,
+    appointmentTime: '2024-01-25 14:00:00',
+    status: 'pending',
+    totalPrice: 88,
+    notes: '需要给狗狗剪指甲',
+    serviceName: '宠物洗澡美容套餐',
+    merchantName: '爱心宠物美容会所',
+    petName: '小白',
+    createdAt: '2024-01-22 10:00:00',
+    updatedAt: '2024-01-22 10:00:00'
+  },
+  {
+    id: 2,
+    userId: 1,
+    merchantId: 2,
+    serviceId: 2,
+    petId: 2,
+    appointmentTime: '2024-01-20 10:30:00',
+    status: 'confirmed',
+    totalPrice: 150,
+    notes: '年度体检',
+    serviceName: '宠物健康体检',
+    merchantName: '宠物健康医院',
+    petName: '小黑',
+    createdAt: '2024-01-18 09:00:00',
+    updatedAt: '2024-01-18 10:00:00'
+  },
+  {
+    id: 3,
+    userId: 1,
+    merchantId: 3,
+    serviceId: 3,
+    petId: 1,
+    appointmentTime: '2024-01-15 09:00:00',
+    status: 'completed',
+    totalPrice: 50,
+    notes: '寄养3天',
+    serviceName: '宠物寄养服务',
+    merchantName: '快乐宠物寄养中心',
+    petName: '小白',
+    createdAt: '2024-01-10 16:00:00',
+    updatedAt: '2024-01-18 10:00:00'
+  },
+  {
+    id: 4,
+    userId: 1,
+    merchantId: 1,
+    serviceId: 1,
+    petId: 2,
+    appointmentTime: '2024-01-10 15:00:00',
+    status: 'cancelled',
+    totalPrice: 88,
+    notes: '临时有事取消',
+    serviceName: '宠物洗澡美容套餐',
+    merchantName: '爱心宠物美容会所',
+    petName: '小黑',
+    createdAt: '2024-01-08 11:00:00',
+    updatedAt: '2024-01-09 14:00:00'
+  }
+]
+
 const filteredProductOrders = computed(() => {
   let list = [...productOrders.value]
-  
+
   if (productStatusFilter.value) {
     list = list.filter(item => item.status === productStatusFilter.value)
   }
-  
+
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    list = list.filter(item => 
+    list = list.filter(item =>
       item.productName?.toLowerCase().includes(keyword) ||
       item.merchantName?.toLowerCase().includes(keyword)
     )
   }
-  
+
   if (dateRange.value && dateRange.value.length === 2) {
     const startDate = new Date(dateRange.value[0])
     const endDate = new Date(dateRange.value[1])
@@ -117,25 +248,25 @@ const filteredProductOrders = computed(() => {
       return orderDate >= startDate && orderDate <= endDate
     })
   }
-  
+
   return list
 })
 
 const filteredAppointments = computed(() => {
   let list = [...appointments.value]
-  
+
   if (appointmentStatusFilter.value) {
     list = list.filter(item => item.status === appointmentStatusFilter.value)
   }
-  
+
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    list = list.filter(item => 
+    list = list.filter(item =>
       item.serviceName?.toLowerCase().includes(keyword) ||
       item.merchantName?.toLowerCase().includes(keyword)
     )
   }
-  
+
   if (dateRange.value && dateRange.value.length === 2) {
     const startDate = new Date(dateRange.value[0])
     const endDate = new Date(dateRange.value[1])
@@ -145,7 +276,7 @@ const filteredAppointments = computed(() => {
       return appointmentDate >= startDate && appointmentDate <= endDate
     })
   }
-  
+
   return list
 })
 
@@ -153,10 +284,11 @@ const fetchProductOrders = async () => {
   productLoading.value = true
   try {
     const res = await getProductOrders()
-    productOrders.value = res.data || []
+    productOrders.value = res.data || res || []
     total.value = productOrders.value.length
-  } catch {
-    ElMessage.error('获取商品订单失败')
+  } catch (error) {
+    console.error('获取商品订单失败:', error)
+    ElMessage.error('获取商品订单失败，请稍后重试')
   } finally {
     productLoading.value = false
   }
@@ -166,9 +298,10 @@ const fetchAppointments = async () => {
   appointmentLoading.value = true
   try {
     const res = await getUserAppointments()
-    appointments.value = res.data || []
-  } catch {
-    ElMessage.error('获取服务预约订单失败')
+    appointments.value = res.data || res || []
+  } catch (error) {
+    console.error('获取服务预约订单失败:', error)
+    ElMessage.error('获取服务预约订单失败，请稍后重试')
   } finally {
     appointmentLoading.value = false
   }
@@ -262,14 +395,14 @@ const handleBatchCancel = async () => {
     ElMessage.warning('请选择要取消的订单')
     return
   }
-  
+
   try {
     await ElMessageBox.confirm(`确定要取消选中的 ${ids.length} 个订单吗？`, '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     })
-    
+
     if (activeTab.value === 'product') {
       await batchCancelOrders(ids)
       selectedProductOrders.value = []
@@ -296,14 +429,14 @@ const handleBatchDelete = async () => {
     ElMessage.warning('请选择要删除的订单')
     return
   }
-  
+
   try {
     await ElMessageBox.confirm(`确定要删除选中的 ${ids.length} 个订单吗？`, '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     })
-    
+
     if (activeTab.value === 'product') {
       await batchDeleteOrders(ids)
       selectedProductOrders.value = []
@@ -371,7 +504,7 @@ onMounted(() => {
               </template>
             </el-input>
           </el-form-item>
-          
+
           <el-form-item label="日期范围">
             <el-date-picker
               v-model="dateRange"
@@ -383,7 +516,7 @@ onMounted(() => {
               style="width: 260px"
             />
           </el-form-item>
-          
+
           <el-form-item>
             <el-button type="primary" @click="handleSearch">搜索</el-button>
             <el-button @click="handleReset">重置</el-button>
@@ -402,7 +535,7 @@ onMounted(() => {
               批量删除
             </el-button>
           </div>
-          
+
           <el-form inline style="margin-bottom: 16px;">
             <el-form-item label="订单状态">
               <el-select v-model="productStatusFilter" placeholder="全部状态" style="width: 120px">
@@ -483,7 +616,7 @@ onMounted(() => {
               批量取消
             </el-button>
           </div>
-          
+
           <el-form inline style="margin-bottom: 16px;">
             <el-form-item label="预约状态">
               <el-select v-model="appointmentStatusFilter" placeholder="全部状态" style="width: 120px">

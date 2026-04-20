@@ -1,10 +1,8 @@
 package com.petshop.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.time.LocalDateTime;
 
-@Data
 @Entity
 @Table(name = "merchant_settings")
 public class MerchantSettings {
@@ -46,5 +44,77 @@ public class MerchantSettings {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Merchant getMerchant() {
+        return merchant;
+    }
+
+    public void setMerchant(Merchant merchant) {
+        this.merchant = merchant;
+    }
+
+    public Boolean getIsOpen() {
+        return isOpen;
+    }
+
+    public void setIsOpen(Boolean isOpen) {
+        this.isOpen = isOpen;
+    }
+
+    public Boolean getAppointmentNotification() {
+        return appointmentNotification;
+    }
+
+    public void setAppointmentNotification(Boolean appointmentNotification) {
+        this.appointmentNotification = appointmentNotification;
+    }
+
+    public Boolean getOrderNotification() {
+        return orderNotification;
+    }
+
+    public void setOrderNotification(Boolean orderNotification) {
+        this.orderNotification = orderNotification;
+    }
+
+    public Boolean getReviewNotification() {
+        return reviewNotification;
+    }
+
+    public void setReviewNotification(Boolean reviewNotification) {
+        this.reviewNotification = reviewNotification;
+    }
+
+    public String getNotificationType() {
+        return notificationType;
+    }
+
+    public void setNotificationType(String notificationType) {
+        this.notificationType = notificationType;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

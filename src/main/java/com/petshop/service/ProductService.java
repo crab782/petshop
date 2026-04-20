@@ -184,4 +184,22 @@ public class ProductService {
     public Page<Product> adminSearchProducts(String keyword, String status, Integer merchantId, String category, Pageable pageable) {
         return productRepository.adminSearchProducts(keyword, status, merchantId, category, pageable);
     }
+
+    public List<Product> searchProducts(
+            String name, Double minPrice, Double maxPrice, 
+            Integer minStock, String status, Integer categoryId, 
+            int page, int pageSize) {
+        // 这里需要实现商品搜索的业务逻辑
+        // 暂时返回所有启用的商品，实际实现需要根据参数进行筛选
+        return productRepository.findByStatus("enabled");
+    }
+
+    public List<Product> searchProducts(
+            String keyword, Integer merchantId, 
+            String sortBy, String sortOrder, 
+            int page, int pageSize) {
+        // 这里需要实现商品搜索的业务逻辑
+        // 暂时返回所有启用的商品，实际实现需要根据参数进行筛选和排序
+        return productRepository.findByStatus("enabled");
+    }
 }

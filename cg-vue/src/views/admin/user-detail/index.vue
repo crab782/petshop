@@ -18,10 +18,23 @@ const fetchUserDetail = async () => {
   if (!userId()) return
   loading.value = true
   try {
-    const res = await getUserDetailById(userId())
-    userDetail.value = res.data
-  } catch {
+    const response = await fetch(`/api/admin/users/${userId()}`)
+    if (!response.ok) throw new Error('获取用户详情失败')
+    const user = await response.json()
+    userDetail.value = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      status: user.status === 'active' ? '正常' : '禁用',
+      createTime: user.createdAt ? new Date(user.createdAt).toLocaleString('zh-CN') : '',
+      recentOrders: [],
+      recentAppointments: [],
+      reviews: []
+    }
+  } catch (error) {
     ElMessage.error('获取用户详情失败')
+    console.error('Error fetching user detail:', error)
   } finally {
     loading.value = false
   }
@@ -38,12 +51,20 @@ const handleDisableAccount = async () => {
         type: 'warning'
       }
     )
-    await updateUserStatus(userId(), '禁用')
+    const response = await fetch(`/api/admin/users/${userId()}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'disabled' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('账户已禁用')
     fetchUserDetail()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error disabling account:', error)
     }
   }
 }
@@ -59,12 +80,20 @@ const handleEnableAccount = async () => {
         type: 'success'
       }
     )
-    await updateUserStatus(userId(), '正常')
+    const response = await fetch(`/api/admin/users/${userId()}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: 'active' })
+    })
+    if (!response.ok) throw new Error('操作失败')
     ElMessage.success('账户已启用')
     fetchUserDetail()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')
+      console.error('Error enabling account:', error)
     }
   }
 }
