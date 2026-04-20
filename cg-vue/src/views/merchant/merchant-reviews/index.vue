@@ -84,7 +84,7 @@ const fetchReviews = async () => {
     const data = res.data.data
     reviews.value = data.content || []
     setTotal(data.totalElements || 0)
-    
+
     // 获取评分分布
     const statsRes = await request.get('/api/merchant/reviews/statistics')
     const statsData = statsRes.data.data

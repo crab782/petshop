@@ -1,9 +1,11 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.MerchantSettings;
-import com.petshop.repository.MerchantRepository;
-import com.petshop.repository.MerchantSettingsRepository;
+import com.petshop.exception.ResourceNotFoundException;
+import com.petshop.mapper.MerchantMapper;
+import com.petshop.mapper.MerchantSettingsMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -11,37 +13,43 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 
 @Service
 public class MerchantSettingsService {
     @Autowired
-    private MerchantSettingsRepository settingsRepository;
+    private MerchantSettingsMapper settingsRepository;
     @Autowired
-    private MerchantRepository merchantRepository;
+    private MerchantMapper merchantRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     public MerchantSettings getSettings(Integer merchantId) {
-        return settingsRepository.findByMerchantId(merchantId)
-                .orElseGet(() -> createDefaultSettings(merchantId));
+        LambdaQueryWrapper<MerchantSettings> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(MerchantSettings::getMerchantId, merchantId);
+        MerchantSettings settings = settingsRepository.selectOne(wrapper);
+        
+        if (settings == null) {
+            return createDefaultSettings(merchantId);
+        }
+        return settings;
     }
 
     @Transactional
     public MerchantSettings createDefaultSettings(Integer merchantId) {
-        Merchant merchant = merchantRepository.findById(merchantId).orElse(null);
+        Merchant merchant = merchantRepository.selectById(merchantId);
         if (merchant == null) {
             return null;
         }
         MerchantSettings settings = new MerchantSettings();
-        settings.setMerchant(merchant);
+        settings.setMerchantId(merchant.getId());
         settings.setIsOpen(true);
         settings.setAppointmentNotification(true);
         settings.setOrderNotification(true);
         settings.setReviewNotification(true);
         settings.setNotificationType("email");
-        return settingsRepository.save(settings);
+        settingsRepository.insert(settings);
+        return settings;
     }
 
     @Transactional
@@ -62,12 +70,13 @@ public class MerchantSettingsService {
         if (newSettings.getNotificationType() != null) {
             settings.setNotificationType(newSettings.getNotificationType());
         }
-        return settingsRepository.save(settings);
+        settingsRepository.updateById(settings);
+        return settings;
     }
 
     @Transactional
     public boolean changePassword(Integer merchantId, String oldPassword, String newPassword) {
-        Merchant merchant = merchantRepository.findById(merchantId).orElse(null);
+        Merchant merchant = merchantRepository.selectById(merchantId);
         if (merchant == null) {
             return false;
         }
@@ -75,33 +84,37 @@ public class MerchantSettingsService {
             return false;
         }
         merchant.setPassword(passwordEncoder.encode(newPassword));
-        merchantRepository.save(merchant);
+        merchantRepository.updateById(merchant);
         return true;
     }
 
     @Transactional
     public boolean bindPhone(Integer merchantId, String phone, String verifyCode) {
-        Merchant merchant = merchantRepository.findById(merchantId).orElse(null);
+        Merchant merchant = merchantRepository.selectById(merchantId);
         if (merchant == null) {
             return false;
         }
         merchant.setPhone(phone);
-        merchantRepository.save(merchant);
+        merchantRepository.updateById(merchant);
         return true;
     }
 
     @Transactional
     public boolean bindEmail(Integer merchantId, String email, String verifyCode) {
-        Merchant merchant = merchantRepository.findById(merchantId).orElse(null);
+        Merchant merchant = merchantRepository.selectById(merchantId);
         if (merchant == null) {
             return false;
         }
-        Optional<Merchant> existingMerchantOpt = merchantRepository.findByEmail(email);
-        if (existingMerchantOpt.isPresent() && !existingMerchantOpt.get().getId().equals(merchantId)) {
+        
+        LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Merchant::getEmail, email)
+               .ne(Merchant::getId, merchantId);
+        if (merchantRepository.selectCount(wrapper) > 0) {
             return false;
         }
+        
         merchant.setEmail(email);
-        merchantRepository.save(merchant);
+        merchantRepository.updateById(merchant);
         return true;
     }
 
@@ -113,7 +126,7 @@ public class MerchantSettingsService {
 
     public Map<String, Object> getSettingsOverview(Integer merchantId) {
         Map<String, Object> overview = new HashMap<>();
-        Merchant merchant = merchantRepository.findById(merchantId).orElse(null);
+        Merchant merchant = merchantRepository.selectById(merchantId);
         if (merchant == null) {
             return overview;
         }
@@ -139,7 +152,7 @@ public class MerchantSettingsService {
     public boolean toggleShopStatus(Integer merchantId) {
         MerchantSettings settings = getSettings(merchantId);
         settings.setIsOpen(!settings.getIsOpen());
-        settingsRepository.save(settings);
+        settingsRepository.updateById(settings);
         return settings.getIsOpen();
     }
 }

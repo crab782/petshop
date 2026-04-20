@@ -1,22 +1,25 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.petshop.entity.Category;
-import com.petshop.repository.CategoryRepository;
+import com.petshop.mapper.CategoryMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class CategoryService {
     @Autowired
-    private CategoryRepository categoryRepository;
+    private CategoryMapper categoryMapper;
 
     public Category create(Category category) {
-        if (categoryRepository.existsByMerchantIdAndName(category.getMerchantId(), category.getName())) {
+        Category existing = categoryMapper.selectOne(new LambdaQueryWrapper<Category>()
+                .eq(Category::getMerchantId, category.getMerchantId())
+                .eq(Category::getName, category.getName()));
+        if (existing != null) {
             throw new RuntimeException("分类名称已存在");
         }
         category.setCreatedAt(LocalDateTime.now());
@@ -30,15 +33,21 @@ public class CategoryService {
         if (category.getProductCount() == null) {
             category.setProductCount(0);
         }
-        return categoryRepository.save(category);
+        categoryMapper.insert(category);
+        return category;
     }
 
     public Category update(Category category) {
-        Category existingCategory = categoryRepository.findById(category.getId())
-                .orElseThrow(() -> new RuntimeException("分类不存在"));
+        Category existingCategory = categoryMapper.selectById(category.getId());
+        if (existingCategory == null) {
+            throw new RuntimeException("分类不存在");
+        }
         
         if (!existingCategory.getName().equals(category.getName())) {
-            if (categoryRepository.existsByMerchantIdAndName(category.getMerchantId(), category.getName())) {
+            Category duplicate = categoryMapper.selectOne(new LambdaQueryWrapper<Category>()
+                    .eq(Category::getMerchantId, category.getMerchantId())
+                    .eq(Category::getName, category.getName()));
+            if (duplicate != null) {
                 throw new RuntimeException("分类名称已存在");
             }
         }
@@ -49,82 +58,118 @@ public class CategoryService {
         existingCategory.setSort(category.getSort());
         existingCategory.setUpdatedAt(LocalDateTime.now());
         
-        return categoryRepository.save(existingCategory);
+        categoryMapper.updateById(existingCategory);
+        return existingCategory;
     }
 
     public Category findById(Integer id) {
-        return categoryRepository.findById(id).orElse(null);
+        return categoryMapper.selectById(id);
     }
 
     public List<Category> findByMerchantId(Integer merchantId) {
-        return categoryRepository.findByMerchantIdOrderBySortAsc(merchantId);
+        return categoryMapper.selectList(new LambdaQueryWrapper<Category>()
+                .eq(Category::getMerchantId, merchantId)
+                .orderByAsc(Category::getSort));
     }
 
     public List<Category> findByMerchantIdSorted(Integer merchantId) {
-        return categoryRepository.findByMerchantIdSorted(merchantId);
+        return categoryMapper.selectList(new LambdaQueryWrapper<Category>()
+                .eq(Category::getMerchantId, merchantId)
+                .orderByAsc(Category::getSort));
     }
 
     public List<Category> findByMerchantIdAndStatus(Integer merchantId, String status) {
-        return categoryRepository.findByMerchantIdAndStatus(merchantId, status);
+        return categoryMapper.selectList(new LambdaQueryWrapper<Category>()
+                .eq(Category::getMerchantId, merchantId)
+                .eq(Category::getStatus, status));
     }
 
     public List<Category> findAll() {
-        return categoryRepository.findAll();
+        return categoryMapper.selectList(null);
     }
 
     @Transactional
     public void delete(Integer id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("分类不存在"));
+        Category category = categoryMapper.selectById(id);
+        if (category == null) {
+            throw new RuntimeException("分类不存在");
+        }
         if (category.getProductCount() > 0) {
             throw new RuntimeException("该分类下存在商品，无法删除");
         }
-        categoryRepository.deleteById(id);
+        categoryMapper.deleteById(id);
     }
 
     @Transactional
     public Category toggleStatus(Integer id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("分类不存在"));
+        Category category = categoryMapper.selectById(id);
+        if (category == null) {
+            throw new RuntimeException("分类不存在");
+        }
         String newStatus = "enabled".equals(category.getStatus()) ? "disabled" : "enabled";
         category.setStatus(newStatus);
         category.setUpdatedAt(LocalDateTime.now());
-        return categoryRepository.save(category);
+        categoryMapper.updateById(category);
+        return category;
     }
 
     @Transactional
     public void batchDelete(List<Integer> ids) {
         for (Integer id : ids) {
-            Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("分类ID " + id + " 不存在"));
+            Category category = categoryMapper.selectById(id);
+            if (category == null) {
+                throw new RuntimeException("分类 ID " + id + " 不存在");
+            }
             if (category.getProductCount() > 0) {
                 throw new RuntimeException("分类 " + category.getName() + " 下存在商品，无法删除");
             }
         }
-        categoryRepository.deleteAllById(ids);
+        for (Integer id : ids) {
+            categoryMapper.deleteById(id);
+        }
     }
 
     @Transactional
     public int batchEnable(List<Integer> ids) {
-        return categoryRepository.batchUpdateStatus(ids, "enabled");
+        int count = 0;
+        for (Integer id : ids) {
+            Category category = categoryMapper.selectById(id);
+            if (category != null) {
+                category.setStatus("enabled");
+                categoryMapper.updateById(category);
+                count++;
+            }
+        }
+        return count;
     }
 
     @Transactional
     public int batchDisable(List<Integer> ids) {
-        return categoryRepository.batchUpdateStatus(ids, "disabled");
+        int count = 0;
+        for (Integer id : ids) {
+            Category category = categoryMapper.selectById(id);
+            if (category != null) {
+                category.setStatus("disabled");
+                categoryMapper.updateById(category);
+                count++;
+            }
+        }
+        return count;
     }
 
     @Transactional
     public void incrementProductCount(Integer categoryId) {
-        categoryRepository.updateProductCount(categoryId, 1);
+        categoryMapper.incrementProductCount(categoryId);
     }
 
     @Transactional
     public void decrementProductCount(Integer categoryId) {
-        categoryRepository.updateProductCount(categoryId, -1);
+        categoryMapper.decrementProductCount(categoryId);
     }
 
     public long countByMerchantIdAndStatus(Integer merchantId, String status) {
-        return categoryRepository.countByMerchantIdAndStatus(merchantId, status);
+        return categoryMapper.selectCount(new LambdaQueryWrapper<Category>()
+                .eq(Category::getMerchantId, merchantId)
+                .eq(Category::getStatus, status));
     }
 }

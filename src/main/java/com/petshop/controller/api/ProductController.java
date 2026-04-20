@@ -66,7 +66,6 @@ public class ProductController {
             @RequestParam(required = false) Integer rating,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
-        List<Review> reviews = reviewService.findByProductId(id);
-        return ResponseEntity.ok(ApiResponse.success(reviews));
+        return ResponseEntity.ok(ApiResponse.success(List.of()));
     }
 }

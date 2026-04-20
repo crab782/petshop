@@ -15,6 +15,7 @@ import com.petshop.service.ProductOrderService;
 import com.petshop.service.ReviewService;
 import com.petshop.service.UserHomeService;
 import com.petshop.service.FavoriteService;
+import com.petshop.service.NotificationService;
 import com.petshop.exception.UnauthorizedException;
 import com.petshop.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +54,8 @@ public class UserApiController {
     private UserHomeService userHomeService;
     @Autowired
     private FavoriteService favoriteService;
+    @Autowired
+    private NotificationService notificationService;
 
     @GetMapping("/profile")
     public ResponseEntity<User> getProfile(HttpSession session) {
@@ -175,12 +178,9 @@ public class UserApiController {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Page<AppointmentDTO> appointmentPage = appointmentService.findByUserIdWithFilters(
+        Map<String, Object> appointmentResult = appointmentService.findByUserIdWithFilters(
                 user.getId(), status, keyword, startDate, endDate, page, pageSize);
-        Map<String, Object> response = new HashMap<>();
-        response.put("data", appointmentPage.getContent());
-        response.put("total", appointmentPage.getTotalElements());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(appointmentResult);
     }
 
     @GetMapping("/appointments/{id}")
@@ -396,6 +396,7 @@ public class UserApiController {
     @GetMapping("/services")
     public ResponseEntity<Map<String, Object>> getServices(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int pageSize,
             HttpSession session) {
@@ -403,12 +404,9 @@ public class UserApiController {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        // 这里需要实现获取用户购买服务的业务逻辑
-        // 暂时返回空列表，实际实现需要查询数据库
-        Map<String, Object> response = new HashMap<>();
-        response.put("data", new ArrayList<>());
-        response.put("total", 0);
-        return ResponseEntity.ok(response);
+        Map<String, Object> serviceResult = appointmentService.findPurchasedServices(
+                user.getId(), keyword, status, page, pageSize);
+        return ResponseEntity.ok(serviceResult);
     }
 
     @GetMapping("/addresses")
@@ -563,7 +561,7 @@ public class UserApiController {
         }
 
         try {
-            Page<ReviewDTO> reviews = reviewService.findByUserIdWithPaging(user.getId(), rating, page, size);
+            com.baomidou.mybatisplus.extension.plugins.pagination.Page<ReviewDTO> reviews = reviewService.findByUserIdWithPaging(user.getId(), rating, page, size);
             return ResponseEntity.ok(ApiResponse.success(reviews));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -879,6 +877,137 @@ public class UserApiController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error(500, "检查收藏状态失败：" + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/notifications")
+    public ResponseEntity<ApiResponse<List<NotificationDTO>>> getNotifications(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Boolean isRead,
+            HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            List<NotificationDTO> notifications = notificationService.findByUserId(user.getId(), type, isRead);
+            return ResponseEntity.ok(ApiResponse.success(notifications));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "获取通知列表失败：" + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/notifications/{id}/read")
+    public ResponseEntity<ApiResponse<Void>> markNotificationAsRead(
+            @PathVariable Integer id,
+            HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            if (!notificationService.isOwner(id, user.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error(403, "无权操作此通知"));
+            }
+            notificationService.markAsRead(id);
+            return ResponseEntity.ok(ApiResponse.success("标记已读成功", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "标记已读失败：" + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/notifications/read-all")
+    public ResponseEntity<ApiResponse<Void>> markAllNotificationsAsRead(HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            notificationService.markAllAsRead(user.getId());
+            return ResponseEntity.ok(ApiResponse.success("全部标记已读成功", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "标记已读失败：" + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/notifications/batch-read")
+    public ResponseEntity<ApiResponse<Void>> batchMarkNotificationsAsRead(
+            @RequestBody BatchOperationRequest request,
+            HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            notificationService.markBatchAsRead(request.getIds(), user.getId());
+            return ResponseEntity.ok(ApiResponse.success("批量标记已读成功", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "批量标记已读失败：" + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/notifications/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteNotification(
+            @PathVariable Integer id,
+            HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            if (!notificationService.isOwner(id, user.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error(403, "无权删除此通知"));
+            }
+            notificationService.deleteNotification(id);
+            return ResponseEntity.ok(ApiResponse.success("删除通知成功", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "删除通知失败：" + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/notifications/batch")
+    public ResponseEntity<ApiResponse<Void>> batchDeleteNotifications(
+            @RequestBody BatchOperationRequest request,
+            HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            notificationService.deleteBatch(request.getIds(), user.getId());
+            return ResponseEntity.ok(ApiResponse.success("批量删除通知成功", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "批量删除通知失败：" + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/notifications/unread-count")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUnreadNotificationCount(HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            Map<String, Object> response = notificationService.getUnreadCountResponse(user.getId());
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "获取未读通知数量失败：" + e.getMessage()));
         }
     }
 }

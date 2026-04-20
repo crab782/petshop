@@ -38,11 +38,11 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
         controller = new AdminApiController();
         org.springframework.test.util.ReflectionTestUtils.setField(controller, "userService", userService);
         org.springframework.test.util.ReflectionTestUtils.setField(controller, "merchantService", merchantService);
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "userRepository", userRepository);
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "merchantRepository", merchantRepository);
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "appointmentRepository", appointmentRepository);
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "serviceRepository", serviceRepository);
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "announcementRepository", announcementRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "userMapper", userMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "merchantMapper", merchantMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "appointmentMapper", appointmentMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "serviceMapper", serviceMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "announcementMapper", announcementMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -53,10 +53,10 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
         @Test
         @DisplayName("成功获取仪表盘统计数据")
         void testGetDashboardStats_Success() throws Exception {
-            when(userRepository.count()).thenReturn(100L);
-            when(merchantRepository.count()).thenReturn(50L);
-            when(appointmentRepository.count()).thenReturn(500L);
-            when(serviceRepository.count()).thenReturn(200L);
+            when(userMapper.count()).thenReturn(100L);
+            when(merchantMapper.count()).thenReturn(50L);
+            when(appointmentMapper.count()).thenReturn(500L);
+            when(serviceMapper.count()).thenReturn(200L);
 
             var result = performGet("/api/admin/dashboard");
 
@@ -234,7 +234,7 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
             List<Announcement> announcements = Arrays.asList(announcement1, announcement2);
             Page<Announcement> announcementPage = new PageImpl<>(announcements, PageRequest.of(0, 10), 2);
 
-            when(announcementRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(announcementPage);
+            when(announcementMapper.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(announcementPage);
 
             var result = performGet("/api/admin/dashboard/announcements");
 

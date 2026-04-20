@@ -1,10 +1,13 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.petshop.dto.*;
 import com.petshop.entity.User;
 import com.petshop.entity.Merchant;
-import com.petshop.repository.UserRepository;
-import com.petshop.repository.MerchantRepository;
+import com.petshop.exception.BadRequestException;
+import com.petshop.exception.ResourceNotFoundException;
+import com.petshop.mapper.MerchantMapper;
+import com.petshop.mapper.UserMapper;
 import com.petshop.security.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,17 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 
 @Service
 public class AuthService {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userRepository;
 
     @Autowired
-    private MerchantRepository merchantRepository;
+    private MerchantMapper merchantRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -46,20 +48,21 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
-                .or(() -> userRepository.findByEmail(request.getUsername()))
-                .orElse(null);
+        String loginIdentifier = request.getLoginIdentifier();
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getPhone, loginIdentifier);
+        User user = userRepository.selectOne(wrapper);
 
         if (user == null) {
-            throw new RuntimeException("User not found");
+            throw new ResourceNotFoundException("User not found, please use phone number to login");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new BadRequestException("Invalid password");
         }
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(user.getPhone(), request.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
@@ -73,26 +76,28 @@ public class AuthService {
 
     @Transactional
     public LoginResponse register(RegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already in use");
+        if (request.getPhone() == null || request.getPhone().isEmpty()) {
+            throw new BadRequestException("Phone number is required");
         }
 
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already in use");
+        LambdaQueryWrapper<User> phoneWrapper = new LambdaQueryWrapper<>();
+        phoneWrapper.eq(User::getPhone, request.getPhone());
+        if (userRepository.selectCount(phoneWrapper) > 0) {
+            throw new BadRequestException("Phone number already registered");
         }
 
         User user = new User();
         user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
+        user.setEmail(request.getEmail() != null ? request.getEmail() : "");
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setPhone(request.getPhone() != null ? request.getPhone() : "");
+        user.setPhone(request.getPhone());
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
 
-        user = userRepository.save(user);
+        userRepository.insert(user);
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(user.getPhone(), request.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
@@ -106,14 +111,11 @@ public class AuthService {
 
     @Transactional
     public Map<String, String> merchantRegister(MerchantRegisterRequest request) {
-        if (merchantRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already in use");
+        LambdaQueryWrapper<Merchant> emailWrapper = new LambdaQueryWrapper<>();
+        emailWrapper.eq(Merchant::getEmail, request.getEmail());
+        if (merchantRepository.selectCount(emailWrapper) > 0) {
+            throw new BadRequestException("Email already in use");
         }
-
-        // 暂时注释掉用户名检查，因为 MerchantRepository 中没有 findByUsername 方法
-        // if (merchantRepository.findByUsername(request.getUsername()).isPresent()) {
-        //     throw new RuntimeException("Username already in use");
-        // }
 
         Merchant merchant = new Merchant();
         merchant.setName(request.getName());
@@ -121,14 +123,13 @@ public class AuthService {
         merchant.setPassword(passwordEncoder.encode(request.getPassword()));
         merchant.setPhone(request.getPhone());
         merchant.setContactPerson(request.getContact_person());
-        merchant.setName(request.getName());
         merchant.setLogo(request.getLogo() != null ? request.getLogo() : "");
         merchant.setAddress(request.getAddress());
         merchant.setStatus("pending");
         merchant.setCreatedAt(LocalDateTime.now());
         merchant.setUpdatedAt(LocalDateTime.now());
 
-        merchantRepository.save(merchant);
+        merchantRepository.insert(merchant);
 
         Map<String, String> result = new HashMap<>();
         result.put("message", "Merchant registration successful. Please wait for admin approval.");
@@ -142,14 +143,16 @@ public class AuthService {
     public UserDTO getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("Not authenticated");
+            throw new BadRequestException("Not authenticated");
         }
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String email = userDetails.getUsername();
+        String phone = userDetails.getUsername();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.selectOne(new LambdaQueryWrapper<User>().eq(User::getPhone, phone));
+        if (user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
 
         return convertToDTO(user);
     }
@@ -158,32 +161,32 @@ public class AuthService {
     public UserDTO updateUserInfo(UserDTO userDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("Not authenticated");
+            throw new BadRequestException("Not authenticated");
         }
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String email = userDetails.getUsername();
+        String phone = userDetails.getUsername();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.selectOne(new LambdaQueryWrapper<User>().eq(User::getPhone, phone));
+        if (user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
 
         if (userDTO.getUsername() != null && !userDTO.getUsername().isEmpty()) {
-            Optional<User> existingUser = userRepository.findByUsername(userDTO.getUsername());
-            if (existingUser.isPresent() && !existingUser.get().getId().equals(user.getId())) {
-                throw new RuntimeException("Username already in use");
-            }
             user.setUsername(userDTO.getUsername());
         }
 
         if (userDTO.getEmail() != null && !userDTO.getEmail().isEmpty()) {
-            Optional<User> existingUser = userRepository.findByEmail(userDTO.getEmail());
-            if (existingUser.isPresent() && !existingUser.get().getId().equals(user.getId())) {
-                throw new RuntimeException("Email already in use");
-            }
             user.setEmail(userDTO.getEmail());
         }
 
-        if (userDTO.getPhone() != null) {
+        if (userDTO.getPhone() != null && !userDTO.getPhone().isEmpty()) {
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getPhone, userDTO.getPhone())
+                   .ne(User::getId, user.getId());
+            if (userRepository.selectCount(wrapper) > 0) {
+                throw new BadRequestException("Phone number already in use");
+            }
             user.setPhone(userDTO.getPhone());
         }
 
@@ -192,7 +195,7 @@ public class AuthService {
         }
 
         user.setUpdatedAt(LocalDateTime.now());
-        user = userRepository.save(user);
+        userRepository.updateById(user);
 
         return convertToDTO(user);
     }
@@ -201,14 +204,16 @@ public class AuthService {
     public Map<String, Object> changePassword(ChangePasswordRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("Not authenticated");
+            throw new BadRequestException("Not authenticated");
         }
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String email = userDetails.getUsername();
+        String phone = userDetails.getUsername();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.selectOne(new LambdaQueryWrapper<User>().eq(User::getPhone, phone));
+        if (user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             Map<String, Object> result = new HashMap<>();
@@ -226,7 +231,7 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
+        userRepository.updateById(user);
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
@@ -236,7 +241,7 @@ public class AuthService {
 
     public void sendVerifyCode(SendVerifyCodeRequest request) {
         if (request.getEmail() == null || request.getEmail().isEmpty()) {
-            throw new RuntimeException("Email is required");
+            throw new BadRequestException("Email is required");
         }
 
         String verifyCode = generateVerifyCode();
@@ -249,36 +254,38 @@ public class AuthService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         if (request.getEmail() == null || request.getEmail().isEmpty()) {
-            throw new RuntimeException("Email is required");
+            throw new BadRequestException("Email is required");
         }
 
         if (request.getVerifyCode() == null || request.getVerifyCode().isEmpty()) {
-            throw new RuntimeException("Verification code is required");
+            throw new BadRequestException("Verification code is required");
         }
 
         if (request.getPassword() == null || request.getPassword().length() < 6) {
-            throw new RuntimeException("Password must be at least 6 characters");
+            throw new BadRequestException("Password must be at least 6 characters");
         }
 
         String storedCode = verifyCodeStore.get(request.getEmail());
         Long expiryTime = verifyCodeExpiry.get(request.getEmail());
 
         if (storedCode == null || !storedCode.equals(request.getVerifyCode())) {
-            throw new RuntimeException("Invalid verification code");
+            throw new BadRequestException("Invalid verification code");
         }
 
         if (expiryTime == null || System.currentTimeMillis() > expiryTime) {
             verifyCodeStore.remove(request.getEmail());
             verifyCodeExpiry.remove(request.getEmail());
-            throw new RuntimeException("Verification code has expired");
+            throw new BadRequestException("Verification code has expired");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.selectOne(new LambdaQueryWrapper<User>().eq(User::getEmail, request.getEmail()));
+        if (user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
 
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
+        userRepository.updateById(user);
 
         verifyCodeStore.remove(request.getEmail());
         verifyCodeExpiry.remove(request.getEmail());

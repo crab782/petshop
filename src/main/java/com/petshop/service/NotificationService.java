@@ -1,8 +1,9 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.petshop.dto.NotificationDTO;
 import com.petshop.entity.Notification;
-import com.petshop.repository.NotificationRepository;
+import com.petshop.mapper.NotificationMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,28 +15,28 @@ import java.util.stream.Collectors;
 @Service
 public class NotificationService {
     @Autowired
-    private NotificationRepository notificationRepository;
+    private NotificationMapper notificationMapper;
 
     public List<NotificationDTO> findByUserId(Integer userId, String type, Boolean isRead) {
-        List<Notification> notifications;
-
-        if (type != null && isRead != null) {
-            notifications = notificationRepository.findByUserIdAndTypeAndIsReadOrderByCreatedAtDesc(userId, type, isRead);
-        } else if (type != null) {
-            notifications = notificationRepository.findByUserIdAndTypeOrderByCreatedAtDesc(userId, type);
-        } else if (isRead != null) {
-            notifications = notificationRepository.findByUserIdAndIsReadOrderByCreatedAtDesc(userId, isRead);
-        } else {
-            notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<Notification>()
+                .eq(Notification::getUserId, userId)
+                .orderByDesc(Notification::getCreatedAt);
+        
+        if (type != null && !type.isEmpty()) {
+            wrapper.eq(Notification::getType, type);
         }
-
+        if (isRead != null) {
+            wrapper.eq(Notification::getIsRead, isRead);
+        }
+        
+        List<Notification> notifications = notificationMapper.selectList(wrapper);
         return notifications.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     public Notification findById(Integer id) {
-        return notificationRepository.findById(id).orElse(null);
+        return notificationMapper.selectById(id);
     }
 
     public boolean isOwner(Integer notificationId, Integer userId) {
@@ -45,39 +46,46 @@ public class NotificationService {
 
     @Transactional
     public void markAsRead(Integer id) {
-        Notification notification = notificationRepository.findById(id).orElse(null);
+        Notification notification = notificationMapper.selectById(id);
         if (notification != null) {
             notification.setIsRead(true);
-            notificationRepository.save(notification);
+            notificationMapper.updateById(notification);
         }
     }
 
     @Transactional
     public void markAllAsRead(Integer userId) {
-        notificationRepository.markAllAsReadByUserId(userId);
+        notificationMapper.markAllAsReadByUserId(userId);
     }
 
     @Transactional
     public void markBatchAsRead(List<Integer> ids, Integer userId) {
         if (ids != null && !ids.isEmpty()) {
-            notificationRepository.markAsReadByIds(ids, userId);
+            notificationMapper.markAsReadByIds(ids, userId);
         }
     }
 
     @Transactional
     public void deleteNotification(Integer id) {
-        notificationRepository.deleteById(id);
+        notificationMapper.deleteById(id);
     }
 
     @Transactional
     public void deleteBatch(List<Integer> ids, Integer userId) {
         if (ids != null && !ids.isEmpty()) {
-            notificationRepository.deleteByUserIdAndIdIn(userId, ids);
+            for (Integer id : ids) {
+                Notification notification = notificationMapper.selectById(id);
+                if (notification != null && notification.getUserId().equals(userId)) {
+                    notificationMapper.deleteById(id);
+                }
+            }
         }
     }
 
     public long getUnreadCount(Integer userId) {
-        return notificationRepository.countByUserIdAndIsRead(userId, false);
+        return notificationMapper.selectCount(new LambdaQueryWrapper<Notification>()
+                .eq(Notification::getUserId, userId)
+                .eq(Notification::getIsRead, false));
     }
 
     public Map<String, Object> getUnreadCountResponse(Integer userId) {

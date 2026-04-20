@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.mapper.AppointmentMapper">
+
+    <!-- 结果映射：Appointment 带所有关联 -->
+    <resultMap id="AppointmentWithRelationsMap" type="com.petshop.entity.Appointment">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="merchantId" column="merchant_id"/>
+        <result property="serviceId" column="service_id"/>
+        <result property="petId" column="pet_id"/>
+        <result property="appointmentTime" column="appointment_time"/>
+        <result property="status" column="status"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="notes" column="notes"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        
+        <!-- User 关联 -->
+        <association property="user" javaType="com.petshop.entity.User">
+            <id property="id" column="user_id"/>
+            <result property="username" column="user_username"/>
+            <result property="email" column="user_email"/>
+            <result property="phone" column="user_phone"/>
+            <result property="avatar" column="user_avatar"/>
+            <result property="status" column="user_status"/>
+        </association>
+        
+        <!-- Service 关联 -->
+        <association property="service" javaType="com.petshop.entity.Service">
+            <id property="id" column="service_id"/>
+            <result property="merchantId" column="service_merchant_id"/>
+            <result property="name" column="service_name"/>
+            <result property="description" column="service_description"/>
+            <result property="price" column="service_price"/>
+            <result property="duration" column="service_duration"/>
+            <result property="image" column="service_image"/>
+            <result property="status" column="service_status"/>
+        </association>
+        
+        <!-- Merchant 关联 -->
+        <association property="merchant" javaType="com.petshop.entity.Merchant">
+            <id property="id" column="merchant_id"/>
+            <result property="name" column="merchant_name"/>
+            <result property="contactPerson" column="merchant_contact_person"/>
+            <result property="phone" column="merchant_phone"/>
+            <result property="email" column="merchant_email"/>
+            <result property="address" column="merchant_address"/>
+            <result property="logo" column="merchant_logo"/>
+            <result property="status" column="merchant_status"/>
+        </association>
+        
+        <!-- Pet 关联 -->
+        <association property="pet" javaType="com.petshop.entity.Pet">
+            <id property="id" column="pet_id"/>
+            <result property="userId" column="pet_user_id"/>
+            <result property="name" column="pet_name"/>
+            <result property="type" column="pet_type"/>
+            <result property="breed" column="pet_breed"/>
+            <result property="age" column="pet_age"/>
+            <result property="gender" column="pet_gender"/>
+            <result property="avatar" column="pet_avatar"/>
+            <result property="description" column="pet_description"/>
+        </association>
+    </resultMap>
+
+    <!-- 根据ID查询预约，同时加载所有关联信息 -->
+    <select id="selectByIdWithRelations" resultMap="AppointmentWithRelationsMap">
+        SELECT
+            a.*,
+            u.id as user_id,
+            u.username as user_username,
+            u.email as user_email,
+            u.phone as user_phone,
+            u.avatar as user_avatar,
+            u.status as user_status,
+            s.id as service_id,
+            s.merchant_id as service_merchant_id,
+            s.name as service_name,
+            s.description as service_description,
+            s.price as service_price,
+            s.duration as service_duration,
+            s.image as service_image,
+            s.status as service_status,
+            m.id as merchant_id,
+            m.name as merchant_name,
+            m.contact_person as merchant_contact_person,
+            m.phone as merchant_phone,
+            m.email as merchant_email,
+            m.address as merchant_address,
+            m.logo as merchant_logo,
+            m.status as merchant_status,
+            p.id as pet_id,
+            p.user_id as pet_user_id,
+            p.name as pet_name,
+            p.type as pet_type,
+            p.breed as pet_breed,
+            p.age as pet_age,
+            p.gender as pet_gender,
+            p.avatar as pet_avatar,
+            p.description as pet_description
+        FROM appointment a
+        LEFT JOIN user u ON a.user_id = u.id
+        LEFT JOIN service s ON a.service_id = s.id
+        LEFT JOIN merchant m ON a.merchant_id = m.id
+        LEFT JOIN pet p ON a.pet_id = p.id
+        WHERE a.id = #{id}
+    </select>
+
+</mapper>

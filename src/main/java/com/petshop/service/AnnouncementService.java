@@ -1,11 +1,12 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.dto.AnnouncementDTO;
 import com.petshop.entity.Announcement;
-import com.petshop.repository.AnnouncementRepository;
+import com.petshop.mapper.AnnouncementMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,31 +17,38 @@ import java.util.stream.Collectors;
 @Service
 public class AnnouncementService {
     @Autowired
-    private AnnouncementRepository announcementRepository;
+    private AnnouncementMapper announcementMapper;
 
     public List<AnnouncementDTO> findAllPublished() {
-        List<Announcement> announcements = announcementRepository.findByStatus("published");
+        List<Announcement> announcements = announcementMapper.selectList(
+                new LambdaQueryWrapper<Announcement>().eq(Announcement::getStatus, "published"));
         return announcements.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
     public AnnouncementDTO findById(Integer id) {
-        return announcementRepository.findById(id)
-                .map(this::toDTO)
-                .orElse(null);
+        Announcement announcement = announcementMapper.selectById(id);
+        return announcement != null ? toDTO(announcement) : null;
     }
     
     public Announcement findEntityById(Integer id) {
-        return announcementRepository.findById(id).orElse(null);
+        return announcementMapper.selectById(id);
     }
     
-    public Page<Announcement> findAll(Pageable pageable) {
-        return announcementRepository.findAllByOrderByCreatedAtDesc(pageable);
+    public org.springframework.data.domain.Page<Announcement> findAll(org.springframework.data.domain.Pageable pageable) {
+        Page<Announcement> page = new Page<>(pageable.getPageNumber() + 1, pageable.getPageSize());
+        Page<Announcement> result = announcementMapper.selectPage(page, new LambdaQueryWrapper<Announcement>()
+                .orderByDesc(Announcement::getCreatedAt));
+        return new PageImpl<>(result.getRecords(), pageable, result.getTotal());
     }
     
-    public Page<Announcement> findByStatus(String status, Pageable pageable) {
-        return announcementRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+    public org.springframework.data.domain.Page<Announcement> findByStatus(String status, org.springframework.data.domain.Pageable pageable) {
+        Page<Announcement> page = new Page<>(pageable.getPageNumber() + 1, pageable.getPageSize());
+        Page<Announcement> result = announcementMapper.selectPage(page, new LambdaQueryWrapper<Announcement>()
+                .eq(Announcement::getStatus, status)
+                .orderByDesc(Announcement::getCreatedAt));
+        return new PageImpl<>(result.getRecords(), pageable, result.getTotal());
     }
     
     @Transactional
@@ -48,43 +56,55 @@ public class AnnouncementService {
         if (announcement.getStatus() == null || announcement.getStatus().isEmpty()) {
             announcement.setStatus("draft");
         }
-        return announcementRepository.save(announcement);
+        announcementMapper.insert(announcement);
+        return announcement;
     }
     
     @Transactional
     public Announcement update(Integer id, Announcement announcement) {
-        Announcement existingAnnouncement = announcementRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Announcement not found with id: " + id));
+        Announcement existingAnnouncement = announcementMapper.selectById(id);
+        if (existingAnnouncement == null) {
+            throw new IllegalArgumentException("Announcement not found with id: " + id);
+        }
         
         existingAnnouncement.setTitle(announcement.getTitle());
         existingAnnouncement.setContent(announcement.getContent());
         
-        return announcementRepository.save(existingAnnouncement);
+        announcementMapper.updateById(existingAnnouncement);
+        return existingAnnouncement;
     }
     
     @Transactional
     public Announcement publish(Integer id) {
-        Announcement announcement = announcementRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Announcement not found with id: " + id));
+        Announcement announcement = announcementMapper.selectById(id);
+        if (announcement == null) {
+            throw new IllegalArgumentException("Announcement not found with id: " + id);
+        }
         
         announcement.setStatus("published");
-        return announcementRepository.save(announcement);
+        announcementMapper.updateById(announcement);
+        return announcement;
     }
     
     @Transactional
     public Announcement unpublish(Integer id) {
-        Announcement announcement = announcementRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Announcement not found with id: " + id));
+        Announcement announcement = announcementMapper.selectById(id);
+        if (announcement == null) {
+            throw new IllegalArgumentException("Announcement not found with id: " + id);
+        }
         
         announcement.setStatus("draft");
-        return announcementRepository.save(announcement);
+        announcementMapper.updateById(announcement);
+        return announcement;
     }
     
     @Transactional
     public void delete(Integer id) {
-        Announcement announcement = announcementRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Announcement not found with id: " + id));
-        announcementRepository.delete(announcement);
+        Announcement announcement = announcementMapper.selectById(id);
+        if (announcement == null) {
+            throw new IllegalArgumentException("Announcement not found with id: " + id);
+        }
+        announcementMapper.deleteById(id);
     }
     
     @Transactional
@@ -92,7 +112,16 @@ public class AnnouncementService {
         if (ids == null || ids.isEmpty()) {
             throw new IllegalArgumentException("Announcement IDs cannot be empty");
         }
-        return announcementRepository.batchUpdateStatus(ids, "published");
+        int count = 0;
+        for (Integer id : ids) {
+            Announcement announcement = announcementMapper.selectById(id);
+            if (announcement != null) {
+                announcement.setStatus("published");
+                announcementMapper.updateById(announcement);
+                count++;
+            }
+        }
+        return count;
     }
     
     @Transactional
@@ -100,7 +129,16 @@ public class AnnouncementService {
         if (ids == null || ids.isEmpty()) {
             throw new IllegalArgumentException("Announcement IDs cannot be empty");
         }
-        return announcementRepository.batchUpdateStatus(ids, "draft");
+        int count = 0;
+        for (Integer id : ids) {
+            Announcement announcement = announcementMapper.selectById(id);
+            if (announcement != null) {
+                announcement.setStatus("draft");
+                announcementMapper.updateById(announcement);
+                count++;
+            }
+        }
+        return count;
     }
     
     @Transactional
@@ -108,7 +146,14 @@ public class AnnouncementService {
         if (ids == null || ids.isEmpty()) {
             throw new IllegalArgumentException("Announcement IDs cannot be empty");
         }
-        return announcementRepository.batchDelete(ids);
+        int count = 0;
+        for (Integer id : ids) {
+            if (announcementMapper.selectById(id) != null) {
+                announcementMapper.deleteById(id);
+                count++;
+            }
+        }
+        return count;
     }
 
     private AnnouncementDTO toDTO(Announcement announcement) {

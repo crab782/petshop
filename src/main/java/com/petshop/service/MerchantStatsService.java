@@ -1,11 +1,12 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.petshop.entity.Appointment;
 import com.petshop.entity.ProductOrder;
 import com.petshop.entity.Review;
-import com.petshop.repository.AppointmentRepository;
-import com.petshop.repository.ProductOrderRepository;
-import com.petshop.repository.ReviewRepository;
+import com.petshop.mapper.AppointmentMapper;
+import com.petshop.mapper.ProductOrderMapper;
+import com.petshop.mapper.ReviewMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,33 +19,41 @@ import java.util.*;
 @Service
 public class MerchantStatsService {
     @Autowired
-    private AppointmentRepository appointmentRepository;
+    private AppointmentMapper appointmentMapper;
     @Autowired
-    private ProductOrderRepository productOrderRepository;
+    private ProductOrderMapper productOrderMapper;
     @Autowired
-    private ReviewRepository reviewRepository;
+    private ReviewMapper reviewMapper;
 
     public Map<String, Object> getDashboardStats(Integer merchantId) {
         Map<String, Object> stats = new HashMap<>();
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
-        List<Appointment> todayAppointments = appointmentRepository.findAll().stream()
-                .filter(a -> a.getMerchant().getId().equals(merchantId))
+        
+        LambdaQueryWrapper<Appointment> todayWrapper = new LambdaQueryWrapper<>();
+        todayWrapper.eq(Appointment::getMerchantId, merchantId);
+        List<Appointment> allAppointments = appointmentMapper.selectList(todayWrapper);
+        List<Appointment> todayAppointments = allAppointments.stream()
                 .filter(a -> a.getAppointmentTime() != null)
                 .filter(a -> !a.getAppointmentTime().isBefore(todayStart) && !a.getAppointmentTime().isAfter(todayEnd))
                 .toList();
         stats.put("todayAppointments", todayAppointments.size());
-        long pendingAppointments = appointmentRepository.findAll().stream()
-                .filter(a -> a.getMerchant().getId().equals(merchantId))
-                .filter(a -> "pending".equals(a.getStatus()))
-                .count();
+        
+        LambdaQueryWrapper<Appointment> pendingWrapper = new LambdaQueryWrapper<>();
+        pendingWrapper.eq(Appointment::getMerchantId, merchantId)
+                     .eq(Appointment::getStatus, "pending");
+        long pendingAppointments = appointmentMapper.selectCount(pendingWrapper);
         stats.put("pendingAppointments", pendingAppointments);
+        
         BigDecimal todayRevenue = todayAppointments.stream()
                 .filter(a -> "completed".equals(a.getStatus()))
                 .map(a -> a.getTotalPrice() != null ? a.getTotalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<ProductOrder> todayOrders = productOrderRepository.findAll().stream()
-                .filter(o -> o.getMerchant().getId().equals(merchantId))
+        
+        LambdaQueryWrapper<ProductOrder> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.eq(ProductOrder::getMerchantId, merchantId);
+        List<ProductOrder> allOrders = productOrderMapper.selectList(orderWrapper);
+        List<ProductOrder> todayOrders = allOrders.stream()
                 .filter(o -> o.getCreatedAt() != null)
                 .filter(o -> !o.getCreatedAt().isBefore(todayStart) && !o.getCreatedAt().isAfter(todayEnd))
                 .toList();
@@ -53,9 +62,13 @@ public class MerchantStatsService {
                 .map(o -> o.getTotalPrice() != null ? o.getTotalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         stats.put("todayRevenue", todayRevenue.add(todayProductRevenue));
-        Double avgRating = reviewRepository.getAverageRatingByMerchantId(merchantId);
+        
+        Double avgRating = reviewMapper.getAverageRatingByMerchantId(merchantId);
         stats.put("avgRating", avgRating != null ? Math.round(avgRating * 10) / 10.0 : 0.0);
-        stats.put("totalReviews", reviewRepository.countByMerchantId(merchantId));
+        
+        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
+        reviewWrapper.eq(Review::getMerchantId, merchantId);
+        stats.put("totalReviews", reviewMapper.selectCount(reviewWrapper));
         return stats;
     }
 
@@ -63,13 +76,19 @@ public class MerchantStatsService {
         Map<String, Object> result = new HashMap<>();
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(LocalTime.MAX);
-        List<Appointment> appointments = appointmentRepository.findAll().stream()
-                .filter(a -> a.getMerchant().getId().equals(merchantId))
+        
+        LambdaQueryWrapper<Appointment> apptWrapper = new LambdaQueryWrapper<>();
+        apptWrapper.eq(Appointment::getMerchantId, merchantId);
+        List<Appointment> allAppointments = appointmentMapper.selectList(apptWrapper);
+        List<Appointment> appointments = allAppointments.stream()
                 .filter(a -> a.getCreatedAt() != null)
                 .filter(a -> !a.getCreatedAt().isBefore(start) && !a.getCreatedAt().isAfter(end))
                 .toList();
-        List<ProductOrder> orders = productOrderRepository.findAll().stream()
-                .filter(o -> o.getMerchant().getId().equals(merchantId))
+        
+        LambdaQueryWrapper<ProductOrder> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.eq(ProductOrder::getMerchantId, merchantId);
+        List<ProductOrder> allOrders = productOrderMapper.selectList(orderWrapper);
+        List<ProductOrder> orders = allOrders.stream()
                 .filter(o -> o.getCreatedAt() != null)
                 .filter(o -> !o.getCreatedAt().isBefore(start) && !o.getCreatedAt().isAfter(end))
                 .toList();
@@ -116,8 +135,11 @@ public class MerchantStatsService {
         Map<String, Object> result = new HashMap<>();
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(LocalTime.MAX);
-        List<Appointment> appointments = appointmentRepository.findAll().stream()
-                .filter(a -> a.getMerchant().getId().equals(merchantId))
+        
+        LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Appointment::getMerchantId, merchantId);
+        List<Appointment> allAppointments = appointmentMapper.selectList(wrapper);
+        List<Appointment> appointments = allAppointments.stream()
                 .filter(a -> a.getAppointmentTime() != null)
                 .filter(a -> !a.getAppointmentTime().isBefore(start) && !a.getAppointmentTime().isAfter(end))
                 .toList();
@@ -198,14 +220,16 @@ public class MerchantStatsService {
     }
 
     public List<Review> getRecentReviews(Integer merchantId, int limit) {
-        return reviewRepository.findRecentReviewsByMerchantId(merchantId, limit);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getMerchantId, merchantId)
+               .orderByDesc(Review::getCreatedAt);
+        return reviewMapper.selectList(wrapper);
     }
 
     public List<Appointment> getRecentAppointments(Integer merchantId, int limit) {
-        return appointmentRepository.findAll().stream()
-                .filter(a -> a.getMerchant().getId().equals(merchantId))
-                .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt()))
-                .limit(limit)
-                .toList();
+        LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Appointment::getMerchantId, merchantId)
+               .orderByDesc(Appointment::getCreatedAt);
+        return appointmentMapper.selectList(wrapper);
     }
 }

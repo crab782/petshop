@@ -61,7 +61,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/", "/login", "/login.html", "/register", "/register.html", "/register/user", "/register/merchant", "/index.html", "/admin-dashboard.html", "/user-dashboard.html", "/merchant-dashboard.html", "/merchant-add-service.html", "/user-add-pet.html", "/service-*.html", "/static/**").permitAll()
+                .requestMatchers("/", "/login", "/login.html", "/register", "/register.html", "/register/user", "/register/merchant", "/index.html", "/admin-dashboard.html", "/user-dashboard.html", "/merchant-dashboard.html", "/merchant-add-service.html", "/user-add-pet.html", "/service-*.html").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/webjars/**").permitAll()
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout").permitAll()
                 .requestMatchers("/api/auth/sendVerifyCode", "/api/auth/resetPassword").permitAll()

@@ -4,14 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.User;
 import com.petshop.factory.TestDataFactory;
-import com.petshop.repository.AnnouncementRepository;
-import com.petshop.repository.AppointmentRepository;
-import com.petshop.repository.MerchantRepository;
-import com.petshop.repository.ProductRepository;
-import com.petshop.repository.ServiceRepository;
-import com.petshop.repository.SystemConfigRepository;
-import com.petshop.repository.SystemSettingsRepository;
-import com.petshop.repository.UserRepository;
+import com.petshop.mapper.AnnouncementMapper;
+import com.petshop.mapper.AppointmentMapper;
+import com.petshop.mapper.MerchantMapper;
+import com.petshop.mapper.ProductMapper;
+import com.petshop.mapper.ServiceMapper;
+import com.petshop.mapper.SystemConfigMapper;
+import com.petshop.mapper.SystemSettingsMapper;
+import com.petshop.mapper.UserMapper;
 import com.petshop.service.ActivityService;
 import com.petshop.service.MerchantService;
 import com.petshop.service.ProductService;
@@ -69,28 +69,28 @@ public abstract class AdminApiControllerTestBase {
     protected ScheduledTaskService scheduledTaskService;
 
     @Mock
-    protected UserRepository userRepository;
+    protected UserMapper userMapper;
 
     @Mock
-    protected MerchantRepository merchantRepository;
+    protected MerchantMapper merchantMapper;
 
     @Mock
-    protected AppointmentRepository appointmentRepository;
+    protected AppointmentMapper appointmentMapper;
 
     @Mock
-    protected ServiceRepository serviceRepository;
+    protected ServiceMapper serviceMapper;
 
     @Mock
-    protected AnnouncementRepository announcementRepository;
+    protected AnnouncementMapper announcementMapper;
 
     @Mock
-    protected ProductRepository productRepository;
+    protected ProductMapper productMapper;
 
     @Mock
-    protected SystemConfigRepository systemConfigRepository;
+    protected SystemConfigMapper systemConfigMapper;
 
     @Mock
-    protected SystemSettingsRepository systemSettingsRepository;
+    protected SystemSettingsMapper systemSettingsMapper;
 
     protected User testAdmin;
     protected Merchant testMerchant;

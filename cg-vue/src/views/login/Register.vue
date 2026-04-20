@@ -43,8 +43,8 @@ const registerRules = {
     { validator: validateConfirmPassword, trigger: 'blur' }
   ],
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+    { required: true, message: '请输入手机号（必填且唯一）', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号格式', trigger: 'blur' }
   ]
 }
 
@@ -108,7 +108,7 @@ const goToLogin = () => {
       >
         <el-form-item prop="username">
           <template #label>
-            <span class="form-label">用户名</span>
+            <span class="form-label">用户名 <span class="hint-text">(可重复)</span></span>
           </template>
           <el-input
             v-model="registerForm.username"
@@ -120,7 +120,7 @@ const goToLogin = () => {
 
         <el-form-item prop="email">
           <template #label>
-            <span class="form-label">邮箱</span>
+            <span class="form-label">邮箱 <span class="hint-text">(可重复)</span></span>
           </template>
           <el-input
             v-model="registerForm.email"
@@ -132,11 +132,11 @@ const goToLogin = () => {
 
         <el-form-item prop="phone">
           <template #label>
-            <span class="form-label">手机号</span>
+            <span class="form-label">手机号 <span class="required-hint">(必填且唯一)</span></span>
           </template>
           <el-input
             v-model="registerForm.phone"
-            placeholder="请输入手机号"
+            placeholder="请输入11位手机号"
             :prefix-icon="Phone"
             size="large"
           />
@@ -289,6 +289,18 @@ const goToLogin = () => {
   display: block;
   font-size: 14px;
   margin-bottom: 8px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: #999;
+  font-weight: normal;
+}
+
+.required-hint {
+  font-size: 12px;
+  color: #f56c6c;
+  font-weight: normal;
 }
 
 /* 表单输入 */

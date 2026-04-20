@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.mapper.ProductMapper">
+
+    <!-- 结果映射：Product 带 Merchant -->
+    <resultMap id="ProductWithMerchantMap" type="com.petshop.entity.Product">
+        <id property="id" column="id"/>
+        <result property="merchantId" column="merchant_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="price" column="price"/>
+        <result property="stock" column="stock"/>
+        <result property="image" column="image"/>
+        <result property="status" column="status"/>
+        <result property="lowStockThreshold" column="low_stock_threshold"/>
+        <result property="category" column="category"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="merchant" javaType="com.petshop.entity.Merchant">
+            <id property="id" column="merchant_id"/>
+            <result property="name" column="merchant_name"/>
+            <result property="contactPerson" column="merchant_contact_person"/>
+            <result property="phone" column="merchant_phone"/>
+            <result property="email" column="merchant_email"/>
+            <result property="address" column="merchant_address"/>
+            <result property="logo" column="merchant_logo"/>
+            <result property="status" column="merchant_status"/>
+            <result property="createdAt" column="merchant_created_at"/>
+            <result property="updatedAt" column="merchant_updated_at"/>
+        </association>
+    </resultMap>
+
+    <!-- 根据ID查询商品，同时加载商家信息 -->
+    <select id="selectByIdWithMerchant" resultMap="ProductWithMerchantMap">
+        SELECT
+            p.*,
+            m.id as merchant_id,
+            m.name as merchant_name,
+            m.contact_person as merchant_contact_person,
+            m.phone as merchant_phone,
+            m.email as merchant_email,
+            m.address as merchant_address,
+            m.logo as merchant_logo,
+            m.status as merchant_status,
+            m.created_at as merchant_created_at,
+            m.updated_at as merchant_updated_at
+        FROM product p
+        LEFT JOIN merchant m ON p.merchant_id = m.id
+        WHERE p.id = #{id}
+    </select>
+
+</mapper>

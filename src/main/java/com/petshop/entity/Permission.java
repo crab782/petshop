@@ -1,26 +1,44 @@
 package com.petshop.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
+
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
-@Entity
-@Table(name = "permission")
-public class Permission {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@EqualsAndHashCode(callSuper = false)
+@Accessors(chain = true)
+@TableName("permission")
+public class Permission implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-    
-    @Column(name = "name", length = 100, nullable = false)
+
+    @TableField("name")
     private String name;
-    
-    @Column(name = "code", length = 100, nullable = false, unique = true)
+
+    @TableField("code")
     private String code;
-    
-    @Column(name = "description", length = 255)
+
+    @TableField("description")
     private String description;
-    
-    @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+    
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -401,8 +401,8 @@ public final class TestDataFactory {
 
         ProductOrder order = new ProductOrder();
         order.setId(1);
-        order.setUser(user);
-        order.setMerchant(merchant);
+        order.setUserId(user.getId());
+        order.setMerchantId(merchant.getId());
         order.setTotalPrice(DEFAULT_PRODUCT_PRICE);
         order.setStatus("pending");
         order.setShippingAddress("测试收货地址");
@@ -428,8 +428,8 @@ public final class TestDataFactory {
                                                   BigDecimal totalPrice, String status, String shippingAddress) {
         ProductOrder order = new ProductOrder();
         order.setId(id);
-        order.setUser(user);
-        order.setMerchant(merchant);
+        order.setUserId(user.getId());
+        order.setMerchantId(merchant.getId());
         order.setTotalPrice(totalPrice);
         order.setStatus(status);
         order.setShippingAddress(shippingAddress);

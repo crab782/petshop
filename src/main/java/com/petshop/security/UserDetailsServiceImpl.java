@@ -3,9 +3,9 @@ package com.petshop.security;
 import com.petshop.entity.User;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.Admin;
-import com.petshop.repository.UserRepository;
-import com.petshop.repository.MerchantRepository;
-import com.petshop.repository.AdminRepository;
+import com.petshop.mapper.UserMapper;
+import com.petshop.mapper.MerchantMapper;
+import com.petshop.mapper.AdminMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,26 +20,26 @@ import java.util.Collections;
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userMapper;
 
     @Autowired
-    private MerchantRepository merchantRepository;
+    private MerchantMapper merchantMapper;
 
     @Autowired
-    private AdminRepository adminRepository;
+    private AdminMapper adminMapper;
 
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(username).orElse(null);
+        User user = userMapper.selectByPhone(username);
         if (user != null) {
             return new org.springframework.security.core.userdetails.User(
-                    user.getEmail(),
+                    user.getPhone(),
                     user.getPassword(),
                     Collections.singletonList(new SimpleGrantedAuthority("ROLE_user")));
         }
 
-        Merchant merchant = merchantRepository.findByEmail(username).orElse(null);
+        Merchant merchant = merchantMapper.selectByEmail(username);
         if (merchant != null) {
             return new org.springframework.security.core.userdetails.User(
                     merchant.getEmail(),
@@ -47,7 +47,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                     Collections.singletonList(new SimpleGrantedAuthority("ROLE_merchant")));
         }
 
-        Admin admin = adminRepository.findByUsername(username).orElse(null);
+        Admin admin = adminMapper.selectByUsername(username);
         if (admin != null) {
             return new org.springframework.security.core.userdetails.User(
                     admin.getUsername(),

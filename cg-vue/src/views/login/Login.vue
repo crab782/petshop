@@ -2,13 +2,13 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, Phone } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 const router = useRouter()
 
 const loginForm = reactive({
-  username: '',
+  phone: '',
   password: '',
   role: 'user'
 })
@@ -22,8 +22,9 @@ const roleOptions = [
 ]
 
 const loginRules = {
-  username: [
-    { required: true, message: '请输入邮箱/用户名', trigger: 'blur' }
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号格式', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -43,7 +44,7 @@ const handleLogin = async () => {
 
     try {
       const response = await axios.post('/api/auth/login', {
-        username: loginForm.username,
+        phone: loginForm.phone,
         password: loginForm.password,
         role: loginForm.role
       })
@@ -62,7 +63,7 @@ const handleLogin = async () => {
         ElMessage.error(response.data.message || '登录失败')
       }
     } catch (error: any) {
-      ElMessage.error(error.response?.data?.message || '登录失败，请检查账号密码')
+      ElMessage.error(error.response?.data?.message || '登录失败，请检查手机号和密码')
     } finally {
       loginLoading.value = false
     }
@@ -106,14 +107,14 @@ const goToRegister = () => {
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item prop="username">
+        <el-form-item prop="phone">
           <template #label>
-            <span class="form-label">邮箱 / 用户名</span>
+            <span class="form-label">手机号</span>
           </template>
           <el-input
-            v-model="loginForm.username"
-            placeholder="请输入邮箱或用户名"
-            :prefix-icon="User"
+            v-model="loginForm.phone"
+            placeholder="请输入11位手机号"
+            :prefix-icon="Phone"
             size="large"
             class="form-input"
           />

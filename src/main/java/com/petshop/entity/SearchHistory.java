@@ -1,31 +1,39 @@
 package com.petshop.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
+
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
-@Entity
-@Table(name = "search_history", indexes = {
-    @Index(name = "idx_user_created", columnList = "user_id, created_at DESC")
-})
-public class SearchHistory {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@EqualsAndHashCode(callSuper = false)
+@Accessors(chain = true)
+@TableName("search_history")
+public class SearchHistory implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-    
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-    
-    @Column(name = "keyword", length = 255, nullable = false)
+
+    @TableField("user_id")
+    private Integer userId;
+
+    @TableField("keyword")
     private String keyword;
-    
-    @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+    public Integer getUserId() { return userId; }
+    public void setUserId(Integer userId) { this.userId = userId; }
+    public String getKeyword() { return keyword; }
+    public void setKeyword(String keyword) { this.keyword = keyword; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

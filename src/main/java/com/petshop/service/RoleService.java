@@ -1,13 +1,12 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.entity.Permission;
 import com.petshop.entity.Role;
-import com.petshop.repository.PermissionRepository;
-import com.petshop.repository.RoleRepository;
+import com.petshop.mapper.PermissionMapper;
+import com.petshop.mapper.RoleMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,18 +18,20 @@ import java.util.Set;
 @Service
 public class RoleService {
     @Autowired
-    private RoleRepository roleRepository;
+    private RoleMapper roleRepository;
     
     @Autowired
-    private PermissionRepository permissionRepository;
+    private PermissionMapper permissionRepository;
 
     public Page<Role> getRoles(int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page, pageSize);
-        return roleRepository.findAllByOrderByIdDesc(pageable);
+        Page<Role> rolePage = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(Role::getId);
+        return roleRepository.selectPage(rolePage, wrapper);
     }
 
     public Role findById(Integer id) {
-        return roleRepository.findById(id).orElse(null);
+        return roleRepository.selectById(id);
     }
 
     @Transactional
@@ -42,16 +43,17 @@ public class RoleService {
         role.setUpdatedAt(LocalDateTime.now());
         
         if (permissionIds != null && !permissionIds.isEmpty()) {
-            Set<Permission> permissions = new HashSet<>(permissionRepository.findAllById(permissionIds));
+            Set<Permission> permissions = new HashSet<>(permissionRepository.selectList(null));
             role.setPermissions(permissions);
         }
         
-        return roleRepository.save(role);
+        roleRepository.insert(role);
+        return role;
     }
 
     @Transactional
     public Role updateRole(Integer id, String name, String description, List<Integer> permissionIds) {
-        Role role = roleRepository.findById(id).orElse(null);
+        Role role = roleRepository.selectById(id);
         if (role == null) {
             return null;
         }
@@ -61,13 +63,14 @@ public class RoleService {
         role.setUpdatedAt(LocalDateTime.now());
         
         if (permissionIds != null) {
-            Set<Permission> permissions = new HashSet<>(permissionRepository.findAllById(permissionIds));
+            Set<Permission> permissions = new HashSet<>(permissionRepository.selectList(null));
             role.setPermissions(permissions);
         } else {
             role.getPermissions().clear();
         }
         
-        return roleRepository.save(role);
+        roleRepository.updateById(role);
+        return role;
     }
 
     @Transactional
@@ -88,6 +91,6 @@ public class RoleService {
     }
 
     public List<Permission> getAllPermissions() {
-        return permissionRepository.findAll();
+        return permissionRepository.selectList(null);
     }
 }

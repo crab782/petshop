@@ -130,10 +130,47 @@ public class AuthApiControllerTest {
         }
 
         @Test
-        @DisplayName("登录失败 - 用户名为空")
-        void testLogin_Fail_UsernameEmpty() throws Exception {
+        @DisplayName("登录成功 - 使用手机号登录")
+        void testLogin_Success_WithPhone() throws Exception {
+            LoginRequest request = LoginRequest.builder()
+                    .phone("13900139000")
+                    .password("password123")
+                    .build();
+
+            UserDTO userDTO = UserDTO.builder()
+                    .id(1)
+                    .username("testuser")
+                    .email("test@user.com")
+                    .phone("13900139000")
+                    .role("user")
+                    .build();
+
+            LoginResponse response = LoginResponse.builder()
+                    .token("jwt-token-123")
+                    .user(userDTO)
+                    .build();
+
+            when(authService.login(any(LoginRequest.class))).thenReturn(response);
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(request)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.message").value("Login successful"))
+                    .andExpect(jsonPath("$.data.token").value("jwt-token-123"))
+                    .andExpect(jsonPath("$.data.user.phone").value("13900139000"));
+
+            verify(authService, times(1)).login(any(LoginRequest.class));
+        }
+
+        @Test
+        @DisplayName("登录失败 - 手机号和用户名为空")
+        void testLogin_Fail_PhoneAndUsernameEmpty() throws Exception {
             LoginRequest request = LoginRequest.builder()
                     .username("")
+                    .phone("")
                     .password("password123")
                     .build();
 
@@ -143,16 +180,17 @@ public class AuthApiControllerTest {
                     .andDo(print())
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
-                    .andExpect(jsonPath("$.message").value("Username is required"));
+                    .andExpect(jsonPath("$.message").value("Phone number is required"));
 
             verify(authService, never()).login(any());
         }
 
         @Test
-        @DisplayName("登录失败 - 用户名为null")
-        void testLogin_Fail_UsernameNull() throws Exception {
+        @DisplayName("登录失败 - 手机号和用户名为null")
+        void testLogin_Fail_PhoneAndUsernameNull() throws Exception {
             LoginRequest request = LoginRequest.builder()
                     .username(null)
+                    .phone(null)
                     .password("password123")
                     .build();
 
@@ -162,7 +200,7 @@ public class AuthApiControllerTest {
                     .andDo(print())
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(400))
-                    .andExpect(jsonPath("$.message").value("Username is required"));
+                    .andExpect(jsonPath("$.message").value("Phone number is required"));
 
             verify(authService, never()).login(any());
         }

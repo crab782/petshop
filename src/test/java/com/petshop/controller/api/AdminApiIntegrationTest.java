@@ -1,10 +1,11 @@
 package com.petshop.controller.api;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petshop.config.TestSecurityConfig;
 import com.petshop.dto.ApiResponse;
 import com.petshop.entity.*;
-import com.petshop.repository.*;
+import com.petshop.mapper.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -40,40 +41,40 @@ public class AdminApiIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userMapper;
 
     @Autowired
-    private MerchantRepository merchantRepository;
+    private MerchantMapper merchantMapper;
 
     @Autowired
-    private ServiceRepository serviceRepository;
+    private ServiceMapper serviceMapper;
 
     @Autowired
-    private ProductRepository productRepository;
+    private ProductMapper productMapper;
 
     @Autowired
-    private AppointmentRepository appointmentRepository;
+    private AppointmentMapper appointmentMapper;
 
     @Autowired
-    private ReviewRepository reviewRepository;
+    private ReviewMapper reviewMapper;
 
     @Autowired
-    private AnnouncementRepository announcementRepository;
+    private AnnouncementMapper announcementMapper;
 
     @Autowired
-    private SystemConfigRepository systemConfigRepository;
+    private SystemConfigMapper systemConfigMapper;
 
     @Autowired
-    private SystemSettingsRepository systemSettingsRepository;
+    private SystemSettingsMapper systemSettingsMapper;
 
     @Autowired
-    private ActivityRepository activityRepository;
+    private ActivityMapper activityMapper;
 
     @Autowired
-    private ScheduledTaskRepository scheduledTaskRepository;
+    private ScheduledTaskMapper scheduledTaskMapper;
 
     @Autowired
-    private PetRepository petRepository;
+    private PetMapper petMapper;
 
     private User testUser;
     private Merchant testMerchant;
@@ -97,7 +98,8 @@ public class AdminApiIntegrationTest {
         user.setPassword("password123");
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
-        return userRepository.save(user);
+        userMapper.insert(user);
+        return user;
     }
 
     private Merchant createAndSaveMerchant() {
@@ -112,7 +114,8 @@ public class AdminApiIntegrationTest {
         merchant.setStatus("approved");
         merchant.setCreatedAt(LocalDateTime.now());
         merchant.setUpdatedAt(LocalDateTime.now());
-        return merchantRepository.save(merchant);
+        merchantMapper.insert(merchant);
+        return merchant;
     }
 
     private Merchant createAndSaveMerchant(String status) {
@@ -127,12 +130,13 @@ public class AdminApiIntegrationTest {
         merchant.setStatus(status);
         merchant.setCreatedAt(LocalDateTime.now());
         merchant.setUpdatedAt(LocalDateTime.now());
-        return merchantRepository.save(merchant);
+        merchantMapper.insert(merchant);
+        return merchant;
     }
 
     private Service createAndSaveService(Merchant merchant) {
         Service service = new Service();
-        service.setMerchant(merchant);
+        service.setMerchantId(merchant.getId());
         service.setName("测试服务_" + System.currentTimeMillis());
         service.setDescription("测试服务描述");
         service.setPrice(new BigDecimal("99.99"));
@@ -140,12 +144,13 @@ public class AdminApiIntegrationTest {
         service.setStatus("enabled");
         service.setCreatedAt(LocalDateTime.now());
         service.setUpdatedAt(LocalDateTime.now());
-        return serviceRepository.save(service);
+        serviceMapper.insert(service);
+        return service;
     }
 
     private Product createAndSaveProduct(Merchant merchant) {
         Product product = new Product();
-        product.setMerchant(merchant);
+        product.setMerchantId(merchant.getId());
         product.setName("测试商品_" + System.currentTimeMillis());
         product.setDescription("测试商品描述");
         product.setPrice(new BigDecimal("199.99"));
@@ -154,42 +159,44 @@ public class AdminApiIntegrationTest {
         product.setLowStockThreshold(10);
         product.setCreatedAt(LocalDateTime.now());
         product.setUpdatedAt(LocalDateTime.now());
-        return productRepository.save(product);
+        productMapper.insert(product);
+        return product;
     }
 
     private Review createAndSaveReview(Merchant merchant, User user, int rating) {
         Pet pet = new Pet();
-        pet.setUser(user);
+        pet.setUserId(user.getId());
         pet.setName("测试宠物");
         pet.setType("dog");
         pet.setAge(2);
         pet.setGender("male");
         pet.setCreatedAt(LocalDateTime.now());
         pet.setUpdatedAt(LocalDateTime.now());
-        pet = petRepository.save(pet);
+        petMapper.insert(pet);
 
         Appointment appointment = new Appointment();
-        appointment.setUser(user);
-        appointment.setMerchant(merchant);
-        appointment.setService(testService);
-        appointment.setPet(pet);
+        appointment.setUserId(user.getId());
+        appointment.setMerchantId(merchant.getId());
+        appointment.setServiceId(testService.getId());
+        appointment.setPetId(pet.getId());
         appointment.setAppointmentTime(LocalDateTime.now().plusDays(1));
         appointment.setStatus("completed");
         appointment.setTotalPrice(new BigDecimal("99.99"));
         appointment.setCreatedAt(LocalDateTime.now());
         appointment.setUpdatedAt(LocalDateTime.now());
-        appointment = appointmentRepository.save(appointment);
+        appointmentMapper.insert(appointment);
 
         Review review = new Review();
-        review.setMerchant(merchant);
-        review.setUser(user);
-        review.setService(testService);
-        review.setAppointment(appointment);
+        review.setMerchantId(merchant.getId());
+        review.setUserId(user.getId());
+        review.setServiceId(testService.getId());
+        review.setAppointmentId(appointment.getId());
         review.setRating(rating);
         review.setComment("测试评价内容");
         review.setStatus("approved");
         review.setCreatedAt(LocalDateTime.now());
-        return reviewRepository.save(review);
+        reviewMapper.insert(review);
+        return review;
     }
 
     private Announcement createAndSaveAnnouncement() {
@@ -198,7 +205,8 @@ public class AdminApiIntegrationTest {
         announcement.setContent("测试公告内容");
         announcement.setStatus("published");
         announcement.setCreatedAt(LocalDateTime.now());
-        return announcementRepository.save(announcement);
+        announcementMapper.insert(announcement);
+        return announcement;
     }
 
     private Activity createAndSaveActivity() {
@@ -209,7 +217,8 @@ public class AdminApiIntegrationTest {
         activity.setStartTime(LocalDateTime.now());
         activity.setEndTime(LocalDateTime.now().plusDays(7));
         activity.setStatus("enabled");
-        return activityRepository.save(activity);
+        activityMapper.insert(activity);
+        return activity;
     }
 
     private ScheduledTask createAndSaveScheduledTask() {
@@ -219,7 +228,8 @@ public class AdminApiIntegrationTest {
         task.setCronExpression("0 0 0 * * ?");
         task.setDescription("测试任务描述");
         task.setStatus("enabled");
-        return scheduledTaskRepository.save(task);
+        scheduledTaskMapper.insert(task);
+        return task;
     }
 
     @Nested
@@ -319,7 +329,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isNoContent());
 
-            Assertions.assertFalse(userRepository.findById(userId).isPresent());
+            Assertions.assertNull(userMapper.selectById(userId));
         }
 
         @Test
@@ -384,7 +394,7 @@ public class AdminApiIntegrationTest {
                     .andExpect(jsonPath("$.id").value(testMerchant.getId()))
                     .andExpect(jsonPath("$.status").value("disabled"));
 
-            Merchant updated = merchantRepository.findById(testMerchant.getId()).orElse(null);
+            Merchant updated = merchantMapper.selectById(testMerchant.getId());
             Assertions.assertNotNull(updated);
             Assertions.assertEquals("disabled", updated.getStatus());
         }
@@ -412,7 +422,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isNoContent());
 
-            Assertions.assertFalse(merchantRepository.findById(merchantId).isPresent());
+            Assertions.assertNull(merchantMapper.selectById(merchantId));
         }
     }
 
@@ -439,8 +449,8 @@ public class AdminApiIntegrationTest {
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.updatedCount").value(2));
 
-            Merchant updated1 = merchantRepository.findById(merchant1.getId()).orElse(null);
-            Merchant updated2 = merchantRepository.findById(merchant2.getId()).orElse(null);
+            Merchant updated1 = merchantMapper.selectById(merchant1.getId());
+            Merchant updated2 = merchantMapper.selectById(merchant2.getId());
             Assertions.assertNotNull(updated1);
             Assertions.assertNotNull(updated2);
             Assertions.assertEquals("disabled", updated1.getStatus());
@@ -481,8 +491,8 @@ public class AdminApiIntegrationTest {
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.deletedCount").value(2));
 
-            Assertions.assertFalse(merchantRepository.findById(merchant1.getId()).isPresent());
-            Assertions.assertFalse(merchantRepository.findById(merchant2.getId()).isPresent());
+            Assertions.assertNull(merchantMapper.selectById(merchant1.getId()));
+            Assertions.assertNull(merchantMapper.selectById(merchant2.getId()));
         }
 
         @Test
@@ -695,7 +705,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isNoContent());
 
-            Assertions.assertFalse(productRepository.findById(productId).isPresent());
+            Assertions.assertNull(productMapper.selectById(productId));
         }
 
         @Test
@@ -703,7 +713,7 @@ public class AdminApiIntegrationTest {
         void testSearchProducts_ByKeyword_Success() throws Exception {
             Product searchProduct = createAndSaveProduct(testMerchant);
             searchProduct.setName("特殊搜索关键字商品");
-            productRepository.save(searchProduct);
+            productMapper.updateById(searchProduct);
 
             mockMvc.perform(get("/api/admin/products")
                     .sessionAttr("admin", "admin")
@@ -739,7 +749,7 @@ public class AdminApiIntegrationTest {
         void testAuditReview_Success() throws Exception {
             Review review = createAndSaveReview(testMerchant, testUser, 5);
             review.setStatus("pending");
-            reviewRepository.save(review);
+            reviewMapper.updateById(review);
 
             Map<String, String> request = new HashMap<>();
             request.put("status", "approved");
@@ -766,7 +776,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isNoContent());
 
-            Assertions.assertFalse(reviewRepository.findById(reviewId).isPresent());
+            Assertions.assertNull(reviewMapper.selectById(reviewId));
         }
 
         @Test
@@ -776,8 +786,8 @@ public class AdminApiIntegrationTest {
             Review review2 = createAndSaveReview(testMerchant, testUser, 4);
             review1.setStatus("pending");
             review2.setStatus("pending");
-            reviewRepository.save(review1);
-            reviewRepository.save(review2);
+            reviewMapper.updateById(review1);
+            reviewMapper.updateById(review2);
 
             Map<String, Object> request = new HashMap<>();
             request.put("ids", Arrays.asList(review1.getId(), review2.getId()));
@@ -829,7 +839,7 @@ public class AdminApiIntegrationTest {
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.status").value("approved"));
 
-            Merchant updated = merchantRepository.findById(pendingMerchant.getId()).orElse(null);
+            Merchant updated = merchantMapper.selectById(pendingMerchant.getId());
             Assertions.assertNotNull(updated);
             Assertions.assertEquals("approved", updated.getStatus());
         }
@@ -1043,7 +1053,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isNoContent());
 
-            Assertions.assertFalse(activityRepository.findById(activityId).isPresent());
+            Assertions.assertNull(activityMapper.selectById(activityId));
         }
     }
 
@@ -1159,7 +1169,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isNoContent());
 
-            Assertions.assertFalse(scheduledTaskRepository.findById(taskId).isPresent());
+            Assertions.assertNull(scheduledTaskMapper.selectById(taskId));
         }
     }
 
@@ -1258,9 +1268,6 @@ public class AdminApiIntegrationTest {
             String uniqueName = "持久化测试商家_" + System.currentTimeMillis();
             String uniqueEmail = "persist_" + System.currentTimeMillis() + "@test.com";
 
-            Map<String, Object> request = new HashMap<>();
-            request.put("ids", Collections.emptyList());
-
             Merchant merchant = new Merchant();
             merchant.setName(uniqueName);
             merchant.setEmail(uniqueEmail);
@@ -1269,9 +1276,9 @@ public class AdminApiIntegrationTest {
             merchant.setAddress("测试地址");
             merchant.setContactPerson("联系人");
             merchant.setStatus("approved");
-            Merchant savedMerchant = merchantRepository.save(merchant);
+            merchantMapper.insert(merchant);
 
-            Merchant found = merchantRepository.findById(savedMerchant.getId()).orElse(null);
+            Merchant found = merchantMapper.selectById(merchant.getId());
             Assertions.assertNotNull(found);
             Assertions.assertEquals(uniqueName, found.getName());
             Assertions.assertEquals(uniqueEmail, found.getEmail());
@@ -1293,7 +1300,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isOk());
 
-            Product updated = productRepository.findById(testProduct.getId()).orElse(null);
+            Product updated = productMapper.selectById(testProduct.getId());
             Assertions.assertNotNull(updated);
             Assertions.assertEquals(newName, updated.getName());
             Assertions.assertEquals(new BigDecimal("399.99"), updated.getPrice());
@@ -1308,7 +1315,7 @@ public class AdminApiIntegrationTest {
         @Test
         @DisplayName("批量操作失败时事务回滚验证")
         void testBatchOperationRollback() throws Exception {
-            int initialCount = (int) merchantRepository.count();
+            Long initialCount = merchantMapper.selectCount(null);
 
             Map<String, Object> request = new HashMap<>();
             request.put("ids", Collections.emptyList());
@@ -1321,7 +1328,7 @@ public class AdminApiIntegrationTest {
                     .andDo(print())
                     .andExpect(status().isBadRequest());
 
-            int finalCount = (int) merchantRepository.count();
+            Long finalCount = merchantMapper.selectCount(null);
             Assertions.assertEquals(initialCount, finalCount);
         }
     }

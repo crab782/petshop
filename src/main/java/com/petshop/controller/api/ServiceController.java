@@ -28,9 +28,9 @@ public class ServiceController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
-        List<Service> services = serviceService.searchServices(
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Service> servicePage = serviceService.searchServices(
                 name, minPrice, maxPrice, minDuration, maxDuration, status, page, pageSize);
-        return ResponseEntity.ok(ApiResponse.success(services));
+        return ResponseEntity.ok(ApiResponse.success(servicePage.getRecords()));
     }
 
     @GetMapping("/{id}")
@@ -51,9 +51,9 @@ public class ServiceController {
             @RequestParam(required = false) String sortOrder,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
-        List<Service> services = serviceService.searchServices(
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Service> servicePage = serviceService.searchServices(
                 keyword, merchantId, sortBy, sortOrder, page, pageSize);
-        return ResponseEntity.ok(ApiResponse.success(services));
+        return ResponseEntity.ok(ApiResponse.success(servicePage.getRecords()));
     }
 
     @GetMapping("/recommended")

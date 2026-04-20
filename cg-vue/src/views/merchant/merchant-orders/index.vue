@@ -53,12 +53,12 @@ const filterStatus = computed({
 // 根据筛选条件过滤订单
 const filteredOrders = computed(() => {
   let result = orders.value
-  
+
   // 按状态筛选
   if (filters.value.status && filters.value.status !== 'all') {
     result = result.filter(order => order.status === filters.value.status)
   }
-  
+
   // 按关键词搜索
   if (debouncedKeyword.value) {
     const kw = debouncedKeyword.value.toLowerCase()
@@ -68,7 +68,7 @@ const filteredOrders = computed(() => {
       order.serviceName.toLowerCase().includes(kw)
     )
   }
-  
+
   // 按日期范围筛选
   if (dateRange.value && dateRange.value[0] && dateRange.value[1]) {
     const [start, end] = dateRange.value
@@ -79,7 +79,7 @@ const filteredOrders = computed(() => {
       return orderDate >= start && orderDate <= endDate
     })
   }
-  
+
   return result
 })
 
@@ -146,7 +146,7 @@ const handleConfirm = async (row: Order) => {
         type: 'info'
       }
     )
-    
+
     const result = await executeUpdateStatus(row.id, 'confirmed')
     if (result) {
       ElMessage.success('订单确认成功')
@@ -173,7 +173,7 @@ const handleComplete = async (row: Order) => {
         type: 'success'
       }
     )
-    
+
     const result = await executeUpdateStatus(row.id, 'completed')
     if (result) {
       ElMessage.success('订单已完成')
@@ -201,7 +201,7 @@ const handleCancel = async (row: Order) => {
         inputPlaceholder: '请输入取消原因'
       }
     )
-    
+
     const result = await executeUpdateStatus(row.id, 'cancelled')
     if (result) {
       ElMessage.success('订单已取消')
@@ -225,7 +225,7 @@ const handleProcess = (row: Order) => {
 // 接单（在详情弹窗中）
 const handleAccept = async () => {
   if (!currentOrder.value) return
-  
+
   try {
     const result = await executeUpdateStatus(currentOrder.value.id, 'confirmed')
     if (result) {
@@ -243,12 +243,12 @@ const handleAccept = async () => {
 // 拒单（在详情弹窗中）
 const handleReject = async () => {
   if (!currentOrder.value) return
-  
+
   if (!rejectReason.value.trim()) {
     ElMessage.warning('请填写拒单原因')
     return
   }
-  
+
   try {
     await ElMessageBox.confirm(
       `确定要拒绝该订单吗？原因：${rejectReason.value}`,
@@ -259,7 +259,7 @@ const handleReject = async () => {
         type: 'warning'
       }
     )
-    
+
     const result = await executeUpdateStatus(currentOrder.value.id, 'cancelled', rejectReason.value)
     if (result) {
       ElMessage.success('拒单成功')
@@ -353,9 +353,9 @@ onMounted(() => {
         </div>
       </template>
 
-      <el-table 
-        :data="paginatedOrders" 
-        v-loading="fetchLoading" 
+      <el-table
+        :data="paginatedOrders"
+        v-loading="fetchLoading"
         style="width: 100%"
         :empty-text="fetchError ? '加载失败，请重试' : '暂无订单数据'"
       >

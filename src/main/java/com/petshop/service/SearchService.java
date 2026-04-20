@@ -1,5 +1,7 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.dto.HotKeywordDTO;
 import com.petshop.dto.MerchantDTO;
 import com.petshop.dto.ProductDTO;
@@ -8,40 +10,39 @@ import com.petshop.dto.ServiceDTO;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.Product;
 import com.petshop.entity.SearchHistory;
-import com.petshop.repository.MerchantRepository;
-import com.petshop.repository.ProductRepository;
-import com.petshop.repository.ReviewRepository;
-import com.petshop.repository.SearchHistoryRepository;
-import com.petshop.repository.ServiceRepository;
+import com.petshop.mapper.MerchantMapper;
+import com.petshop.mapper.ProductMapper;
+import com.petshop.mapper.ReviewMapper;
+import com.petshop.mapper.SearchHistoryMapper;
+import com.petshop.mapper.ServiceMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@org.springframework.stereotype.Service
+@Service
 public class SearchService {
     
     private static final int MAX_SEARCH_HISTORY = 20;
     private static final int DEFAULT_SUGGESTION_LIMIT = 5;
     
     @Autowired
-    private ServiceRepository serviceRepository;
+    private ServiceMapper serviceMapper;
     
     @Autowired
-    private ProductRepository productRepository;
+    private ProductMapper productMapper;
     
     @Autowired
-    private MerchantRepository merchantRepository;
+    private MerchantMapper merchantMapper;
     
     @Autowired
-    private SearchHistoryRepository searchHistoryRepository;
+    private SearchHistoryMapper searchHistoryMapper;
     
     @Autowired
-    private ReviewRepository reviewRepository;
+    private ReviewMapper reviewMapper;
     
     public SearchSuggestionsDTO getSearchSuggestions(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
@@ -53,14 +54,27 @@ public class SearchService {
         }
         
         String trimmedKeyword = keyword.trim();
-        Pageable limit = PageRequest.of(0, DEFAULT_SUGGESTION_LIMIT);
         
-        List<com.petshop.entity.Service> services = serviceRepository.searchByKeyword(trimmedKeyword);
-        List<Product> products = productRepository.searchByKeyword(trimmedKeyword, limit).getContent();
-        List<Merchant> merchants = merchantRepository.searchByKeyword(trimmedKeyword, limit).getContent();
+        LambdaQueryWrapper<com.petshop.entity.Service> serviceWrapper = new LambdaQueryWrapper<>();
+        serviceWrapper.like(com.petshop.entity.Service::getName, trimmedKeyword)
+                     .or().like(com.petshop.entity.Service::getDescription, trimmedKeyword)
+                     .last("LIMIT " + DEFAULT_SUGGESTION_LIMIT);
+        List<com.petshop.entity.Service> services = serviceMapper.selectList(serviceWrapper);
+        
+        LambdaQueryWrapper<Product> productWrapper = new LambdaQueryWrapper<>();
+        productWrapper.like(Product::getName, trimmedKeyword)
+                     .or().like(Product::getDescription, trimmedKeyword)
+                     .last("LIMIT " + DEFAULT_SUGGESTION_LIMIT);
+        Page<Product> productPage = new Page<>(1, DEFAULT_SUGGESTION_LIMIT);
+        List<Product> products = productMapper.selectPage(productPage, productWrapper).getRecords();
+        
+        LambdaQueryWrapper<Merchant> merchantWrapper = new LambdaQueryWrapper<>();
+        merchantWrapper.like(Merchant::getName, trimmedKeyword)
+                      .last("LIMIT " + DEFAULT_SUGGESTION_LIMIT);
+        Page<Merchant> merchantPage = new Page<>(1, DEFAULT_SUGGESTION_LIMIT);
+        List<Merchant> merchants = merchantMapper.selectPage(merchantPage, merchantWrapper).getRecords();
         
         List<ServiceDTO> serviceDTOs = services.stream()
-                .limit(DEFAULT_SUGGESTION_LIMIT)
                 .map(this::convertToServiceDTO)
                 .collect(Collectors.toList());
         
@@ -83,13 +97,19 @@ public class SearchService {
         if (limit == null || limit <= 0) {
             limit = 10;
         }
-        Pageable pageable = PageRequest.of(0, limit);
-        List<Object[]> results = searchHistoryRepository.findHotKeywords(pageable);
+        
+        LambdaQueryWrapper<SearchHistory> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(SearchHistory::getKeyword)
+               .groupBy(SearchHistory::getKeyword)
+               .orderByDesc(SearchHistory::getKeyword);
+        
+        Page<SearchHistory> page = new Page<>(1, limit);
+        List<SearchHistory> results = searchHistoryMapper.selectPage(page, wrapper).getRecords();
         
         return results.stream()
                 .map(result -> HotKeywordDTO.builder()
-                        .keyword((String) result[0])
-                        .count((Long) result[1])
+                        .keyword(result.getKeyword())
+                        .count(1L)
                         .build())
                 .collect(Collectors.toList());
     }
@@ -102,16 +122,20 @@ public class SearchService {
         
         String trimmedKeyword = keyword.trim();
         
-        searchHistoryRepository.deleteByUserIdAndKeyword(userId, trimmedKeyword);
+        LambdaQueryWrapper<SearchHistory> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.eq(SearchHistory::getUserId, userId)
+                    .eq(SearchHistory::getKeyword, trimmedKeyword);
+        searchHistoryMapper.delete(deleteWrapper);
         
         SearchHistory searchHistory = new SearchHistory();
-        com.petshop.entity.User user = new com.petshop.entity.User();
-        user.setId(userId);
-        searchHistory.setUser(user);
+        searchHistory.setUserId(userId);
         searchHistory.setKeyword(trimmedKeyword);
-        searchHistoryRepository.save(searchHistory);
+        searchHistoryMapper.insert(searchHistory);
         
-        long count = searchHistoryRepository.countByUserId(userId);
+        LambdaQueryWrapper<SearchHistory> countWrapper = new LambdaQueryWrapper<>();
+        countWrapper.eq(SearchHistory::getUserId, userId);
+        long count = searchHistoryMapper.selectCount(countWrapper);
+        
         if (count > MAX_SEARCH_HISTORY) {
             cleanOldSearchHistory(userId);
         }
@@ -121,26 +145,45 @@ public class SearchService {
         if (limit == null || limit <= 0) {
             limit = 10;
         }
-        Pageable pageable = PageRequest.of(0, limit);
-        return searchHistoryRepository.findDistinctKeywordsByUserIdOrderByCreatedAtDesc(userId, pageable);
+        
+        LambdaQueryWrapper<SearchHistory> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(SearchHistory::getKeyword)
+               .eq(SearchHistory::getUserId, userId)
+               .groupBy(SearchHistory::getKeyword)
+               .orderByDesc(SearchHistory::getCreatedAt)
+               .last("LIMIT " + limit);
+        
+        List<SearchHistory> results = searchHistoryMapper.selectList(wrapper);
+        return results.stream()
+                .map(SearchHistory::getKeyword)
+                .collect(Collectors.toList());
     }
     
     @Transactional
     public void clearSearchHistory(Integer userId) {
-        searchHistoryRepository.deleteByUserId(userId);
+        LambdaQueryWrapper<SearchHistory> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SearchHistory::getUserId, userId);
+        searchHistoryMapper.delete(wrapper);
     }
     
     @Transactional
     protected void cleanOldSearchHistory(Integer userId) {
-        Pageable pageable = PageRequest.of(0, MAX_SEARCH_HISTORY);
-        List<SearchHistory> recentHistory = searchHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        LambdaQueryWrapper<SearchHistory> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SearchHistory::getUserId, userId)
+                   .orderByDesc(SearchHistory::getCreatedAt)
+                   .last("LIMIT " + MAX_SEARCH_HISTORY);
+        
+        List<SearchHistory> recentHistory = searchHistoryMapper.selectList(queryWrapper);
         
         List<Integer> idsToKeep = recentHistory.stream()
                 .map(SearchHistory::getId)
                 .collect(Collectors.toList());
         
         if (!idsToKeep.isEmpty()) {
-            searchHistoryRepository.deleteAllByIdNotInAndUserId(idsToKeep, userId);
+            LambdaQueryWrapper<SearchHistory> deleteWrapper = new LambdaQueryWrapper<>();
+            deleteWrapper.eq(SearchHistory::getUserId, userId)
+                        .notIn(SearchHistory::getId, idsToKeep);
+            searchHistoryMapper.delete(deleteWrapper);
         }
     }
     
@@ -151,7 +194,7 @@ public class SearchService {
                 .description(service.getDescription())
                 .price(service.getPrice())
                 .duration(service.getDuration())
-                .merchantId(service.getMerchant() != null ? service.getMerchant().getId() : null)
+                .merchantId(service.getMerchantId() != null ? service.getMerchantId() : null)
                 .merchantName(service.getMerchant() != null ? service.getMerchant().getName() : null)
                 .image(service.getImage())
                 .status(service.getStatus())
@@ -165,7 +208,7 @@ public class SearchService {
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .stock(product.getStock())
-                .merchantId(product.getMerchant() != null ? product.getMerchant().getId() : null)
+                .merchantId(product.getMerchantId() != null ? product.getMerchantId() : null)
                 .image(product.getImage())
                 .status(product.getStatus())
                 .category(product.getCategory())
@@ -173,7 +216,18 @@ public class SearchService {
     }
     
     private MerchantDTO convertToMerchantDTO(Merchant merchant) {
-        Double rating = reviewRepository.getAverageRatingByMerchantId(merchant.getId());
+        LambdaQueryWrapper<com.petshop.entity.Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(com.petshop.entity.Review::getMerchantId, merchant.getId());
+        List<com.petshop.entity.Review> reviews = reviewMapper.selectList(wrapper);
+        
+        Double rating = 0.0;
+        if (!reviews.isEmpty()) {
+            double sum = reviews.stream()
+                    .mapToInt(com.petshop.entity.Review::getRating)
+                    .sum();
+            rating = Math.round((sum / reviews.size()) * 10.0) / 10.0;
+        }
+        
         return MerchantDTO.builder()
                 .id(merchant.getId())
                 .name(merchant.getName())
@@ -181,7 +235,7 @@ public class SearchService {
                 .contact(merchant.getContactPerson())
                 .phone(merchant.getPhone())
                 .address(merchant.getAddress())
-                .rating(rating != null ? Math.round(rating * 10.0) / 10.0 : 0.0)
+                .rating(rating)
                 .build();
     }
 }

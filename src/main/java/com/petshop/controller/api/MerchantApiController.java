@@ -254,12 +254,12 @@ public class MerchantApiController {
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
         try {
-            Service existingService = serviceService.findById(id);
+            Service existingService = serviceService.findByIdWithMerchant(id);
             if (existingService == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "服务不存在"));
             }
-            if (!existingService.getMerchant().getId().equals(merchant.getId())) {
+            if (existingService.getMerchant() == null || !existingService.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此服务"));
             }
@@ -303,12 +303,12 @@ public class MerchantApiController {
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
         try {
-            Service service = serviceService.findById(id);
+            Service service = serviceService.findByIdWithMerchant(id);
             if (service == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "服务不存在"));
             }
-            if (!service.getMerchant().getId().equals(merchant.getId())) {
+            if (service.getMerchant() == null || !service.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此服务"));
             }
@@ -389,8 +389,8 @@ public class MerchantApiController {
         }
         
         for (Integer id : ids) {
-            Service service = serviceService.findById(id);
-            if (service == null || !service.getMerchant().getId().equals(merchant.getId())) {
+            Service service = serviceService.findByIdWithMerchant(id);
+            if (service == null || service.getMerchant() == null || !service.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "服务ID " + id + " 不存在或无权限"));
             }
@@ -405,6 +405,41 @@ public class MerchantApiController {
         result.put("ids", ids);
         
         return ResponseEntity.ok(ApiResponse.success("批量删除服务成功", result));
+    }
+
+    /**
+     * 获取服务详情
+     * GET /api/merchant/services/{id}
+     * 
+     * 商家可以查看自己店铺的服务详情
+     * 
+     * @param id 服务ID
+     * @param session HTTP会话，用于验证商家身份
+     * @return 统一响应格式，包含服务详情
+     */
+    @GetMapping("/services/{id}")
+    public ResponseEntity<ApiResponse<Service>> getServiceById(
+            @PathVariable Integer id, HttpSession session) {
+        Merchant merchant = (Merchant) session.getAttribute("merchant");
+        if (merchant == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
+        }
+        try {
+            Service service = serviceService.findByIdWithMerchant(id);
+            if (service == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(404, "服务不存在"));
+            }
+            if (service.getMerchant() == null || !service.getMerchant().getId().equals(merchant.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error(403, "无权查看此服务"));
+            }
+            return ResponseEntity.ok(ApiResponse.success(service));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "获取服务详情失败：" + e.getMessage()));
+        }
     }
 
     /**
@@ -445,20 +480,27 @@ public class MerchantApiController {
     @PutMapping("/appointments/{id}/status")
     public ResponseEntity<ApiResponse<Appointment>> updateAppointmentStatus(
             @PathVariable Integer id,
-            @RequestParam String status,
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         Merchant merchant = (Merchant) session.getAttribute("merchant");
         if (merchant == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "状态值不能为空"));
+        }
+        
         try {
-            Appointment appointment = appointmentService.findById(id);
+            Appointment appointment = appointmentService.findByIdWithRelations(id);
             if (appointment == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "预约不存在"));
             }
-            if (!appointment.getMerchant().getId().equals(merchant.getId())) {
+            if (appointment.getMerchant() == null || !appointment.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此预约"));
             }
@@ -538,8 +580,10 @@ public class MerchantApiController {
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
         try {
+            LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
+            LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
             Map<String, Object> stats = merchantStatsService.getAppointmentStats(
-                    merchant.getId(), startDate, endDate);
+                    merchant.getId(), start, end);
             return ResponseEntity.ok(ApiResponse.success(stats));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -579,7 +623,7 @@ public class MerchantApiController {
             return ResponseEntity.ok()
                     .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
                     .header("Content-Disposition", "attachment; filename=appointment-stats." + format)
-                    .body(fileBytes);
+                    .body(fileContent);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -652,20 +696,27 @@ public class MerchantApiController {
     @PutMapping("/orders/{id}/status")
     public ResponseEntity<ApiResponse<ProductOrder>> updateOrderStatus(
             @PathVariable Integer id,
-            @RequestParam String status,
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         Merchant merchant = (Merchant) session.getAttribute("merchant");
         if (merchant == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "状态值不能为空"));
+        }
+        
         try {
-            ProductOrder order = productOrderService.findById(id);
+            ProductOrder order = productOrderService.findByIdWithMerchant(id);
             if (order == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "订单不存在"));
             }
-            if (!order.getMerchant().getId().equals(merchant.getId())) {
+            if (order.getMerchant() == null || !order.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此订单"));
             }
@@ -729,20 +780,27 @@ public class MerchantApiController {
     @PutMapping("/product-orders/{id}/status")
     public ResponseEntity<ApiResponse<ProductOrder>> updateProductOrderStatus(
             @PathVariable Integer id,
-            @RequestParam String status,
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         Merchant merchant = (Merchant) session.getAttribute("merchant");
         if (merchant == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "状态值不能为空"));
+        }
+        
         try {
-            ProductOrder order = productOrderService.findById(id);
+            ProductOrder order = productOrderService.findByIdWithMerchant(id);
             if (order == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "订单不存在"));
             }
-            if (!order.getMerchant().getId().equals(merchant.getId())) {
+            if (order.getMerchant() == null || !order.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此订单"));
             }
@@ -782,12 +840,12 @@ public class MerchantApiController {
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
         try {
-            ProductOrder order = productOrderService.findById(id);
+            ProductOrder order = productOrderService.findByIdWithMerchant(id);
             if (order == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "订单不存在"));
             }
-            if (!order.getMerchant().getId().equals(merchant.getId())) {
+            if (order.getMerchant() == null || !order.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此订单"));
             }
@@ -853,8 +911,8 @@ public class MerchantApiController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
-        Product product = productService.findById(id);
-        if (product == null || !product.getMerchant().getId().equals(merchant.getId())) {
+        Product product = productService.findByIdWithMerchant(id);
+        if (product == null || product.getMerchant() == null || !product.getMerchant().getId().equals(merchant.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(404, "商品不存在"));
         }
@@ -872,8 +930,8 @@ public class MerchantApiController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
-        Product existingProduct = productService.findById(id);
-        if (existingProduct == null || !existingProduct.getMerchant().getId().equals(merchant.getId())) {
+        Product existingProduct = productService.findByIdWithMerchant(id);
+        if (existingProduct == null || existingProduct.getMerchant() == null || !existingProduct.getMerchant().getId().equals(merchant.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(404, "商品不存在"));
         }
@@ -895,8 +953,8 @@ public class MerchantApiController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
-        Product product = productService.findById(id);
-        if (product == null || !product.getMerchant().getId().equals(merchant.getId())) {
+        Product product = productService.findByIdWithMerchant(id);
+        if (product == null || product.getMerchant() == null || !product.getMerchant().getId().equals(merchant.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(404, "商品不存在"));
         }
@@ -911,12 +969,15 @@ public class MerchantApiController {
     @GetMapping("/products/paged")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProductsPaged(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) String stockStatus,
             HttpSession session) {
         Merchant merchant = (Merchant) session.getAttribute("merchant");
         if (merchant == null) {
@@ -924,17 +985,14 @@ public class MerchantApiController {
                     .body(ApiResponse.error(401, "未授权访问"));
         }
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PageRequest.of(page, pageSize, sort);
         Page<Product> productPage = productService.searchProducts(merchant.getId(), name, status, category, pageable);
         
         Map<String, Object> response = new HashMap<>();
-        response.put("content", productPage.getContent());
-        response.put("totalElements", productPage.getTotalElements());
-        response.put("totalPages", productPage.getTotalPages());
-        response.put("currentPage", productPage.getNumber());
+        response.put("list", productPage.getContent());
+        response.put("total", productPage.getTotalElements());
+        response.put("page", productPage.getNumber());
         response.put("pageSize", productPage.getSize());
-        response.put("hasNext", productPage.hasNext());
-        response.put("hasPrevious", productPage.hasPrevious());
         
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -946,15 +1004,22 @@ public class MerchantApiController {
     @PutMapping("/products/{id}/status")
     public ResponseEntity<ApiResponse<Product>> updateProductStatus(
             @PathVariable Integer id,
-            @RequestParam String status,
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         Merchant merchant = (Merchant) session.getAttribute("merchant");
         if (merchant == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
-        Product product = productService.findById(id);
-        if (product == null || !product.getMerchant().getId().equals(merchant.getId())) {
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "状态值不能为空"));
+        }
+        
+        Product product = productService.findByIdWithMerchant(id);
+        if (product == null || product.getMerchant() == null || !product.getMerchant().getId().equals(merchant.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(404, "商品不存在"));
         }
@@ -987,7 +1052,7 @@ public class MerchantApiController {
         @SuppressWarnings("unchecked")
         List<Integer> ids = (List<Integer>) request.get("ids");
         String status = (String) request.get("status");
-        
+
         if (ids == null || ids.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(400, "商品ID列表不能为空"));
@@ -996,21 +1061,21 @@ public class MerchantApiController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(400, "无效的状态值"));
         }
-        
+
         for (Integer id : ids) {
-            Product product = productService.findById(id);
-            if (product == null || !product.getMerchant().getId().equals(merchant.getId())) {
+            Product product = productService.findByIdWithMerchant(id);
+            if (product == null || product.getMerchant() == null || !product.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "商品ID " + id + " 不存在或无权限"));
             }
         }
-        
+
         int updatedCount = productService.batchUpdateStatus(ids, status);
         Map<String, Object> result = new HashMap<>();
         result.put("updatedCount", updatedCount);
         result.put("ids", ids);
         result.put("status", status);
-        
+
         return ResponseEntity.ok(ApiResponse.success("批量更新状态成功", result));
     }
 
@@ -1029,25 +1094,25 @@ public class MerchantApiController {
         }
         @SuppressWarnings("unchecked")
         List<Integer> ids = (List<Integer>) request.get("ids");
-        
+
         if (ids == null || ids.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(400, "商品ID列表不能为空"));
         }
-        
+
         for (Integer id : ids) {
-            Product product = productService.findById(id);
-            if (product == null || !product.getMerchant().getId().equals(merchant.getId())) {
+            Product product = productService.findByIdWithMerchant(id);
+            if (product == null || product.getMerchant() == null || !product.getMerchant().getId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "商品ID " + id + " 不存在或无权限"));
             }
         }
-        
+
         productService.batchDelete(ids);
         Map<String, Object> result = new HashMap<>();
         result.put("deletedCount", ids.size());
         result.put("ids", ids);
-        
+
         return ResponseEntity.ok(ApiResponse.success("批量删除成功", result));
     }
 
@@ -1198,13 +1263,20 @@ public class MerchantApiController {
     @PutMapping("/categories/{id}/status")
     public ResponseEntity<ApiResponse<Category>> updateCategoryStatus(
             @PathVariable Integer id,
-            @RequestParam String status,
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         Merchant merchant = (Merchant) session.getAttribute("merchant");
         if (merchant == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "状态值不能为空"));
+        }
+        
         try {
             Category category = categoryService.findById(id);
             if (category == null) {
@@ -1380,17 +1452,17 @@ public class MerchantApiController {
                     .body(ApiResponse.error(401, "未授权访问，请先登录"));
         }
         try {
-            Page<Review> reviewPage = reviewService.getReviewsWithPaging(
+            com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> reviewPage = reviewService.getReviewsWithPaging(
                     merchant.getId(), rating, keyword, page, size, sortBy, sortDir);
             
             Map<String, Object> response = new HashMap<>();
-            response.put("content", reviewPage.getContent());
-            response.put("totalElements", reviewPage.getTotalElements());
-            response.put("totalPages", reviewPage.getTotalPages());
-            response.put("currentPage", reviewPage.getNumber());
+            response.put("content", reviewPage.getRecords());
+            response.put("totalElements", reviewPage.getTotal());
+            response.put("totalPages", reviewPage.getPages());
+            response.put("currentPage", reviewPage.getCurrent());
             response.put("pageSize", reviewPage.getSize());
-            response.put("hasNext", reviewPage.hasNext());
-            response.put("hasPrevious", reviewPage.hasPrevious());
+            response.put("hasNext", reviewPage.getCurrent() < reviewPage.getPages());
+            response.put("hasPrevious", reviewPage.getCurrent() > 1);
             
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
@@ -1445,7 +1517,8 @@ public class MerchantApiController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "评价不存在"));
             }
-            if (!review.getMerchant().getId().equals(merchant.getId())) {
+            // 使用 merchantId 字段进行权限检查，避免 NPE
+            if (review.getMerchantId() == null || !review.getMerchantId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权查看此评价"));
             }
@@ -1459,9 +1532,9 @@ public class MerchantApiController {
     /**
      * 回复评价
      * PUT /api/merchant/reviews/{id}/reply
-     * 
+     *
      * 商家可以回复用户的评价
-     * 
+     *
      * @param id 评价ID
      * @param request 包含回复内容的请求体
      * @param session HTTP会话，用于验证商家身份
@@ -1483,7 +1556,8 @@ public class MerchantApiController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "评价不存在"));
             }
-            if (!review.getMerchant().getId().equals(merchant.getId())) {
+            // 使用 merchantId 字段进行权限检查，避免 NPE
+            if (review.getMerchantId() == null || !review.getMerchantId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此评价"));
             }
@@ -1504,9 +1578,9 @@ public class MerchantApiController {
     /**
      * 删除评价
      * DELETE /api/merchant/reviews/{id}
-     * 
+     *
      * 商家可以删除自己店铺的评价
-     * 
+     *
      * @param id 评价ID
      * @param session HTTP会话，用于验证商家身份
      * @return 统一响应格式
@@ -1526,7 +1600,8 @@ public class MerchantApiController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error(404, "评价不存在"));
             }
-            if (!review.getMerchant().getId().equals(merchant.getId())) {
+            // 使用 merchantId 字段进行权限检查，避免 NPE
+            if (review.getMerchantId() == null || !review.getMerchantId().equals(merchant.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiResponse.error(403, "无权操作此评价"));
             }
@@ -1545,70 +1620,6 @@ public class MerchantApiController {
      * 获取商家最近的评价列表
      * 
      * @param limit 限制返回数量
-     * @param session HTTP会话，用于验证商家身份
-     * @return 统一响应格式，包含最近评价列表
-     */
-    @GetMapping("/reviews/recent")
-    public ResponseEntity<ApiResponse<List<Review>>> getRecentReviews(
-            @RequestParam(defaultValue = "5") int limit,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
-        try {
-            List<Review> reviews = reviewService.getRecentReviews(merchant.getId(), limit);
-            return ResponseEntity.ok(ApiResponse.success(reviews));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(500, "获取最近评价失败：" + e.getMessage()));
-        }
-    }
-
-
-
-    /**
-     * 删除评价
-     * DELETE /api/merchant/reviews/{id}
-     * 
-     * @param id 评价ID
-     * @param session HTTP会话，用于验证商家身份
-     * @return 统一响应格式
-     */
-    @DeleteMapping("/reviews/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteReview(
-            @PathVariable Integer id,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
-        try {
-            Review review = reviewService.findById(id);
-            if (review == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error(404, "评价不存在"));
-            }
-            if (!review.getMerchant().getId().equals(merchant.getId())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(ApiResponse.error(403, "无权删除此评价"));
-            }
-            
-            reviewService.delete(id);
-            return ResponseEntity.ok(ApiResponse.success("评价删除成功", null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(500, "删除评价失败：" + e.getMessage()));
-        }
-    }
-
-    /**
-     * 获取最近评价列表
-     * GET /api/merchant/reviews/recent
-     * 
-     * @param limit 数量限制（默认5）
      * @param session HTTP会话，用于验证商家身份
      * @return 统一响应格式，包含最近评价列表
      */
@@ -1862,66 +1873,6 @@ public class MerchantApiController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error(500, "导出营收统计失败：" + e.getMessage()));
-        }
-    }
-
-    /**
-     * 获取预约统计
-     * GET /api/merchant/appointment-stats
-     * 
-     * @param startDate 开始日期（可选，默认本月第一天）
-     * @param endDate 结束日期（可选，默认今天）
-     * @param session HTTP会话，用于验证商家身份
-     * @return 统一响应格式，包含预约统计数据
-     */
-    @GetMapping("/appointment-stats")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getAppointmentStats(
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
-        try {
-            LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
-            LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
-            Map<String, Object> stats = merchantStatsService.getAppointmentStats(merchant.getId(), start, end);
-            return ResponseEntity.ok(ApiResponse.success(stats));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(500, "获取预约统计失败：" + e.getMessage()));
-        }
-    }
-
-    /**
-     * 导出预约统计
-     * GET /api/merchant/appointment-stats/export
-     * 
-     * @param startDate 开始日期（可选，默认本月第一天）
-     * @param endDate 结束日期（可选，默认今天）
-     * @param session HTTP会话，用于验证商家身份
-     * @return 统一响应格式，包含导出数据
-     */
-    @GetMapping("/appointment-stats/export")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> exportAppointmentStats(
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
-        try {
-            LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
-            LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
-            List<Map<String, Object>> exportData = merchantStatsService.getAppointmentStatsForExport(merchant.getId(), start, end);
-            return ResponseEntity.ok(ApiResponse.success("导出成功", exportData));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(500, "导出预约统计失败：" + e.getMessage()));
         }
     }
 

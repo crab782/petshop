@@ -1,17 +1,17 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.dto.ActivityDTO;
 import com.petshop.dto.HomeStatsDTO;
 import com.petshop.entity.Appointment;
 import com.petshop.entity.ProductOrder;
 import com.petshop.entity.Review;
-import com.petshop.repository.AppointmentRepository;
-import com.petshop.repository.PetRepository;
-import com.petshop.repository.ProductOrderRepository;
-import com.petshop.repository.ReviewRepository;
+import com.petshop.mapper.AppointmentMapper;
+import com.petshop.mapper.PetMapper;
+import com.petshop.mapper.ProductOrderMapper;
+import com.petshop.mapper.ReviewMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,23 +25,32 @@ import java.util.stream.Collectors;
 public class UserHomeService {
 
     @Autowired
-    private PetRepository petRepository;
+    private PetMapper petRepository;
 
     @Autowired
-    private AppointmentRepository appointmentRepository;
+    private AppointmentMapper appointmentRepository;
 
     @Autowired
-    private ReviewRepository reviewRepository;
+    private ReviewMapper reviewRepository;
 
     @Autowired
-    private ProductOrderRepository productOrderRepository;
+    private ProductOrderMapper productOrderRepository;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public HomeStatsDTO getHomeStats(Integer userId) {
-        long petCount = petRepository.countByUserId(userId);
-        long pendingAppointments = appointmentRepository.countByUserIdAndStatus(userId, "pending");
-        long reviewCount = reviewRepository.countByUserId(userId);
+        LambdaQueryWrapper<com.petshop.entity.Pet> petWrapper = new LambdaQueryWrapper<>();
+        petWrapper.eq(com.petshop.entity.Pet::getUserId, userId);
+        long petCount = petRepository.selectCount(petWrapper);
+        
+        LambdaQueryWrapper<Appointment> appointmentWrapper = new LambdaQueryWrapper<>();
+        appointmentWrapper.eq(Appointment::getUserId, userId)
+                         .eq(Appointment::getStatus, "pending");
+        long pendingAppointments = appointmentRepository.selectCount(appointmentWrapper);
+        
+        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
+        reviewWrapper.eq(Review::getUserId, userId);
+        long reviewCount = reviewRepository.selectCount(reviewWrapper);
 
         return new HomeStatsDTO(petCount, pendingAppointments, reviewCount);
     }
@@ -49,15 +58,17 @@ public class UserHomeService {
     public List<ActivityDTO> getRecentActivities(Integer userId, int limit) {
         List<ActivityDTO> activities = new ArrayList<>();
 
-        List<Appointment> appointments = appointmentRepository.findByUserIdOrderByCreatedAtDesc(
-            userId, 
-            PageRequest.of(0, limit)
-        );
+        Page<Appointment> appointmentPage = new Page<>(1, limit);
+        LambdaQueryWrapper<Appointment> appointmentWrapper = new LambdaQueryWrapper<>();
+        appointmentWrapper.eq(Appointment::getUserId, userId)
+                         .orderByDesc(Appointment::getCreatedAt);
+        List<Appointment> appointments = appointmentRepository.selectPage(appointmentPage, appointmentWrapper).getRecords();
+        
         for (Appointment apt : appointments) {
             activities.add(ActivityDTO.builder()
                 .id(apt.getId())
                 .type("appointment")
-                .title("预约服务: " + (apt.getService() != null ? apt.getService().getName() : "未知服务"))
+                .title("预约服务：" + (apt.getService() != null ? apt.getService().getName() : "未知服务"))
                 .time(formatTime(apt.getCreatedAt()))
                 .status(getAppointmentStatusText(apt.getStatus()))
                 .statusColor(getAppointmentStatusColor(apt.getStatus()))
@@ -65,15 +76,17 @@ public class UserHomeService {
                 .build());
         }
 
-        List<Review> reviews = reviewRepository.findByUserIdOrderByCreatedAtDesc(
-            userId,
-            PageRequest.of(0, limit)
-        );
+        Page<Review> reviewPage = new Page<>(1, limit);
+        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
+        reviewWrapper.eq(Review::getUserId, userId)
+                    .orderByDesc(Review::getCreatedAt);
+        List<Review> reviews = reviewRepository.selectPage(reviewPage, reviewWrapper).getRecords();
+        
         for (Review review : reviews) {
             activities.add(ActivityDTO.builder()
                 .id(review.getId())
                 .type("review")
-                .title("评价服务: " + (review.getService() != null ? review.getService().getName() : "未知服务"))
+                .title("评价服务：" + (review.getService() != null ? review.getService().getName() : "未知服务"))
                 .time(formatTime(review.getCreatedAt()))
                 .status("已评价")
                 .statusColor("green")
@@ -81,10 +94,12 @@ public class UserHomeService {
                 .build());
         }
 
-        List<ProductOrder> orders = productOrderRepository.findByUserIdOrderByCreatedAtDesc(
-            userId,
-            PageRequest.of(0, limit)
-        );
+        Page<ProductOrder> orderPage = new Page<>(1, limit);
+        LambdaQueryWrapper<ProductOrder> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.eq(ProductOrder::getUserId, userId)
+                   .orderByDesc(ProductOrder::getCreatedAt);
+        List<ProductOrder> orders = productOrderRepository.selectPage(orderPage, orderWrapper).getRecords();
+        
         for (ProductOrder order : orders) {
             activities.add(ActivityDTO.builder()
                 .id(order.getId())

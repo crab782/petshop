@@ -200,6 +200,25 @@
   - `human-judgment` TR-14.2: API注释清晰完整
 - **备注**: 最终验证
 
+## [x] Task 15: 商家端 API 审计
+- **优先级**: P0
+- **依赖**: Task 1-14
+- **描述**: 
+  - 审计 MerchantApiController 和 MerchantController 所有接口
+  - 检查 HTTP 方法正确性（GET/POST/PUT/DELETE）
+  - 检查 URL 路径规范性
+  - 检查请求参数验证
+  - 检查响应格式一致性
+  - 检查错误处理完整性
+  - 检查状态码正确性
+  - 检查前端兼容性
+- **验收标准**: AC-5
+- **测试要求**:
+  - `programmatic` TR-15.1: 生成完整的审计报告
+  - `programmatic` TR-15.2: 识别所有前后端不兼容问题
+  - `programmatic` TR-15.3: 提供修复建议
+- **备注**: 审计报告已生成：audit-report.md
+
 ## 任务依赖关系
 - Task 1 是所有任务的基础
 - Task 2, Task 3 可以并行执行
@@ -208,3 +227,33 @@
 - Task 10 依赖 Task 3
 - Task 11 依赖 Task 1, Task 2
 - Task 14 依赖所有其他任务
+- Task 15 依赖 Task 1-14
+
+## 审计发现的问题
+
+### P0 - 严重问题（需立即修复）
+1. **前后端参数传递不匹配**（5个接口）
+   - PUT /api/merchant/appointments/{id}/status
+   - PUT /api/merchant/orders/{id}/status
+   - PUT /api/merchant/product-orders/{id}/status
+   - PUT /api/merchant/products/{id}/status
+   - PUT /api/merchant/categories/{id}/status
+   
+   前端使用 JSON Body 发送参数，后端使用 @RequestParam 接收，导致接口无法正常工作。
+
+### P1 - 中等问题（需尽快修复）
+1. **重复接口**
+   - GET /api/merchant/profile 和 GET /api/merchant/info 功能重复
+   - PUT /api/merchant/profile 和 PUT /api/merchant/info 功能重复
+
+2. **HTTP 方法不规范**
+   - POST /api/merchant/settings/toggle-status 应使用 PUT
+   - POST /api/merchant/change-password 应使用 PUT
+
+### P2 - 低等问题（需计划修复）
+1. **参数验证不完整**
+   - 多个接口缺少必要的参数验证
+
+2. **错误处理不一致**
+   - 异常捕获过于宽泛
+   - 错误消息格式不统一

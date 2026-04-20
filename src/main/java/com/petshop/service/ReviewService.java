@@ -1,14 +1,14 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.dto.ReviewDTO;
 import com.petshop.entity.Review;
-import com.petshop.repository.ReviewRepository;
+import com.petshop.exception.BadRequestException;
+import com.petshop.mapper.ReviewMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,67 +22,81 @@ import java.util.stream.Collectors;
 public class ReviewService {
     
     @Autowired
-    private ReviewRepository reviewRepository;
+    private ReviewMapper reviewMapper;
     
     public Review create(Review review) {
         review.setCreatedAt(LocalDateTime.now());
-        return reviewRepository.save(review);
+        reviewMapper.insert(review);
+        return review;
     }
     
     public Review findById(Integer id) {
-        return reviewRepository.findById(id).orElse(null);
+        return reviewMapper.selectById(id);
     }
     
     public List<Review> findByMerchantId(Integer merchantId) {
-        return reviewRepository.findByMerchantId(merchantId);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getMerchantId, merchantId);
+        return reviewMapper.selectList(wrapper);
     }
     
     public List<Review> findByUserId(Integer userId) {
-        return reviewRepository.findByUserId(userId);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getUserId, userId);
+        return reviewMapper.selectList(wrapper);
     }
     
-    public Page<Review> findByUserId(Integer userId, Pageable pageable) {
-        return reviewRepository.findByUserId(userId, pageable);
+    public Page<Review> findByUserId(Integer userId, Page page) {
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getUserId, userId);
+        wrapper.orderByDesc(Review::getCreatedAt);
+        return reviewMapper.selectPage(page, wrapper);
     }
     
     public Review findByAppointmentId(Integer appointmentId) {
-        return reviewRepository.findByAppointmentId(appointmentId);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getAppointmentId, appointmentId);
+        return reviewMapper.selectOne(wrapper);
     }
     
-    public Page<ReviewDTO> findByUserIdWithPaging(Integer userId, Integer rating, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviewPage;
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<ReviewDTO> findByUserIdWithPaging(Integer userId, Integer rating, int page, int size) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> reviewPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page + 1, size);
+        
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getUserId, userId);
+        
         if (rating != null) {
-            reviewPage = reviewRepository.findByUserId(userId, pageable);
-        } else {
-            reviewPage = reviewRepository.findByUserId(userId, pageable);
+            wrapper.eq(Review::getRating, rating);
         }
-        List<ReviewDTO> dtos = reviewPage.getContent().stream()
+        
+        wrapper.orderByDesc(Review::getCreatedAt);
+        
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> result = reviewMapper.selectPage(reviewPage, wrapper);
+        
+        // 创建新的 Page 对象，用于存放转换后的 ReviewDTO
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<ReviewDTO> dtoPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page + 1, size);
+        dtoPage.setTotal(result.getTotal());
+        dtoPage.setRecords(result.getRecords().stream()
                 .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        return new PageImpl<>(dtos, pageable, reviewPage.getTotalElements());
+                .collect(Collectors.toList()));
+        
+        return dtoPage;
     }
     
-    public Page<ReviewDTO> findByUserIdWithPagingAndRating(Integer userId, Integer rating, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviewPage = reviewRepository.findByUserId(userId, pageable);
-        List<ReviewDTO> dtos = reviewPage.getContent().stream()
-                .filter(r -> rating == null || r.getRating().equals(rating))
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        return new PageImpl<>(dtos, pageable, reviewPage.getTotalElements());
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<ReviewDTO> findByUserIdWithPagingAndRating(Integer userId, Integer rating, int page, int size) {
+        return findByUserIdWithPaging(userId, rating, page, size);
     }
     
     private ReviewDTO convertToDTO(Review review) {
         return ReviewDTO.builder()
                 .id(review.getId())
-                .userId(review.getUser().getId())
-                .userName(review.getUser().getUsername())
-                .merchantId(review.getMerchant().getId())
-                .merchantName(review.getMerchant().getName())
-                .serviceId(review.getService().getId())
-                .serviceName(review.getService().getName())
-                .appointmentId(review.getAppointment().getId())
+                .userId(review.getUserId())
+                .userName(review.getUser() != null ? review.getUser().getUsername() : null)
+                .merchantId(review.getMerchantId())
+                .merchantName(review.getMerchant() != null ? review.getMerchant().getName() : null)
+                .serviceId(review.getServiceId())
+                .serviceName(review.getService() != null ? review.getService().getName() : null)
+                .appointmentId(review.getAppointmentId())
                 .rating(review.getRating())
                 .comment(review.getComment())
                 .createTime(review.getCreatedAt())
@@ -90,54 +104,98 @@ public class ReviewService {
     }
     
     public List<Review> findByServiceId(Integer serviceId) {
-        return reviewRepository.findByServiceId(serviceId);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getServiceId, serviceId);
+        return reviewMapper.selectList(wrapper);
     }
     
-    public Page<Review> findByMerchantId(Integer merchantId, Pageable pageable) {
-        return reviewRepository.findByMerchantId(merchantId, pageable);
+    public Page<Review> findByMerchantId(Integer merchantId, Page page) {
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getMerchantId, merchantId);
+        wrapper.orderByDesc(Review::getCreatedAt);
+        return reviewMapper.selectPage(page, wrapper);
     }
     
-    public Page<Review> searchReviews(Integer merchantId, Integer rating, String keyword, Pageable pageable) {
-        return reviewRepository.searchReviews(merchantId, rating, keyword, pageable);
+    public Page<Review> searchReviews(Integer merchantId, Integer rating, String keyword, Page page) {
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        
+        if (merchantId != null) {
+            wrapper.eq(Review::getMerchantId, merchantId);
+        }
+        
+        if (rating != null) {
+            wrapper.eq(Review::getRating, rating);
+        }
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.and(w -> w.like(Review::getComment, keyword)
+                    .or().like(Review::getReplyContent, keyword));
+        }
+        
+        wrapper.orderByDesc(Review::getCreatedAt);
+        
+        return reviewMapper.selectPage(page, wrapper);
     }
     
     public List<Review> getRecentReviews(Integer merchantId, int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
-        return reviewRepository.findRecentByMerchantId(merchantId, pageable);
+        Page<Review> page = new Page<>(1, limit);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getMerchantId, merchantId);
+        wrapper.orderByDesc(Review::getCreatedAt);
+        IPage<Review> result = reviewMapper.selectPage(page, wrapper);
+        return result.getRecords();
     }
     
     @Transactional
     public Review replyToReview(Integer reviewId, String replyContent) {
-        Review review = reviewRepository.findById(reviewId).orElse(null);
+        Review review = reviewMapper.selectById(reviewId);
         if (review != null) {
             review.setReplyContent(replyContent);
             review.setReplyTime(LocalDateTime.now());
-            return reviewRepository.save(review);
+            reviewMapper.updateById(review);
+            return review;
         }
         return null;
     }
     
     @Transactional
     public Review update(Review review) {
-        return reviewRepository.save(review);
+        reviewMapper.updateById(review);
+        return review;
     }
     
     @Transactional
     public void delete(Integer id) {
-        reviewRepository.deleteById(id);
+        reviewMapper.deleteById(id);
     }
     
     public Double getAverageRating(Integer merchantId) {
-        Double avgRating = reviewRepository.getAverageRatingByMerchantId(merchantId);
-        return avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0;
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getMerchantId, merchantId);
+        List<Review> reviews = reviewMapper.selectList(wrapper);
+        
+        if (reviews.isEmpty()) {
+            return 0.0;
+        }
+        
+        double sum = reviews.stream()
+                .mapToInt(Review::getRating)
+                .sum();
+        double avg = sum / reviews.size();
+        return Math.round(avg * 10.0) / 10.0;
     }
     
     public Map<Integer, Long> getRatingDistribution(Integer merchantId) {
         Map<Integer, Long> distribution = new HashMap<>();
+        
         for (int i = 1; i <= 5; i++) {
-            Long count = reviewRepository.countByMerchantIdAndRating(merchantId, i);
-            distribution.put(i, count != null ? count : 0L);
+            LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Review::getMerchantId, merchantId)
+                   .eq(Review::getRating, i);
+            Long count = (long) reviewMapper.selectCount(wrapper);
+            distribution.put(i, count);
         }
+        
         return distribution;
     }
     
@@ -150,7 +208,9 @@ public class ReviewService {
         Map<Integer, Long> distribution = getRatingDistribution(merchantId);
         statistics.put("ratingDistribution", distribution);
         
-        long totalReviews = reviewRepository.findByMerchantId(merchantId).size();
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getMerchantId, merchantId);
+        long totalReviews = reviewMapper.selectCount(wrapper);
         statistics.put("totalReviews", totalReviews);
         
         return statistics;
@@ -158,45 +218,40 @@ public class ReviewService {
     
     public Page<Review> getReviewsWithPaging(Integer merchantId, Integer rating, String keyword, 
                                              int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("asc") 
-            ? Sort.by(sortBy).ascending() 
-            : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(page, size, sort);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
         
-        if (rating != null || (keyword != null && !keyword.trim().isEmpty())) {
-            return searchReviews(merchantId, rating, keyword, pageable);
+        if (merchantId != null) {
+            wrapper.eq(Review::getMerchantId, merchantId);
         }
         
-        return findByMerchantId(merchantId, pageable);
+        if (rating != null) {
+            wrapper.eq(Review::getRating, rating);
+        }
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.and(w -> w.like(Review::getComment, keyword)
+                    .or().like(Review::getReplyContent, keyword));
+        }
+        
+        if ("asc".equalsIgnoreCase(sortDir)) {
+            wrapper.orderByAsc(Review::getCreatedAt);
+        } else {
+            wrapper.orderByDesc(Review::getCreatedAt);
+        }
+        
+        Page<Review> reviewPage = new Page<>(page, size);
+        return reviewMapper.selectPage(reviewPage, wrapper);
     }
     
-    public Page<Review> getAllReviews(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return reviewRepository.findAllByOrderByCreatedAtDesc(pageable);
-    }
-    
-    public Page<Review> getReviewsByStatus(String status, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return reviewRepository.findByStatus(status, pageable);
-    }
-    
-    public Page<Review> searchAdminReviews(Integer rating, String keyword, Integer merchantId, 
-                                           String status, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return reviewRepository.searchAdminReviews(rating, keyword, merchantId, status, pageable);
-    }
-    
-    public Page<Review> getPendingReviews(String keyword, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return reviewRepository.findPendingReviews(keyword, pageable);
-    }
+
     
     @Transactional
     public Review auditReview(Integer id, String status, String reason) {
-        Review review = reviewRepository.findById(id).orElse(null);
+        Review review = reviewMapper.selectById(id);
         if (review != null) {
             review.setStatus(status);
-            return reviewRepository.save(review);
+            reviewMapper.updateById(review);
+            return review;
         }
         return null;
     }
@@ -204,19 +259,84 @@ public class ReviewService {
     @Transactional
     public int batchUpdateStatus(List<Integer> ids, String status) {
         if (ids == null || ids.isEmpty()) {
-            throw new IllegalArgumentException("Review IDs cannot be empty");
+            throw new BadRequestException("Review IDs cannot be empty");
         }
         if (status == null || (!status.equals("approved") && !status.equals("rejected"))) {
-            throw new IllegalArgumentException("Invalid status. Must be 'approved' or 'rejected'");
+            throw new BadRequestException("Invalid status. Must be 'approved' or 'rejected'");
         }
-        return reviewRepository.batchUpdateStatus(ids, status);
+        
+        int count = 0;
+        for (Integer id : ids) {
+            Review review = reviewMapper.selectById(id);
+            if (review != null) {
+                review.setStatus(status);
+                reviewMapper.updateById(review);
+                count++;
+            }
+        }
+        return count;
     }
     
     @Transactional
     public int batchDelete(List<Integer> ids) {
         if (ids == null || ids.isEmpty()) {
-            throw new IllegalArgumentException("Review IDs cannot be empty");
+            throw new BadRequestException("Review IDs cannot be empty");
         }
-        return reviewRepository.batchDelete(ids);
+        
+        int count = 0;
+        for (Integer id : ids) {
+            reviewMapper.deleteById(id);
+            count++;
+        }
+        return count;
+    }
+    
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> getAllReviews(int page, int pageSize) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> mpPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page + 1, pageSize);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(Review::getCreatedAt);
+        return reviewMapper.selectPage(mpPage, wrapper);
+    }
+    
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> searchAdminReviews(Integer rating, String keyword, 
+                                                                            Integer merchantId, String status, 
+                                                                            int page, int pageSize) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> mpPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page + 1, pageSize);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        
+        if (rating != null) {
+            wrapper.eq(Review::getRating, rating);
+        }
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.and(w -> w.like(Review::getComment, keyword)
+                    .or().like(Review::getReplyContent, keyword));
+        }
+        
+        if (merchantId != null) {
+            wrapper.eq(Review::getMerchantId, merchantId);
+        }
+        
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(Review::getStatus, status);
+        }
+        
+        wrapper.orderByDesc(Review::getCreatedAt);
+        
+        return reviewMapper.selectPage(mpPage, wrapper);
+    }
+    
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> getPendingReviews(String keyword, int page, int pageSize) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> mpPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page + 1, pageSize);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getStatus, "pending");
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.like(Review::getComment, keyword);
+        }
+        
+        wrapper.orderByDesc(Review::getCreatedAt);
+        
+        return reviewMapper.selectPage(mpPage, wrapper);
     }
 }

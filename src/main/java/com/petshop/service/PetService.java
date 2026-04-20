@@ -1,7 +1,8 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.petshop.entity.Pet;
-import com.petshop.repository.PetRepository;
+import com.petshop.mapper.PetMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -10,25 +11,28 @@ import java.util.List;
 @Service
 public class PetService {
     @Autowired
-    private PetRepository petRepository;
+    private PetMapper petMapper;
 
     public Pet create(Pet pet) {
-        return petRepository.save(pet);
+        petMapper.insert(pet);
+        return pet;
     }
 
     public Pet findById(Integer id) {
-        return petRepository.findById(id).orElse(null);
+        return petMapper.selectById(id);
     }
 
     public List<Pet> findByUserId(Integer userId) {
-        return petRepository.findByUserId(userId);
+        return petMapper.selectList(new LambdaQueryWrapper<Pet>()
+                .eq(Pet::getUserId, userId));
     }
 
     public Pet update(Pet pet) {
-        return petRepository.save(pet);
+        petMapper.updateById(pet);
+        return pet;
     }
 
     public void delete(Integer id) {
-        petRepository.deleteById(id);
+        petMapper.deleteById(id);
     }
 }

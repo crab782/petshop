@@ -46,6 +46,10 @@ public class ApiResponse<T> {
         return new ApiResponse<>(200, message, data);
     }
 
+    public static ApiResponse<Boolean> success(boolean success, String message) {
+        return new ApiResponse<>(200, message, success);
+    }
+
     public static <T> ApiResponse<T> error(int code, String message) {
         return new ApiResponse<>(code, message, null);
     }

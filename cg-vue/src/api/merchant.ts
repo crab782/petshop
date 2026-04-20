@@ -335,7 +335,7 @@ export const getMerchantRevenueStats = (query: RevenueQuery) => {
   // 根据 query 计算日期范围
   let startDate = query.startDate;
   let endDate = query.endDate;
-  
+
   if (!startDate || !endDate) {
     const now = new Date();
     switch (query.type) {
@@ -361,7 +361,7 @@ export const getMerchantRevenueStats = (query: RevenueQuery) => {
         break;
     }
   }
-  
+
   return request.get<RevenueStats>('/api/merchant/revenue-stats', { params: { startDate, endDate } })
 }
 
@@ -369,7 +369,7 @@ export const exportRevenueStats = (query: RevenueQuery) => {
   // 根据 query 计算日期范围
   let startDate = query.startDate;
   let endDate = query.endDate;
-  
+
   if (!startDate || !endDate) {
     const now = new Date();
     switch (query.type) {
@@ -395,7 +395,7 @@ export const exportRevenueStats = (query: RevenueQuery) => {
         break;
     }
   }
-  
+
   return request.get<Blob>('/api/merchant/revenue-stats/export', {
     params: { startDate, endDate },
     responseType: 'blob'
@@ -419,7 +419,7 @@ export const getMerchantAppointmentStats = (timeRange: string, startDate?: strin
   // 根据 timeRange 计算日期范围
   let actualStartDate = startDate;
   let actualEndDate = endDate;
-  
+
   if (!startDate || !endDate) {
     const now = new Date();
     switch (timeRange) {
@@ -445,7 +445,7 @@ export const getMerchantAppointmentStats = (timeRange: string, startDate?: strin
         break;
     }
   }
-  
+
   return request.get<AppointmentStats>('/api/merchant/appointment-stats', { params: { startDate: actualStartDate, endDate: actualEndDate } })
 }
 
@@ -453,7 +453,7 @@ export const exportAppointmentStats = (timeRange: string, startDate?: string, en
   // 根据 timeRange 计算日期范围
   let actualStartDate = startDate;
   let actualEndDate = endDate;
-  
+
   if (!startDate || !endDate) {
     const now = new Date();
     switch (timeRange) {
@@ -479,7 +479,7 @@ export const exportAppointmentStats = (timeRange: string, startDate?: string, en
         break;
     }
   }
-  
+
   return request.get<Blob>('/api/merchant/appointment-stats/export', {
     params: { startDate: actualStartDate, endDate: actualEndDate },
     responseType: 'blob'

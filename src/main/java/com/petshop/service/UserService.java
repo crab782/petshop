@@ -1,62 +1,68 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.entity.User;
-import com.petshop.repository.UserRepository;
+import com.petshop.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserService {
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userMapper;
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     public User register(User user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setCreatedAt(java.time.LocalDateTime.now());
-        user.setUpdatedAt(java.time.LocalDateTime.now());
-        return userRepository.save(user);
+        userMapper.insert(user);
+        return user;
     }
 
     public User login(String email, String password) {
-        Optional<User> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
-            return userOpt.get();
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getEmail, email));
+        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+            return user;
         }
-        userOpt = userRepository.findByUsername(email);
-        if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
-            return userOpt.get();
+        user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getUsername, email));
+        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+            return user;
         }
         return null;
     }
 
     public User findByEmail(String email) {
-        return userRepository.findByEmail(email).orElse(null);
+        return userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getEmail, email));
     }
 
     public User findById(Integer id) {
-        return userRepository.findById(id).orElse(null);
+        return userMapper.selectById(id);
     }
 
     public List<User> findAll() {
-        return userRepository.findAll();
+        return userMapper.selectList(null);
+    }
+
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<User> findAll(org.springframework.data.domain.Pageable pageable) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<User> mpPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageable.getPageNumber() + 1, pageable.getPageSize());
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(User::getCreatedAt);
+        return userMapper.selectPage(mpPage, wrapper);
     }
 
     public User update(User user) {
-        user.setUpdatedAt(java.time.LocalDateTime.now());
-        return userRepository.save(user);
+        userMapper.updateById(user);
+        return user;
     }
 
     public void delete(Integer id) {
-        userRepository.deleteById(id);
-    }
-
-    public Optional<User> findByEmailOptional(String email) {
-        return userRepository.findByEmail(email);
+        userMapper.deleteById(id);
     }
 }

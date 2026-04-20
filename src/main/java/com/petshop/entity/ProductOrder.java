@@ -1,235 +1,121 @@
 package com.petshop.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
+
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "product_order")
-public class ProductOrder {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Data
+@EqualsAndHashCode(callSuper = false)
+@Accessors(chain = true)
+@TableName("product_order")
+public class ProductOrder implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
-    
-    @Column(name = "order_no", length = 50, unique = true)
+
+    @TableField("order_no")
     private String orderNo;
-    
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-    
-    @ManyToOne
-    @JoinColumn(name = "merchant_id", nullable = false)
-    private Merchant merchant;
-    
-    @Column(name = "total_price", columnDefinition = "decimal(10,2)", nullable = false)
+
+    @TableField("user_id")
+    private Integer userId;
+
+    @TableField("merchant_id")
+    private Integer merchantId;
+
+    @TableField("total_price")
     private BigDecimal totalPrice;
-    
-    @Column(name = "freight", columnDefinition = "decimal(10,2)")
+
+    @TableField("freight")
     private BigDecimal freight = BigDecimal.ZERO;
-    
-    @Column(name = "status", columnDefinition = "enum('pending','paid','shipped','completed','cancelled') default 'pending'")
+
+    @TableField("status")
     private String status = "pending";
-    
-    @Column(name = "pay_method", length = 20)
+
+    @TableField("pay_method")
     private String payMethod;
-    
-    @Column(name = "remark", length = 500)
+
+    @TableField("remark")
     private String remark;
-    
-    @Column(name = "shipping_address", length = 255, nullable = false)
+
+    @TableField("shipping_address")
     private String shippingAddress;
-    
-    @Column(name = "logistics_company", length = 50)
+
+    @TableField("logistics_company")
     private String logisticsCompany;
-    
-    @Column(name = "logistics_number", length = 100)
+
+    @TableField("logistics_number")
     private String logisticsNumber;
-    
-    @Column(name = "transaction_id", length = 100)
+
+    @TableField("transaction_id")
     private String transactionId;
-    
-    @Column(name = "paid_at")
+
+    @TableField("paid_at")
     private LocalDateTime paidAt;
-    
-    @Column(name = "shipped_at")
+
+    @TableField("shipped_at")
     private LocalDateTime shippedAt;
-    
-    @Column(name = "completed_at")
+
+    @TableField("completed_at")
     private LocalDateTime completedAt;
-    
-    @Column(name = "cancelled_at")
+
+    @TableField("cancelled_at")
     private LocalDateTime cancelledAt;
-    
-    @Column(name = "created_at", updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-    
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
     
-    @PrePersist
-    protected void onCreate() {
-        if (orderNo == null) {
-            orderNo = "PO" + System.currentTimeMillis();
-        }
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
+    @TableField(exist = false)
+    private Merchant merchant;
     
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getOrderNo() {
-        return orderNo;
-    }
-
-    public void setOrderNo(String orderNo) {
-        this.orderNo = orderNo;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public Merchant getMerchant() {
-        return merchant;
-    }
-
-    public void setMerchant(Merchant merchant) {
-        this.merchant = merchant;
-    }
-
-    public BigDecimal getTotalPrice() {
-        return totalPrice;
-    }
-
-    public void setTotalPrice(BigDecimal totalPrice) {
-        this.totalPrice = totalPrice;
-    }
-
-    public BigDecimal getFreight() {
-        return freight;
-    }
-
-    public void setFreight(BigDecimal freight) {
-        this.freight = freight;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getPayMethod() {
-        return payMethod;
-    }
-
-    public void setPayMethod(String payMethod) {
-        this.payMethod = payMethod;
-    }
-
-    public String getRemark() {
-        return remark;
-    }
-
-    public void setRemark(String remark) {
-        this.remark = remark;
-    }
-
-    public String getShippingAddress() {
-        return shippingAddress;
-    }
-
-    public void setShippingAddress(String shippingAddress) {
-        this.shippingAddress = shippingAddress;
-    }
-
-    public String getLogisticsCompany() {
-        return logisticsCompany;
-    }
-
-    public void setLogisticsCompany(String logisticsCompany) {
-        this.logisticsCompany = logisticsCompany;
-    }
-
-    public String getLogisticsNumber() {
-        return logisticsNumber;
-    }
-
-    public void setLogisticsNumber(String logisticsNumber) {
-        this.logisticsNumber = logisticsNumber;
-    }
-
-    public String getTransactionId() {
-        return transactionId;
-    }
-
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
-    }
-
-    public LocalDateTime getPaidAt() {
-        return paidAt;
-    }
-
-    public void setPaidAt(LocalDateTime paidAt) {
-        this.paidAt = paidAt;
-    }
-
-    public LocalDateTime getShippedAt() {
-        return shippedAt;
-    }
-
-    public void setShippedAt(LocalDateTime shippedAt) {
-        this.shippedAt = shippedAt;
-    }
-
-    public LocalDateTime getCompletedAt() {
-        return completedAt;
-    }
-
-    public void setCompletedAt(LocalDateTime completedAt) {
-        this.completedAt = completedAt;
-    }
-
-    public LocalDateTime getCancelledAt() {
-        return cancelledAt;
-    }
-
-    public void setCancelledAt(LocalDateTime cancelledAt) {
-        this.cancelledAt = cancelledAt;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    // Manual getter and setter methods
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+    public String getOrderNo() { return orderNo; }
+    public void setOrderNo(String orderNo) { this.orderNo = orderNo; }
+    public Integer getUserId() { return userId; }
+    public void setUserId(Integer userId) { this.userId = userId; }
+    public Integer getMerchantId() { return merchantId; }
+    public void setMerchantId(Integer merchantId) { this.merchantId = merchantId; }
+    public BigDecimal getTotalPrice() { return totalPrice; }
+    public void setTotalPrice(BigDecimal totalPrice) { this.totalPrice = totalPrice; }
+    public BigDecimal getFreight() { return freight; }
+    public void setFreight(BigDecimal freight) { this.freight = freight; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public String getPayMethod() { return payMethod; }
+    public void setPayMethod(String payMethod) { this.payMethod = payMethod; }
+    public String getRemark() { return remark; }
+    public void setRemark(String remark) { this.remark = remark; }
+    public String getShippingAddress() { return shippingAddress; }
+    public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
+    public String getLogisticsCompany() { return logisticsCompany; }
+    public void setLogisticsCompany(String logisticsCompany) { this.logisticsCompany = logisticsCompany; }
+    public String getLogisticsNumber() { return logisticsNumber; }
+    public void setLogisticsNumber(String logisticsNumber) { this.logisticsNumber = logisticsNumber; }
+    public String getTransactionId() { return transactionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public LocalDateTime getShippedAt() { return shippedAt; }
+    public void setShippedAt(LocalDateTime shippedAt) { this.shippedAt = shippedAt; }
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Merchant getMerchant() { return merchant; }
+    public void setMerchant(Merchant merchant) { this.merchant = merchant; }
 }

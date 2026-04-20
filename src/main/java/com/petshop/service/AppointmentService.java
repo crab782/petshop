@@ -1,75 +1,125 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.dto.AppointmentDTO;
 import com.petshop.dto.UserPurchasedServiceDTO;
 import com.petshop.entity.Appointment;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.Pet;
-import com.petshop.repository.AppointmentRepository;
+import com.petshop.entity.User;
+import com.petshop.mapper.AppointmentMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@org.springframework.stereotype.Service
+@Service
 public class AppointmentService {
     @Autowired
-    private AppointmentRepository appointmentRepository;
+    private AppointmentMapper appointmentMapper;
 
     public Appointment create(Appointment appointment) {
         appointment.setStatus("pending");
-        return appointmentRepository.save(appointment);
+        appointmentMapper.insert(appointment);
+        return appointment;
     }
 
     public Appointment findById(Integer id) {
-        return appointmentRepository.findById(id).orElse(null);
+        return appointmentMapper.selectById(id);
+    }
+
+    /**
+     * 根据ID查询预约，同时加载所有关联信息（用户、服务、商家、宠物）
+     *
+     * @param id 预约ID
+     * @return 包含所有关联信息的预约对象
+     */
+    public Appointment findByIdWithRelations(Integer id) {
+        return appointmentMapper.selectByIdWithRelations(id);
     }
 
     public List<Appointment> findByUserId(Integer userId) {
-        return appointmentRepository.findByUserId(userId);
+        return appointmentMapper.selectList(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId));
     }
 
     public List<Appointment> findByMerchantId(Integer merchantId) {
-        return appointmentRepository.findByMerchantId(merchantId);
+        return appointmentMapper.selectList(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getMerchantId, merchantId));
     }
 
     public Appointment update(Appointment appointment) {
-        return appointmentRepository.save(appointment);
+        appointmentMapper.updateById(appointment);
+        return appointment;
     }
 
     public void delete(Integer id) {
-        appointmentRepository.deleteById(id);
+        appointmentMapper.deleteById(id);
     }
 
-    public Page<UserPurchasedServiceDTO> findPurchasedServices(Integer userId, String keyword, String status, int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("createdAt").descending());
-        Page<Appointment> appointmentPage = appointmentRepository.findPurchasedServices(userId, keyword, status, pageable);
-
-        return appointmentPage.map(this::convertToPurchasedServiceDTO);
+    public Map<String, Object> findPurchasedServices(Integer userId, String keyword, String status, int page, int pageSize) {
+        LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId)
+                .orderByDesc(Appointment::getCreatedAt);
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.and(w -> w.like(Appointment::getNotes, keyword.trim())
+                    .or().like(Appointment::getNotes, keyword.trim()));
+        }
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(Appointment::getStatus, status);
+        }
+        
+        Page<Appointment> appointmentPage = appointmentMapper.selectPage(
+                new Page<>(page, pageSize), wrapper);
+        
+        List<UserPurchasedServiceDTO> dtos = appointmentPage.getRecords().stream()
+                .map(this::convertToPurchasedServiceDTO)
+                .collect(java.util.stream.Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", dtos);
+        result.put("total", appointmentPage.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil((double) appointmentPage.getTotal() / pageSize));
+        return result;
     }
 
     private UserPurchasedServiceDTO convertToPurchasedServiceDTO(Appointment appointment) {
         String serviceStatus = mapAppointmentStatusToServiceStatus(appointment.getStatus());
+        
+        com.petshop.entity.Service service = appointment.getService();
+        if (service == null) {
+            service = new com.petshop.entity.Service();
+            service.setName("未知服务");
+            service.setDescription("");
+        }
+        
+        com.petshop.entity.Merchant merchant = appointment.getMerchant();
+        if (merchant == null) {
+            merchant = new com.petshop.entity.Merchant();
+            merchant.setId(0);
+            merchant.setName("未知商家");
+        }
 
         return UserPurchasedServiceDTO.builder()
                 .id(appointment.getId())
-                .name(appointment.getService().getName())
-                .merchant(appointment.getMerchant().getName())
-                .merchantId(appointment.getMerchant().getId())
+                .name(service.getName())
+                .merchant(merchant.getName())
+                .merchantId(merchant.getId())
                 .price(appointment.getTotalPrice())
                 .purchaseDate(appointment.getCreatedAt())
                 .expiryDate(appointment.getAppointmentTime())
                 .status(serviceStatus)
-                .category(appointment.getService().getDescription() != null ? "General" : "General")
-                .serviceId(appointment.getService().getId())
+                .category(service.getDescription() != null && !service.getDescription().isEmpty() ? "General" : "General")
+                .serviceId(service.getId())
                 .build();
     }
 
@@ -90,7 +140,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment createAppointment(com.petshop.entity.User user, com.petshop.entity.Service service, Pet pet, 
+    public Appointment createAppointment(User user, com.petshop.entity.Service service, Pet pet, 
                                          LocalDateTime appointmentTime, String remark) {
         Appointment appointment = new Appointment();
         appointment.setUser(user);
@@ -101,71 +151,129 @@ public class AppointmentService {
         appointment.setNotes(remark);
         appointment.setTotalPrice(service.getPrice());
         appointment.setStatus("pending");
-        return appointmentRepository.save(appointment);
+        appointmentMapper.insert(appointment);
+        return appointment;
     }
 
-    public Page<AppointmentDTO> findByUserIdWithFilters(Integer userId, String status, String keyword,
+    public Map<String, Object> findByUserIdWithFilters(Integer userId, String status, String keyword,
                                                         LocalDateTime startDate, LocalDateTime endDate,
                                                         int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("createdAt").descending());
-        Page<Appointment> appointmentPage = appointmentRepository.findByUserIdWithFilters(
-                userId, status, keyword, startDate, endDate, pageable);
-        return appointmentPage.map(this::convertToDTO);
+        LambdaQueryWrapper<Appointment> wrapper = new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId)
+                .orderByDesc(Appointment::getCreatedAt);
+        
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(Appointment::getStatus, status);
+        }
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.and(w -> w.like(Appointment::getNotes, keyword.trim())
+                    .or().like(Appointment::getNotes, keyword.trim()));
+        }
+        if (startDate != null) {
+            wrapper.ge(Appointment::getCreatedAt, startDate);
+        }
+        if (endDate != null) {
+            wrapper.le(Appointment::getCreatedAt, endDate);
+        }
+        
+        Page<Appointment> appointmentPage = appointmentMapper.selectPage(
+                new Page<>(page, pageSize), wrapper);
+        
+        List<AppointmentDTO> dtos = appointmentPage.getRecords().stream()
+                .map(this::convertToDTO)
+                .collect(java.util.stream.Collectors.toList());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", dtos);
+        result.put("total", appointmentPage.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil((double) appointmentPage.getTotal() / pageSize));
+        return result;
     }
 
     public AppointmentDTO findByIdAndUserId(Integer id, Integer userId) {
-        return appointmentRepository.findByIdAndUserIdWithDetails(id, userId)
-                .map(this::convertToDTO)
-                .orElse(null);
+        Appointment appointment = appointmentMapper.selectById(id);
+        if (appointment == null || !appointment.getUserId().equals(userId)) {
+            return null;
+        }
+        return convertToDTO(appointment);
     }
 
     @Transactional
     public boolean cancelAppointment(Integer id, Integer userId) {
-        Appointment appointment = appointmentRepository.findByIdAndUserIdWithDetails(id, userId).orElse(null);
-        if (appointment == null) {
+        Appointment appointment = appointmentMapper.selectById(id);
+        if (appointment == null || !appointment.getUserId().equals(userId)) {
             return false;
         }
         if ("cancelled".equals(appointment.getStatus()) || "completed".equals(appointment.getStatus())) {
             return false;
         }
         appointment.setStatus("cancelled");
-        appointmentRepository.save(appointment);
+        appointmentMapper.updateById(appointment);
         return true;
     }
 
     public Map<String, Long> getAppointmentStats(Integer userId) {
         Map<String, Long> stats = new HashMap<>();
-        stats.put("total", appointmentRepository.countByUserId(userId));
-        stats.put("pending", appointmentRepository.countByUserIdAndStatus(userId, "pending"));
-        stats.put("confirmed", appointmentRepository.countByUserIdAndStatus(userId, "confirmed"));
-        stats.put("completed", appointmentRepository.countByUserIdAndStatus(userId, "completed"));
-        stats.put("cancelled", appointmentRepository.countByUserIdAndStatus(userId, "cancelled"));
+        stats.put("total", appointmentMapper.selectCount(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId)));
+        stats.put("pending", appointmentMapper.selectCount(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId).eq(Appointment::getStatus, "pending")));
+        stats.put("confirmed", appointmentMapper.selectCount(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId).eq(Appointment::getStatus, "confirmed")));
+        stats.put("completed", appointmentMapper.selectCount(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId).eq(Appointment::getStatus, "completed")));
+        stats.put("cancelled", appointmentMapper.selectCount(new LambdaQueryWrapper<Appointment>()
+                .eq(Appointment::getUserId, userId).eq(Appointment::getStatus, "cancelled")));
         return stats;
     }
 
     private AppointmentDTO convertToDTO(Appointment appointment) {
         com.petshop.entity.Service service = appointment.getService();
-        Merchant merchant = appointment.getMerchant();
+        if (service == null) {
+            service = new com.petshop.entity.Service();
+            service.setId(0);
+            service.setName("未知服务");
+            service.setPrice(java.math.BigDecimal.ZERO);
+            service.setDuration(0);
+        }
+        
+        com.petshop.entity.Merchant merchant = appointment.getMerchant();
+        if (merchant == null) {
+            merchant = new com.petshop.entity.Merchant();
+            merchant.setId(0);
+            merchant.setName("未知商家");
+            merchant.setPhone("");
+            merchant.setAddress("");
+        }
+        
         Pet pet = appointment.getPet();
+        if (pet == null) {
+            pet = new Pet();
+            pet.setId(0);
+            pet.setName("未知宠物");
+            pet.setType("未知");
+        }
 
         return AppointmentDTO.builder()
                 .id(appointment.getId())
-                .userId(appointment.getUser().getId())
-                .serviceId(service != null ? service.getId() : null)
-                .merchantId(merchant != null ? merchant.getId() : null)
-                .serviceName(service != null ? service.getName() : null)
-                .merchantName(merchant != null ? merchant.getName() : null)
+                .userId(appointment.getUser() != null ? appointment.getUser().getId() : null)
+                .serviceId(service.getId())
+                .merchantId(merchant.getId())
+                .serviceName(service.getName())
+                .merchantName(merchant.getName())
                 .appointmentTime(appointment.getAppointmentTime())
                 .status(appointment.getStatus())
                 .remark(appointment.getNotes())
                 .totalPrice(appointment.getTotalPrice())
-                .petId(pet != null ? pet.getId() : null)
-                .petName(pet != null ? pet.getName() : null)
-                .petType(pet != null ? pet.getType() : null)
-                .merchantPhone(merchant != null ? merchant.getPhone() : null)
-                .merchantAddress(merchant != null ? merchant.getAddress() : null)
-                .servicePrice(service != null ? service.getPrice() : null)
-                .serviceDuration(service != null ? service.getDuration() : null)
+                .petId(pet.getId())
+                .petName(pet.getName())
+                .petType(pet.getType())
+                .merchantPhone(merchant.getPhone())
+                .merchantAddress(merchant.getAddress())
+                .servicePrice(service.getPrice())
+                .serviceDuration(service.getDuration())
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
                 .build();

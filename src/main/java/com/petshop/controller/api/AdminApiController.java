@@ -25,14 +25,16 @@ import com.petshop.service.AnnouncementService;
 import com.petshop.service.RoleService;
 import com.petshop.service.ScheduledTaskService;
 import com.petshop.service.ActivityService;
-import com.petshop.repository.UserRepository;
-import com.petshop.repository.MerchantRepository;
-import com.petshop.repository.AppointmentRepository;
-import com.petshop.repository.ServiceRepository;
-import com.petshop.repository.AnnouncementRepository;
-import com.petshop.repository.ProductRepository;
-import com.petshop.repository.SystemConfigRepository;
-import com.petshop.repository.SystemSettingsRepository;
+import com.petshop.service.ServiceService;
+import com.petshop.service.SystemSettingsService;
+import com.petshop.mapper.UserMapper;
+import com.petshop.mapper.MerchantMapper;
+import com.petshop.mapper.AppointmentMapper;
+import com.petshop.mapper.ServiceMapper;
+import com.petshop.mapper.AnnouncementMapper;
+import com.petshop.mapper.ProductMapper;
+import com.petshop.mapper.SystemConfigMapper;
+import com.petshop.mapper.SystemSettingsMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -56,7 +58,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/admin")
-@Tag(name = "平台端API", description = "平台管理员使用的API接口，包括用户管理、商家管理、商品管理、评价管理、系统设置等功能")
+@Tag(name = "平台端 API", description = "平台管理员使用的 API 接口，包括用户管理、商家管理、商品管理、评价管理、系统设置等功能")
 @SecurityRequirement(name = "sessionAuth")
 public class AdminApiController {
     @Autowired
@@ -64,19 +66,21 @@ public class AdminApiController {
     @Autowired
     private MerchantService merchantService;
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userMapper;
     @Autowired
-    private MerchantRepository merchantRepository;
+    private MerchantMapper merchantMapper;
     @Autowired
-    private AppointmentRepository appointmentRepository;
+    private AppointmentMapper appointmentMapper;
     @Autowired
-    private ServiceRepository serviceRepository;
+    private ServiceMapper serviceMapper;
     @Autowired
-    private AnnouncementRepository announcementRepository;
+    private AnnouncementMapper announcementMapper;
+    @Autowired
+    private AnnouncementService announcementService;
     @Autowired
     private ProductService productService;
     @Autowired
-    private ProductRepository productRepository;
+    private ProductMapper productMapper;
     @Autowired
     private ReviewService reviewService;
     @Autowired
@@ -86,9 +90,9 @@ public class AdminApiController {
     @Autowired
     private ActivityService activityService;
     @Autowired
-    private SystemConfigRepository systemConfigRepository;
+    private SystemConfigMapper systemConfigMapper;
     @Autowired
-    private SystemSettingsRepository systemSettingsRepository;
+    private SystemSettingsMapper systemSettingsMapper;
     @Autowired
     private ServiceService serviceService;
     
@@ -135,11 +139,21 @@ public class AdminApiController {
     @PutMapping("/users/{id}/status")
     public ResponseEntity<ApiResponse<User>> updateUserStatus(
             @Parameter(description = "用户ID", required = true) @PathVariable Integer id, 
-            @Parameter(description = "用户状态（active/disabled）", required = true) @RequestParam String status, 
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "状态更新请求，包含目标状态",
+                    content = @Content(schema = @Schema(example = "{\"status\": \"active\"}"))
+            )
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         if (session.getAttribute("admin") == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Status cannot be empty"));
         }
         
         User user = userService.findById(id);
@@ -274,24 +288,38 @@ public class AdminApiController {
     @Operation(summary = "更新商家状态", description = "更新指定商家的状态（approved/rejected/pending等）")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "商家状态更新成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "商家不存在")
     })
     @PutMapping("/merchants/{id}/status")
-    public ResponseEntity<Merchant> updateMerchantStatus(
+    public ResponseEntity<ApiResponse<Merchant>> updateMerchantStatus(
             @Parameter(description = "商家ID", required = true) @PathVariable Integer id, 
-            @Parameter(description = "商家状态（approved/rejected/pending）", required = true) @RequestParam String status, 
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "状态更新请求，包含目标状态",
+                    content = @Content(schema = @Schema(example = "{\"status\": \"approved\"}"))
+            )
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         if (session.getAttribute("admin") == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
         }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Status cannot be empty"));
+        }
+        
         Merchant merchant = merchantService.findById(id);
         if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Merchant not found"));
         }
         merchant.setStatus(status);
         Merchant updatedMerchant = merchantService.update(merchant);
-        return ResponseEntity.ok(updatedMerchant);
+        return ResponseEntity.ok(ApiResponse.success("Merchant status updated", updatedMerchant));
     }
 
     @Operation(summary = "删除商家", description = "根据商家ID删除指定商家")
@@ -430,14 +458,14 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
         
-        Page<Merchant> merchantPage = merchantService.getPendingMerchants(keyword, page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Merchant> merchantPage = merchantService.getPendingMerchants(keyword, page, pageSize);
         
         PageResponse<Merchant> response = PageResponse.<Merchant>builder()
-                .data(merchantPage.getContent())
-                .total(merchantPage.getTotalElements())
+                .data(merchantPage.getRecords())
+                .total(merchantPage.getTotal())
                 .page(page)
                 .pageSize(pageSize)
-                .totalPages(merchantPage.getTotalPages())
+                .totalPages((int) merchantPage.getPages())
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -493,10 +521,10 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "未授权访问"));
         }
         
-        long userCount = userRepository.count();
-        long merchantCount = merchantRepository.count();
-        long orderCount = appointmentRepository.count();
-        long serviceCount = serviceRepository.count();
+        long userCount = userMapper.selectCount(null);
+        long merchantCount = merchantMapper.selectCount(null);
+        long orderCount = appointmentMapper.selectCount(null);
+        long serviceCount = serviceMapper.selectCount(null);
         
         DashboardStatsDTO stats = DashboardStatsDTO.builder()
                 .userCount(userCount)
@@ -524,43 +552,14 @@ public class AdminApiController {
         }
         
         Pageable pageable = PageRequest.of(page, pageSize);
-        Page<User> userPage = userRepository.findAllByOrderByCreatedAtDesc(pageable);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<User> userPage = userService.findAll(pageable);
         
         PageResponse<User> response = PageResponse.<User>builder()
-                .data(userPage.getContent())
-                .total(userPage.getTotalElements())
+                .data(userPage.getRecords())
+                .total(userPage.getTotal())
                 .page(page)
                 .pageSize(pageSize)
-                .totalPages(userPage.getTotalPages())
-                .build();
-        
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-    
-    @Operation(summary = "获取待审核商家", description = "获取待审核状态的商家列表")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取待审核商家"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
-    })
-    @GetMapping("/merchants/pending")
-    public ResponseEntity<ApiResponse<PageResponse<Merchant>>> getPendingMerchants(
-            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
-            @Parameter(description = "搜索关键字") @RequestParam(required = false) String keyword,
-            HttpSession session) {
-        if (session.getAttribute("admin") == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
-        
-        Page<Merchant> merchantPage = merchantService.getPendingMerchants(keyword, page, pageSize);
-        
-        PageResponse<Merchant> response = PageResponse.<Merchant>builder()
-                .data(merchantPage.getContent())
-                .total(merchantPage.getTotalElements())
-                .page(page)
-                .pageSize(pageSize)
-                .totalPages(merchantPage.getTotalPages())
+                .totalPages((int) userPage.getPages())
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -964,35 +963,6 @@ public class AdminApiController {
         return ResponseEntity.ok(ApiResponse.success(uploadSettings));
     }
 
-    @Operation(summary = "获取最近注册用户", description = "分页获取最近注册的用户列表")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取用户列表"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
-    })
-    @GetMapping("/dashboard/recent-users")
-    public ResponseEntity<ApiResponse<PageResponse<User>>> getRecentUsers(
-            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
-            HttpSession session) {
-        if (session.getAttribute("admin") == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
-        
-        Pageable pageable = PageRequest.of(page, pageSize);
-        Page<User> userPage = userRepository.findAllByOrderByCreatedAtDesc(pageable);
-        
-        PageResponse<User> response = PageResponse.<User>builder()
-                .data(userPage.getContent())
-                .total(userPage.getTotalElements())
-                .page(page)
-                .pageSize(pageSize)
-                .totalPages(userPage.getTotalPages())
-                .build();
-        
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
     @Operation(summary = "获取待审核商家（仪表盘）", description = "仪表盘页面获取待审核商家列表")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取待审核商家"),
@@ -1009,43 +979,14 @@ public class AdminApiController {
         }
         
         Pageable pageable = PageRequest.of(page, pageSize);
-        Page<Merchant> merchantPage = merchantRepository.findByStatus("pending", pageable);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Merchant> merchantPage = merchantService.findByStatus("pending", pageable);
         
         PageResponse<Merchant> response = PageResponse.<Merchant>builder()
-                .data(merchantPage.getContent())
-                .total(merchantPage.getTotalElements())
+                .data(merchantPage.getRecords())
+                .total(merchantPage.getTotal())
                 .page(page)
                 .pageSize(pageSize)
-                .totalPages(merchantPage.getTotalPages())
-                .build();
-        
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @Operation(summary = "获取公告列表（仪表盘）", description = "仪表盘页面获取公告列表")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取公告列表"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
-    })
-    @GetMapping("/dashboard/announcements")
-    public ResponseEntity<ApiResponse<PageResponse<Announcement>>> getAnnouncements(
-            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
-            HttpSession session) {
-        if (session.getAttribute("admin") == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
-        
-        Pageable pageable = PageRequest.of(page, pageSize);
-        Page<Announcement> announcementPage = announcementRepository.findAllByOrderByCreatedAtDesc(pageable);
-        
-        PageResponse<Announcement> response = PageResponse.<Announcement>builder()
-                .data(announcementPage.getContent())
-                .total(announcementPage.getTotalElements())
-                .page(page)
-                .pageSize(pageSize)
-                .totalPages(announcementPage.getTotalPages())
+                .totalPages((int) merchantPage.getPages())
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -1154,11 +1095,21 @@ public class AdminApiController {
     @PutMapping("/products/{id}/status")
     public ResponseEntity<ApiResponse<Product>> updateProductStatus(
             @Parameter(description = "商品ID", required = true) @PathVariable Integer id,
-            @Parameter(description = "商品状态（enabled/disabled）", required = true) @RequestParam String status,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "状态更新请求，包含目标状态",
+                    content = @Content(schema = @Schema(example = "{\"status\": \"enabled\"}"))
+            )
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         if (session.getAttribute("admin") == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Status cannot be empty"));
         }
         
         Product product = productService.findById(id);
@@ -1305,18 +1256,18 @@ public class AdminApiController {
         }
         
         Pageable pageable = PageRequest.of(page, pageSize);
-        Page<com.petshop.entity.Service> servicePage;
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.petshop.entity.Service> servicePage;
         
         // 这里需要根据ServiceService的实际方法来实现
         // 暂时使用findAll方法
         servicePage = serviceService.findAll(pageable);
         
         PageResponse<com.petshop.entity.Service> response = PageResponse.<com.petshop.entity.Service>builder()
-                .data(servicePage.getContent())
-                .total(servicePage.getTotalElements())
+                .data(servicePage.getRecords())
+                .total(servicePage.getTotal())
                 .page(page)
                 .pageSize(pageSize)
-                .totalPages(servicePage.getTotalPages())
+                .totalPages((int) servicePage.getPages())
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -1332,11 +1283,21 @@ public class AdminApiController {
     @PutMapping("/services/{id}/status")
     public ResponseEntity<ApiResponse<com.petshop.entity.Service>> updateServiceStatus(
             @Parameter(description = "服务ID", required = true) @PathVariable Integer id,
-            @Parameter(description = "服务状态（enabled/disabled）", required = true) @RequestParam String status,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "状态更新请求，包含目标状态",
+                    content = @Content(schema = @Schema(example = "{\"status\": \"enabled\"}"))
+            )
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         if (session.getAttribute("admin") == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Status cannot be empty"));
         }
         
         com.petshop.entity.Service service = serviceService.findById(id);
@@ -1497,7 +1458,7 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
         
-        Page<Review> reviewPage;
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> reviewPage;
         
         if ((rating == null) && 
             (keyword == null || keyword.trim().isEmpty()) && 
@@ -1509,11 +1470,11 @@ public class AdminApiController {
         }
         
         PageResponse<Review> response = PageResponse.<Review>builder()
-                .data(reviewPage.getContent())
-                .total(reviewPage.getTotalElements())
+                .data(reviewPage.getRecords())
+                .total(reviewPage.getTotal())
                 .page(page)
                 .pageSize(pageSize)
-                .totalPages(reviewPage.getTotalPages())
+                .totalPages((int) reviewPage.getPages())
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -1535,14 +1496,14 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
         
-        Page<Review> reviewPage = reviewService.getPendingReviews(keyword, page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> reviewPage = reviewService.getPendingReviews(keyword, page, pageSize);
         
         PageResponse<Review> response = PageResponse.<Review>builder()
-                .data(reviewPage.getContent())
-                .total(reviewPage.getTotalElements())
+                .data(reviewPage.getRecords())
+                .total(reviewPage.getTotal())
                 .page(page)
                 .pageSize(pageSize)
-                .totalPages(reviewPage.getTotalPages())
+                .totalPages((int) reviewPage.getPages())
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -1606,6 +1567,56 @@ public class AdminApiController {
         
         reviewService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    @Operation(summary = "批准评价", description = "批准指定评价")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "评价批准成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "评价不存在")
+    })
+    @PutMapping("/reviews/{id}/approve")
+    public ResponseEntity<ApiResponse<Review>> approveReview(
+            @Parameter(description = "评价ID", required = true) @PathVariable Integer id, HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        Review review = reviewService.findById(id);
+        if (review == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Review not found"));
+        }
+        
+        review.setStatus("approved");
+        Review updatedReview = reviewService.update(review);
+        return ResponseEntity.ok(ApiResponse.success("Review approved", updatedReview));
+    }
+    
+    @Operation(summary = "标记评价违规", description = "标记指定评价为违规")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "评价标记违规成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "评价不存在")
+    })
+    @PutMapping("/reviews/{id}/violation")
+    public ResponseEntity<ApiResponse<Review>> markReviewViolation(
+            @Parameter(description = "评价ID", required = true) @PathVariable Integer id, HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        Review review = reviewService.findById(id);
+        if (review == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Review not found"));
+        }
+        
+        review.setStatus("rejected");
+        Review updatedReview = reviewService.update(review);
+        return ResponseEntity.ok(ApiResponse.success("Review marked as violation", updatedReview));
     }
 
     @Operation(summary = "批量更新评价状态", description = "批量更新多个评价的审核状态")
@@ -1700,11 +1711,11 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
         
-        SystemConfig config = systemConfigRepository.findById(1).orElse(null);
+        SystemConfig config = systemConfigMapper.selectById(1);
         if (config == null) {
             config = new SystemConfig();
             config.setSiteName("宠物服务平台");
-            config = systemConfigRepository.save(config);
+            systemConfigMapper.insert(config);
         }
         
         Map<String, Object> result = new HashMap<>();
@@ -1738,7 +1749,7 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
         
-        SystemConfig config = systemConfigRepository.findById(1).orElse(null);
+        SystemConfig config = systemConfigMapper.selectById(1);
         if (config == null) {
             config = new SystemConfig();
         }
@@ -1768,233 +1779,20 @@ public class AdminApiController {
             config.setFooterText((String) request.get("footerText"));
         }
         
-        SystemConfig savedConfig = systemConfigRepository.save(config);
+        systemConfigMapper.updateById(config);
         
         Map<String, Object> result = new HashMap<>();
-        result.put("id", savedConfig.getId());
-        result.put("siteName", savedConfig.getSiteName());
-        result.put("logo", savedConfig.getLogo());
-        result.put("contactEmail", savedConfig.getContactEmail());
-        result.put("contactPhone", savedConfig.getContactPhone());
-        result.put("icpNumber", savedConfig.getIcpNumber());
-        result.put("siteDescription", savedConfig.getSiteDescription());
-        result.put("siteKeywords", savedConfig.getSiteKeywords());
-        result.put("footerText", savedConfig.getFooterText());
+        result.put("id", config.getId());
+        result.put("siteName", config.getSiteName());
+        result.put("logo", config.getLogo());
+        result.put("contactEmail", config.getContactEmail());
+        result.put("contactPhone", config.getContactPhone());
+        result.put("icpNumber", config.getIcpNumber());
+        result.put("siteDescription", config.getSiteDescription());
+        result.put("siteKeywords", config.getSiteKeywords());
+        result.put("footerText", config.getFooterText());
         
         return ResponseEntity.ok(ApiResponse.success("System config updated successfully", result));
-    }
-
-    @Operation(summary = "获取系统设置", description = "获取邮件、短信、支付、上传等系统设置")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取系统设置"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
-    })
-    @GetMapping("/system/settings")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getSystemSettings(HttpSession session) {
-        if (session.getAttribute("admin") == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "Unauthorized"));
-        }
-        
-        SystemSettings settings = systemSettingsRepository.findById(1).orElse(null);
-        if (settings == null) {
-            settings = new SystemSettings();
-            settings.setMaxFileSize(10485760L);
-            settings.setAllowedFileTypes("jpg,jpeg,png,gif,pdf");
-            settings = systemSettingsRepository.save(settings);
-        }
-        
-        Map<String, Object> result = new HashMap<>();
-        result.put("id", settings.getId());
-        
-        Map<String, Object> emailSettings = new HashMap<>();
-        emailSettings.put("smtp", settings.getEmailSmtp());
-        emailSettings.put("port", settings.getEmailPort());
-        emailSettings.put("username", settings.getEmailUsername());
-        emailSettings.put("password", settings.getEmailPassword());
-        emailSettings.put("from", settings.getEmailFrom());
-        result.put("emailSettings", emailSettings);
-        
-        Map<String, Object> smsSettings = new HashMap<>();
-        smsSettings.put("provider", settings.getSmsProvider());
-        smsSettings.put("apiKey", settings.getSmsApiKey());
-        smsSettings.put("apiSecret", settings.getSmsApiSecret());
-        smsSettings.put("signName", settings.getSmsSignName());
-        result.put("smsSettings", smsSettings);
-        
-        Map<String, Object> wechatPaySettings = new HashMap<>();
-        wechatPaySettings.put("appId", settings.getWechatAppId());
-        wechatPaySettings.put("appSecret", settings.getWechatAppSecret());
-        wechatPaySettings.put("mchId", settings.getWechatMchId());
-        wechatPaySettings.put("payKey", settings.getWechatPayKey());
-        wechatPaySettings.put("payCert", settings.getWechatPayCert());
-        result.put("wechatPaySettings", wechatPaySettings);
-        
-        Map<String, Object> alipaySettings = new HashMap<>();
-        alipaySettings.put("appId", settings.getAlipayAppId());
-        alipaySettings.put("privateKey", settings.getAlipayPrivateKey());
-        alipaySettings.put("publicKey", settings.getAlipayPublicKey());
-        alipaySettings.put("notifyUrl", settings.getAlipayNotifyUrl());
-        result.put("alipaySettings", alipaySettings);
-        
-        Map<String, Object> uploadSettings = new HashMap<>();
-        uploadSettings.put("path", settings.getUploadPath());
-        uploadSettings.put("maxFileSize", settings.getMaxFileSize());
-        uploadSettings.put("allowedFileTypes", settings.getAllowedFileTypes());
-        result.put("uploadSettings", uploadSettings);
-        
-        return ResponseEntity.ok(ApiResponse.success(result));
-    }
-
-    @Operation(summary = "更新系统设置", description = "更新邮件、短信、支付、上传等系统设置")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "系统设置更新成功"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
-    })
-    @PutMapping("/system/settings")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> updateSystemSettings(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "系统设置信息", required = true)
-            @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "Unauthorized"));
-        }
-        
-        SystemSettings settings = systemSettingsRepository.findById(1).orElse(null);
-        if (settings == null) {
-            settings = new SystemSettings();
-        }
-        
-        @SuppressWarnings("unchecked")
-        Map<String, Object> emailSettings = (Map<String, Object>) request.get("emailSettings");
-        if (emailSettings != null) {
-            if (emailSettings.containsKey("smtp")) {
-                settings.setEmailSmtp((String) emailSettings.get("smtp"));
-            }
-            if (emailSettings.containsKey("port")) {
-                settings.setEmailPort(((Number) emailSettings.get("port")).intValue());
-            }
-            if (emailSettings.containsKey("username")) {
-                settings.setEmailUsername((String) emailSettings.get("username"));
-            }
-            if (emailSettings.containsKey("password")) {
-                settings.setEmailPassword((String) emailSettings.get("password"));
-            }
-            if (emailSettings.containsKey("from")) {
-                settings.setEmailFrom((String) emailSettings.get("from"));
-            }
-        }
-        
-        @SuppressWarnings("unchecked")
-        Map<String, Object> smsSettings = (Map<String, Object>) request.get("smsSettings");
-        if (smsSettings != null) {
-            if (smsSettings.containsKey("provider")) {
-                settings.setSmsProvider((String) smsSettings.get("provider"));
-            }
-            if (smsSettings.containsKey("apiKey")) {
-                settings.setSmsApiKey((String) smsSettings.get("apiKey"));
-            }
-            if (smsSettings.containsKey("apiSecret")) {
-                settings.setSmsApiSecret((String) smsSettings.get("apiSecret"));
-            }
-            if (smsSettings.containsKey("signName")) {
-                settings.setSmsSignName((String) smsSettings.get("signName"));
-            }
-        }
-        
-        @SuppressWarnings("unchecked")
-        Map<String, Object> wechatPaySettings = (Map<String, Object>) request.get("wechatPaySettings");
-        if (wechatPaySettings != null) {
-            if (wechatPaySettings.containsKey("appId")) {
-                settings.setWechatAppId((String) wechatPaySettings.get("appId"));
-            }
-            if (wechatPaySettings.containsKey("appSecret")) {
-                settings.setWechatAppSecret((String) wechatPaySettings.get("appSecret"));
-            }
-            if (wechatPaySettings.containsKey("mchId")) {
-                settings.setWechatMchId((String) wechatPaySettings.get("mchId"));
-            }
-            if (wechatPaySettings.containsKey("payKey")) {
-                settings.setWechatPayKey((String) wechatPaySettings.get("payKey"));
-            }
-            if (wechatPaySettings.containsKey("payCert")) {
-                settings.setWechatPayCert((String) wechatPaySettings.get("payCert"));
-            }
-        }
-        
-        @SuppressWarnings("unchecked")
-        Map<String, Object> alipaySettings = (Map<String, Object>) request.get("alipaySettings");
-        if (alipaySettings != null) {
-            if (alipaySettings.containsKey("appId")) {
-                settings.setAlipayAppId((String) alipaySettings.get("appId"));
-            }
-            if (alipaySettings.containsKey("privateKey")) {
-                settings.setAlipayPrivateKey((String) alipaySettings.get("privateKey"));
-            }
-            if (alipaySettings.containsKey("publicKey")) {
-                settings.setAlipayPublicKey((String) alipaySettings.get("publicKey"));
-            }
-            if (alipaySettings.containsKey("notifyUrl")) {
-                settings.setAlipayNotifyUrl((String) alipaySettings.get("notifyUrl"));
-            }
-        }
-        
-        @SuppressWarnings("unchecked")
-        Map<String, Object> uploadSettings = (Map<String, Object>) request.get("uploadSettings");
-        if (uploadSettings != null) {
-            if (uploadSettings.containsKey("path")) {
-                settings.setUploadPath((String) uploadSettings.get("path"));
-            }
-            if (uploadSettings.containsKey("maxFileSize")) {
-                settings.setMaxFileSize(((Number) uploadSettings.get("maxFileSize")).longValue());
-            }
-            if (uploadSettings.containsKey("allowedFileTypes")) {
-                settings.setAllowedFileTypes((String) uploadSettings.get("allowedFileTypes"));
-            }
-        }
-        
-        SystemSettings savedSettings = systemSettingsRepository.save(settings);
-        
-        Map<String, Object> result = new HashMap<>();
-        result.put("id", savedSettings.getId());
-        
-        Map<String, Object> resultEmailSettings = new HashMap<>();
-        resultEmailSettings.put("smtp", savedSettings.getEmailSmtp());
-        resultEmailSettings.put("port", savedSettings.getEmailPort());
-        resultEmailSettings.put("username", savedSettings.getEmailUsername());
-        resultEmailSettings.put("password", savedSettings.getEmailPassword());
-        resultEmailSettings.put("from", savedSettings.getEmailFrom());
-        result.put("emailSettings", resultEmailSettings);
-        
-        Map<String, Object> resultSmsSettings = new HashMap<>();
-        resultSmsSettings.put("provider", savedSettings.getSmsProvider());
-        resultSmsSettings.put("apiKey", savedSettings.getSmsApiKey());
-        resultSmsSettings.put("apiSecret", savedSettings.getSmsApiSecret());
-        resultSmsSettings.put("signName", savedSettings.getSmsSignName());
-        result.put("smsSettings", resultSmsSettings);
-        
-        Map<String, Object> resultWechatPaySettings = new HashMap<>();
-        resultWechatPaySettings.put("appId", savedSettings.getWechatAppId());
-        resultWechatPaySettings.put("appSecret", savedSettings.getWechatAppSecret());
-        resultWechatPaySettings.put("mchId", savedSettings.getWechatMchId());
-        resultWechatPaySettings.put("payKey", savedSettings.getWechatPayKey());
-        resultWechatPaySettings.put("payCert", savedSettings.getWechatPayCert());
-        result.put("wechatPaySettings", resultWechatPaySettings);
-        
-        Map<String, Object> resultAlipaySettings = new HashMap<>();
-        resultAlipaySettings.put("appId", savedSettings.getAlipayAppId());
-        resultAlipaySettings.put("privateKey", savedSettings.getAlipayPrivateKey());
-        resultAlipaySettings.put("publicKey", savedSettings.getAlipayPublicKey());
-        resultAlipaySettings.put("notifyUrl", savedSettings.getAlipayNotifyUrl());
-        result.put("alipaySettings", resultAlipaySettings);
-        
-        Map<String, Object> resultUploadSettings = new HashMap<>();
-        resultUploadSettings.put("path", savedSettings.getUploadPath());
-        resultUploadSettings.put("maxFileSize", savedSettings.getMaxFileSize());
-        resultUploadSettings.put("allowedFileTypes", savedSettings.getAllowedFileTypes());
-        result.put("uploadSettings", resultUploadSettings);
-        
-        return ResponseEntity.ok(ApiResponse.success("System settings updated successfully", result));
     }
 
     @Operation(summary = "获取活动列表", description = "分页获取活动列表，支持多条件筛选")
@@ -2017,8 +1815,7 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
         
-        Pageable pageable = PageRequest.of(page, pageSize);
-        Page<Activity> activityPage;
+        org.springframework.data.domain.Page<Activity> activityPage;
         
         LocalDateTime startDateTime = null;
         LocalDateTime endDateTime = null;
@@ -2037,9 +1834,9 @@ public class AdminApiController {
         }
         
         if (keyword != null || type != null || status != null || startDateTime != null || endDateTime != null) {
-            activityPage = activityService.searchActivities(keyword, type, status, startDateTime, endDateTime, pageable);
+            activityPage = activityService.searchActivities(keyword, type, status, startDateTime, endDateTime, page, pageSize);
         } else {
-            activityPage = activityService.findAll(pageable);
+            activityPage = activityService.findAll(page, pageSize);
         }
         
         PageResponse<Activity> response = PageResponse.<Activity>builder()
@@ -2143,11 +1940,21 @@ public class AdminApiController {
     @PutMapping("/activities/{id}/status")
     public ResponseEntity<ApiResponse<Activity>> updateActivityStatus(
             @Parameter(description = "活动ID", required = true) @PathVariable Integer id,
-            @Parameter(description = "活动状态（enabled/disabled）", required = true) @RequestParam String status,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "状态更新请求，包含目标状态",
+                    content = @Content(schema = @Schema(example = "{\"status\": \"enabled\"}"))
+            )
+            @RequestBody Map<String, String> request,
             HttpSession session) {
         if (session.getAttribute("admin") == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
+        }
+        
+        String status = request.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Status cannot be empty"));
         }
         
         Activity activity = activityService.findById(id);
@@ -2186,14 +1993,14 @@ public class AdminApiController {
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
         
-        Page<Merchant> merchantPage = merchantService.getPendingMerchants(keyword, page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Merchant> merchantPage = merchantService.getPendingMerchants(keyword, page, pageSize);
         
         PageResponse<Merchant> response = PageResponse.<Merchant>builder()
-                .data(merchantPage.getContent())
-                .total(merchantPage.getTotalElements())
+                .data(merchantPage.getRecords())
+                .total(merchantPage.getTotal())
                 .page(page)
                 .pageSize(pageSize)
-                .totalPages(merchantPage.getTotalPages())
+                .totalPages((int) merchantPage.getPages())
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(response));

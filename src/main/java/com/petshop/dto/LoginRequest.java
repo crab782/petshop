@@ -2,6 +2,7 @@ package com.petshop.dto;
 
 public class LoginRequest {
     private String username;
+    private String phone;
     private String password;
 
     public LoginRequest() {
@@ -20,6 +21,14 @@ public class LoginRequest {
         this.username = username;
     }
 
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
     public String getPassword() {
         return password;
     }
@@ -28,16 +37,29 @@ public class LoginRequest {
         this.password = password;
     }
 
+    public String getLoginIdentifier() {
+        if (phone != null && !phone.isEmpty()) {
+            return phone;
+        }
+        return username;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
 
     public static class Builder {
         private String username;
+        private String phone;
         private String password;
 
         public Builder username(String username) {
             this.username = username;
+            return this;
+        }
+
+        public Builder phone(String phone) {
+            this.phone = phone;
             return this;
         }
 
@@ -47,7 +69,11 @@ public class LoginRequest {
         }
 
         public LoginRequest build() {
-            return new LoginRequest(username, password);
+            LoginRequest request = new LoginRequest();
+            request.username = this.username;
+            request.phone = this.phone;
+            request.password = this.password;
+            return request;
         }
     }
 }

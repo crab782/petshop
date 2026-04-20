@@ -1,15 +1,14 @@
 package com.petshop.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.dto.*;
 import com.petshop.entity.*;
 import com.petshop.exception.BadRequestException;
 import com.petshop.exception.ResourceNotFoundException;
-import com.petshop.repository.*;
+import com.petshop.mapper.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,64 +21,105 @@ import java.util.stream.Collectors;
 @Service
 public class ProductOrderService {
     @Autowired
-    private ProductOrderRepository productOrderRepository;
+    private ProductOrderMapper productOrderMapper;
     
     @Autowired
-    private ProductOrderItemRepository productOrderItemRepository;
+    private ProductOrderItemMapper productOrderItemMapper;
     
     @Autowired
-    private ProductRepository productRepository;
+    private ProductMapper productMapper;
     
     @Autowired
-    private AddressRepository addressRepository;
+    private AddressMapper addressMapper;
     
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userRepository;
 
     public ProductOrder findById(Integer id) {
-        return productOrderRepository.findById(id).orElse(null);
+        return productOrderMapper.selectById(id);
+    }
+
+    /**
+     * 根据ID查询订单，同时加载商家信息
+     *
+     * @param id 订单ID
+     * @return 包含商家信息的订单对象
+     */
+    public ProductOrder findByIdWithMerchant(Integer id) {
+        return productOrderMapper.selectByIdWithMerchant(id);
     }
 
     public List<ProductOrder> findByMerchantId(Integer merchantId) {
-        return productOrderRepository.findByMerchantId(merchantId);
+        LambdaQueryWrapper<ProductOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductOrder::getMerchantId, merchantId);
+        return productOrderMapper.selectList(wrapper);
     }
 
     public List<ProductOrder> findByUserId(Integer userId) {
-        return productOrderRepository.findByUserId(userId);
+        LambdaQueryWrapper<ProductOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductOrder::getUserId, userId);
+        return productOrderMapper.selectList(wrapper);
     }
 
     public List<ProductOrder> findByMerchantIdAndStatus(Integer merchantId, String status) {
-        return productOrderRepository.findByMerchantIdAndStatus(merchantId, status);
+        LambdaQueryWrapper<ProductOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductOrder::getMerchantId, merchantId)
+               .eq(ProductOrder::getStatus, status);
+        return productOrderMapper.selectList(wrapper);
     }
 
     public ProductOrder update(ProductOrder order) {
-        return productOrderRepository.save(order);
+        productOrderMapper.updateById(order);
+        return order;
     }
     
     public PageResponse<OrderDTO> getUserOrders(Integer userId, String status, String keyword, 
             LocalDateTime startDate, LocalDateTime endDate, Integer page, Integer pageSize) {
-        Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<ProductOrder> orderPage = productOrderRepository.searchUserOrders(
-                userId, status, keyword, startDate, endDate, pageable);
+        Page<ProductOrder> orderPage = new Page<>(page, pageSize);
         
-        List<OrderDTO> orders = orderPage.getContent().stream()
+        LambdaQueryWrapper<ProductOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductOrder::getUserId, userId);
+        
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(ProductOrder::getStatus, status);
+        }
+        
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.like(ProductOrder::getOrderNo, keyword);
+        }
+        
+        if (startDate != null) {
+            wrapper.ge(ProductOrder::getCreatedAt, startDate);
+        }
+        
+        if (endDate != null) {
+            wrapper.le(ProductOrder::getCreatedAt, endDate);
+        }
+        
+        wrapper.orderByDesc(ProductOrder::getCreatedAt);
+        
+        IPage<ProductOrder> result = productOrderMapper.selectPage(orderPage, wrapper);
+        
+        List<OrderDTO> orders = result.getRecords().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
         
         return PageResponse.<OrderDTO>builder()
                 .data(orders)
-                .total(orderPage.getTotalElements())
-                .page(page)
-                .pageSize(pageSize)
-                .totalPages(orderPage.getTotalPages())
+                .total(result.getTotal())
+                .page((int) result.getCurrent())
+                .pageSize((int) result.getSize())
+                .totalPages((int) result.getPages())
                 .build();
     }
     
     public OrderDTO getOrderDetail(Integer orderId, Integer userId) {
-        ProductOrder order = productOrderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        ProductOrder order = productOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ResourceNotFoundException("Order not found with id: " + orderId);
+        }
         
-        if (!order.getUser().getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BadRequestException("You don't have permission to view this order");
         }
         
@@ -88,13 +128,17 @@ public class ProductOrderService {
     
     @Transactional
     public CreateOrderResponse createOrder(Integer userId, CreateOrderRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = userRepository.selectById(userId);
+        if (user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
         
-        Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+        Address address = addressMapper.selectById(request.getAddressId());
+        if (address == null) {
+            throw new ResourceNotFoundException("Address not found");
+        }
         
-        if (!address.getUser().getId().equals(userId)) {
+        if (!address.getUserId().equals(userId)) {
             throw new BadRequestException("Address does not belong to user");
         }
         
@@ -107,8 +151,10 @@ public class ProductOrderService {
         BigDecimal totalProductPrice = BigDecimal.ZERO;
         
         for (CreateOrderRequest.OrderItemRequest item : request.getItems()) {
-            Product product = productRepository.findById(item.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + item.getProductId()));
+            Product product = productMapper.selectById(item.getProductId());
+            if (product == null) {
+                throw new ResourceNotFoundException("Product not found: " + item.getProductId());
+            }
             
             if (!"enabled".equals(product.getStatus())) {
                 throw new BadRequestException("Product is not available: " + product.getName());
@@ -119,7 +165,7 @@ public class ProductOrderService {
             }
             
             productMap.put(product.getId(), product);
-            merchantProductCount.merge(product.getMerchant().getId(), 1, Integer::sum);
+            merchantProductCount.merge(product.getMerchantId(), 1, Integer::sum);
             totalProductPrice = totalProductPrice.add(
                     product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         }
@@ -132,8 +178,8 @@ public class ProductOrderService {
         Merchant merchant = productMap.values().iterator().next().getMerchant();
         
         ProductOrder order = new ProductOrder();
-        order.setUser(user);
-        order.setMerchant(merchant);
+        order.setUserId(user.getId());
+        order.setMerchantId(merchant.getId());
         order.setTotalPrice(totalProductPrice);
         order.setFreight(BigDecimal.ZERO);
         order.setStatus("pending");
@@ -141,20 +187,20 @@ public class ProductOrderService {
         order.setRemark(request.getRemark());
         order.setShippingAddress(formatAddress(address));
         
-        order = productOrderRepository.save(order);
+        productOrderMapper.insert(order);
         
         for (CreateOrderRequest.OrderItemRequest item : request.getItems()) {
             Product product = productMap.get(item.getProductId());
             
             ProductOrderItem orderItem = new ProductOrderItem();
-            orderItem.setOrder(order);
-            orderItem.setProduct(product);
+            orderItem.setOrderId(order.getId());
+            orderItem.setProductId(product.getId());
             orderItem.setQuantity(item.getQuantity());
             orderItem.setPrice(product.getPrice());
-            productOrderItemRepository.save(orderItem);
+            productOrderItemMapper.insert(orderItem);
             
             product.setStock(product.getStock() - item.getQuantity());
-            productRepository.save(product);
+            productMapper.updateById(product);
         }
         
         return new CreateOrderResponse(order.getId(), order.getOrderNo());
@@ -169,8 +215,10 @@ public class ProductOrderService {
         BigDecimal productTotal = BigDecimal.ZERO;
         
         for (PreviewOrderRequest.OrderItemRequest item : request.getItems()) {
-            Product product = productRepository.findById(item.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + item.getProductId()));
+            Product product = productMapper.selectById(item.getProductId());
+            if (product == null) {
+                throw new ResourceNotFoundException("Product not found: " + item.getProductId());
+            }
             
             if (!"enabled".equals(product.getStatus())) {
                 throw new BadRequestException("Product is not available: " + product.getName());
@@ -204,10 +252,12 @@ public class ProductOrderService {
     
     @Transactional
     public PayResponse payOrder(Integer orderId, Integer userId, String payMethod) {
-        ProductOrder order = productOrderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        ProductOrder order = productOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ResourceNotFoundException("Order not found");
+        }
         
-        if (!order.getUser().getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BadRequestException("You don't have permission to pay this order");
         }
         
@@ -219,7 +269,7 @@ public class ProductOrderService {
         order.setPayMethod(payMethod);
         order.setPaidAt(LocalDateTime.now());
         order.setTransactionId("TXN" + System.currentTimeMillis());
-        productOrderRepository.save(order);
+        productOrderMapper.updateById(order);
         
         return PayResponse.builder()
                 .payId(order.getId())
@@ -230,10 +280,12 @@ public class ProductOrderService {
     }
     
     public PayStatusResponse getPayStatus(Integer orderId, Integer userId) {
-        ProductOrder order = productOrderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        ProductOrder order = productOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ResourceNotFoundException("Order not found");
+        }
         
-        if (!order.getUser().getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BadRequestException("You don't have permission to view this order");
         }
         
@@ -264,10 +316,12 @@ public class ProductOrderService {
     
     @Transactional
     public void cancelOrder(Integer orderId, Integer userId) {
-        ProductOrder order = productOrderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        ProductOrder order = productOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ResourceNotFoundException("Order not found");
+        }
         
-        if (!order.getUser().getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BadRequestException("You don't have permission to cancel this order");
         }
         
@@ -281,15 +335,17 @@ public class ProductOrderService {
         
         order.setStatus("cancelled");
         order.setCancelledAt(LocalDateTime.now());
-        productOrderRepository.save(order);
+        productOrderMapper.updateById(order);
     }
     
     @Transactional
     public void refundOrder(Integer orderId, Integer userId, String reason) {
-        ProductOrder order = productOrderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        ProductOrder order = productOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ResourceNotFoundException("Order not found");
+        }
         
-        if (!order.getUser().getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BadRequestException("You don't have permission to refund this order");
         }
         
@@ -301,15 +357,17 @@ public class ProductOrderService {
         
         order.setStatus("cancelled");
         order.setCancelledAt(LocalDateTime.now());
-        productOrderRepository.save(order);
+        productOrderMapper.updateById(order);
     }
     
     @Transactional
     public void confirmReceive(Integer orderId, Integer userId) {
-        ProductOrder order = productOrderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        ProductOrder order = productOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ResourceNotFoundException("Order not found");
+        }
         
-        if (!order.getUser().getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BadRequestException("You don't have permission to confirm this order");
         }
         
@@ -319,15 +377,17 @@ public class ProductOrderService {
         
         order.setStatus("completed");
         order.setCompletedAt(LocalDateTime.now());
-        productOrderRepository.save(order);
+        productOrderMapper.updateById(order);
     }
     
     @Transactional
     public void deleteOrder(Integer orderId, Integer userId) {
-        ProductOrder order = productOrderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        ProductOrder order = productOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ResourceNotFoundException("Order not found");
+        }
         
-        if (!order.getUser().getId().equals(userId)) {
+        if (!order.getUserId().equals(userId)) {
             throw new BadRequestException("You don't have permission to delete this order");
         }
         
@@ -335,8 +395,11 @@ public class ProductOrderService {
             throw new BadRequestException("Only completed or cancelled orders can be deleted");
         }
         
-        productOrderItemRepository.deleteByOrderId(orderId);
-        productOrderRepository.delete(order);
+        LambdaQueryWrapper<ProductOrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductOrderItem::getOrderId, orderId);
+        productOrderItemMapper.delete(wrapper);
+        
+        productOrderMapper.deleteById(orderId);
     }
     
     @Transactional
@@ -360,11 +423,14 @@ public class ProductOrderService {
     }
     
     private void restoreStock(Integer orderId) {
-        List<ProductOrderItem> items = productOrderItemRepository.findByOrderId(orderId);
+        LambdaQueryWrapper<ProductOrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductOrderItem::getOrderId, orderId);
+        List<ProductOrderItem> items = productOrderItemMapper.selectList(wrapper);
+        
         for (ProductOrderItem item : items) {
-            Product product = item.getProduct();
+            Product product = productMapper.selectById(item.getProductId());
             product.setStock(product.getStock() + item.getQuantity());
-            productRepository.save(product);
+            productMapper.updateById(product);
         }
     }
     
@@ -375,12 +441,14 @@ public class ProductOrderService {
     }
     
     private OrderDTO convertToDTO(ProductOrder order) {
-        List<ProductOrderItem> items = productOrderItemRepository.findByOrderId(order.getId());
+        LambdaQueryWrapper<ProductOrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductOrderItem::getOrderId, order.getId());
+        List<ProductOrderItem> items = productOrderItemMapper.selectList(wrapper);
         
         List<OrderItemDTO> itemDTOs = items.stream()
                 .map(item -> OrderItemDTO.builder()
                         .id(item.getId())
-                        .productId(item.getProduct().getId())
+                        .productId(item.getProductId())
                         .productName(item.getProduct().getName())
                         .productImage(item.getProduct().getImage())
                         .price(item.getPrice())

@@ -20,13 +20,14 @@ public class AuthApiController {
     @Autowired
     private AuthService authService;
 
-    @Operation(summary = "用户登录", description = "使用用户名/邮箱和密码登录")
+    @Operation(summary = "用户登录", description = "使用手机号和密码登录")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest request) {
         try {
-            if (request.getUsername() == null || request.getUsername().isEmpty()) {
+            String loginIdentifier = request.getLoginIdentifier();
+            if (loginIdentifier == null || loginIdentifier.isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Username is required"));
+                        .body(ApiResponse.error(400, "Phone number is required"));
             }
             if (request.getPassword() == null || request.getPassword().isEmpty()) {
                 return ResponseEntity.badRequest()
@@ -56,9 +57,9 @@ public class AuthApiController {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error(400, "Password must be at least 6 characters"));
             }
-            if (request.getEmail() == null || request.getEmail().isEmpty()) {
+            if (request.getPhone() == null || request.getPhone().isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(400, "Email is required"));
+                        .body(ApiResponse.error(400, "Phone number is required"));
             }
 
             LoginResponse response = authService.register(request);
