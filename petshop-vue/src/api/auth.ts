@@ -1,22 +1,22 @@
 import request from './request'
 
 export interface LoginData {
-  username: string
+  loginIdentifier: string
   password: string
 }
 
 export interface RegisterData {
-  username: string
+  username?: string
   password: string
   email?: string
-  phone?: string
+  phone: string
 }
 
 export interface MerchantRegisterData {
   password: string
   email?: string
   phone: string
-  contact_person?: string
+  contactPerson?: string
   name?: string
   logo?: string
   address?: string
@@ -56,7 +56,6 @@ export interface UpdateUserInfoData {
   email?: string
   phone?: string
   avatar?: string
-  password?: string
 }
 
 export const updateUserInfo = (data: UpdateUserInfoData) => {

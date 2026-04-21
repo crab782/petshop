@@ -13,6 +13,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -80,6 +86,26 @@ public abstract class MerchantApiControllerTestBase {
     @BeforeEach
     protected void setUp() {
         testMerchant = TestDataFactory.createMerchant(testMerchantId);
+        setupSecurityContext();
+    }
+
+    protected void setupSecurityContext() {
+        // 创建UserDetails对象
+        UserDetails userDetails = User.withUsername(testMerchant.getPhone())
+                .password(testMerchant.getPassword())
+                .roles("MERCHANT")
+                .build();
+        
+        // 创建Authentication对象
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        
+        // 创建SecurityContext并设置Authentication
+        SecurityContext securityContext = org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        securityContext.setAuthentication(authentication);
+        
+        // 设置SecurityContext到SecurityContextHolder
+        SecurityContextHolder.setContext(securityContext);
     }
 
     protected void mockMerchantSession() {

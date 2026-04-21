@@ -204,6 +204,56 @@ public class AuthApiController {
         }
     }
 
+    @Operation(summary = "商家登录", description = "商家使用手机号/邮箱和密码登录")
+    @PostMapping("/merchant/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> merchantLogin(@RequestBody LoginRequest request) {
+        try {
+            String loginIdentifier = request.getLoginIdentifier();
+            if (loginIdentifier == null || loginIdentifier.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Phone or email is required"));
+            }
+            if (request.getPassword() == null || request.getPassword().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Password is required"));
+            }
+
+            LoginResponse response = authService.merchantLogin(request);
+            return ResponseEntity.ok(ApiResponse.success("Merchant login successful", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "Merchant login failed: " + e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "管理员登录", description = "管理员使用用户名和密码登录")
+    @PostMapping("/admin/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> adminLogin(@RequestBody LoginRequest request) {
+        try {
+            String loginIdentifier = request.getLoginIdentifier();
+            if (loginIdentifier == null || loginIdentifier.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Username is required"));
+            }
+            if (request.getPassword() == null || request.getPassword().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Password is required"));
+            }
+
+            LoginResponse response = authService.adminLogin(request);
+            return ResponseEntity.ok(ApiResponse.success("Admin login successful", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "Admin login failed: " + e.getMessage()));
+        }
+    }
+
     @Operation(summary = "商家注册", description = "注册新商家账号，手机号必填且唯一，邮箱可选")
     @PostMapping("/merchant/register")
     public ResponseEntity<ApiResponse<Map<String, String>>> merchantRegister(@RequestBody MerchantRegisterRequest request) {

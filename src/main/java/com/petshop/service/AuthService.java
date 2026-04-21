@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.petshop.dto.*;
 import com.petshop.entity.User;
 import com.petshop.entity.Merchant;
+import com.petshop.entity.Admin;
 import com.petshop.exception.BadRequestException;
 import com.petshop.exception.ResourceNotFoundException;
+import com.petshop.mapper.AdminMapper;
 import com.petshop.mapper.MerchantMapper;
 import com.petshop.mapper.UserMapper;
 import com.petshop.security.JwtUtils;
@@ -32,6 +34,9 @@ public class AuthService {
 
     @Autowired
     private MerchantMapper merchantRepository;
+
+    @Autowired
+    private AdminMapper adminRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -134,6 +139,80 @@ public class AuthService {
         Map<String, String> result = new HashMap<>();
         result.put("message", "Merchant registration successful. Please wait for admin approval.");
         return result;
+    }
+
+    @Transactional
+    public LoginResponse merchantLogin(LoginRequest request) {
+        String loginIdentifier = request.getLoginIdentifier();
+
+        Merchant merchant = merchantRepository.selectByPhone(loginIdentifier);
+        if (merchant == null) {
+            merchant = merchantRepository.selectByEmail(loginIdentifier);
+        }
+
+        if (merchant == null) {
+            throw new ResourceNotFoundException("Merchant not found");
+        }
+
+        if (!"approved".equals(merchant.getStatus())) {
+            throw new BadRequestException("Merchant account is not approved. Current status: " + merchant.getStatus());
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), merchant.getPassword())) {
+            throw new BadRequestException("Invalid password");
+        }
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(merchant.getPhone(), request.getPassword()));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserDTO userDTO = UserDTO.builder()
+                .id(merchant.getId())
+                .username(merchant.getName())
+                .email(merchant.getEmail())
+                .phone(merchant.getPhone())
+                .avatar(merchant.getLogo())
+                .role("merchant")
+                .build();
+
+        return LoginResponse.builder()
+                .token(jwt)
+                .user(userDTO)
+                .build();
+    }
+
+    @Transactional
+    public LoginResponse adminLogin(LoginRequest request) {
+        String loginIdentifier = request.getLoginIdentifier();
+
+        Admin admin = adminRepository.selectByUsername(loginIdentifier);
+
+        if (admin == null) {
+            throw new ResourceNotFoundException("Admin not found");
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
+            throw new BadRequestException("Invalid password");
+        }
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(admin.getUsername(), request.getPassword()));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserDTO userDTO = UserDTO.builder()
+                .id(admin.getId())
+                .username(admin.getUsername())
+                .role("admin")
+                .build();
+
+        return LoginResponse.builder()
+                .token(jwt)
+                .user(userDTO)
+                .build();
     }
 
     public void logout() {

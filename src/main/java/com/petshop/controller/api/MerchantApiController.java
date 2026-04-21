@@ -9,6 +9,7 @@ import com.petshop.entity.Category;
 import com.petshop.entity.Appointment;
 import com.petshop.entity.ProductOrder;
 import com.petshop.entity.Review;
+import com.petshop.exception.UnauthorizedException;
 import com.petshop.service.MerchantService;
 import com.petshop.service.ServiceService;
 import com.petshop.service.ProductService;
@@ -18,6 +19,8 @@ import com.petshop.service.ProductOrderService;
 import com.petshop.service.ReviewService;
 import com.petshop.service.MerchantStatsService;
 import com.petshop.service.MerchantSettingsService;
+import com.petshop.mapper.MerchantMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,9 +28,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -55,6 +59,26 @@ public class MerchantApiController {
     private MerchantStatsService merchantStatsService;
     @Autowired
     private MerchantSettingsService merchantSettingsService;
+    @Autowired
+    private MerchantMapper merchantMapper;
+
+    private Merchant getCurrentMerchant() {
+        org.springframework.security.core.Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new UnauthorizedException("未授权访问，请先登录");
+        }
+        String phone;
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            phone = ((UserDetails) authentication.getPrincipal()).getUsername();
+        } else {
+            phone = authentication.getPrincipal().toString();
+        }
+        Merchant merchant = merchantMapper.selectOne(new LambdaQueryWrapper<Merchant>().eq(Merchant::getPhone, phone));
+        if (merchant == null) {
+            throw new UnauthorizedException("商家不存在");
+        }
+        return merchant;
+    }
 
     /**
      * 获取商家资料
@@ -66,12 +90,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含商家信息
      */
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse<Merchant>> getProfile(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Merchant>> getProfile() {
+        Merchant merchant = getCurrentMerchant();
         try {
             Merchant freshMerchant = merchantService.findById(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(freshMerchant));
@@ -91,12 +111,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含商家信息
      */
     @GetMapping("/info")
-    public ResponseEntity<ApiResponse<Merchant>> getInfo(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Merchant>> getInfo() {
+        Merchant merchant = getCurrentMerchant();
         try {
             Merchant freshMerchant = merchantService.findById(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(freshMerchant));
@@ -118,18 +134,13 @@ public class MerchantApiController {
      * @return 统一响应格式，包含更新后的商家信息
      */
     @PutMapping("/profile")
-    public ResponseEntity<ApiResponse<Merchant>> updateProfile(@RequestBody Merchant merchant, HttpSession session) {
-        Merchant currentMerchant = (Merchant) session.getAttribute("merchant");
-        if (currentMerchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Merchant>> updateProfile(@RequestBody Merchant merchant) {
+        Merchant currentMerchant = getCurrentMerchant();
         try {
             merchant.setId(currentMerchant.getId());
             merchant.setPassword(currentMerchant.getPassword());
             merchant.setStatus(currentMerchant.getStatus());
             Merchant updatedMerchant = merchantService.update(merchant);
-            session.setAttribute("merchant", updatedMerchant);
             return ResponseEntity.ok(ApiResponse.success("商家资料更新成功", updatedMerchant));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -149,18 +160,13 @@ public class MerchantApiController {
      * @return 统一响应格式，包含更新后的商家信息
      */
     @PutMapping("/info")
-    public ResponseEntity<ApiResponse<Merchant>> updateInfo(@RequestBody Merchant merchant, HttpSession session) {
-        Merchant currentMerchant = (Merchant) session.getAttribute("merchant");
-        if (currentMerchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Merchant>> updateInfo(@RequestBody Merchant merchant) {
+        Merchant currentMerchant = getCurrentMerchant();
         try {
             merchant.setId(currentMerchant.getId());
             merchant.setPassword(currentMerchant.getPassword());
             merchant.setStatus(currentMerchant.getStatus());
             Merchant updatedMerchant = merchantService.update(merchant);
-            session.setAttribute("merchant", updatedMerchant);
             return ResponseEntity.ok(ApiResponse.success("商家信息更新成功", updatedMerchant));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -179,12 +185,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含服务列表
      */
     @GetMapping("/services")
-    public ResponseEntity<ApiResponse<List<Service>>> getServices(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<List<Service>>> getServices() {
+        Merchant merchant = getCurrentMerchant();
         try {
             List<Service> services = serviceService.findByMerchantId(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(services));
@@ -204,12 +206,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含创建的服务
      */
     @PostMapping("/services")
-    public ResponseEntity<ApiResponse<Service>> addService(@RequestBody Service service, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Service>> addService(@RequestBody Service service) {
+        Merchant merchant = getCurrentMerchant();
         try {
             if (service.getName() == null || service.getName().trim().isEmpty()) {
                 return ResponseEntity.badRequest()
@@ -246,13 +244,8 @@ public class MerchantApiController {
     @PutMapping("/services/{id}")
     public ResponseEntity<ApiResponse<Service>> updateService(
             @PathVariable Integer id,
-            @RequestBody Service service,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Service service) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Service existingService = serviceService.findByIdWithMerchant(id);
             if (existingService == null) {
@@ -296,12 +289,8 @@ public class MerchantApiController {
      * @return 统一响应格式
      */
     @DeleteMapping("/services/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteService(@PathVariable Integer id, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteService(@PathVariable Integer id) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Service service = serviceService.findByIdWithMerchant(id);
             if (service == null) {
@@ -322,12 +311,8 @@ public class MerchantApiController {
 
     @PutMapping("/services/batch/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> batchUpdateServicesStatus(
-            @RequestBody Map<String, Object> request, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Object> request) {
+        Merchant merchant = getCurrentMerchant();
         
         @SuppressWarnings("unchecked")
         List<Integer> ids = (List<Integer>) request.get("ids");
@@ -373,12 +358,8 @@ public class MerchantApiController {
      */
     @DeleteMapping("/services/batch")
     public ResponseEntity<ApiResponse<Map<String, Object>>> batchDeleteServices(
-            @RequestBody Map<String, Object> request, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Object> request) {
+        Merchant merchant = getCurrentMerchant();
         
         @SuppressWarnings("unchecked")
         List<Integer> ids = (List<Integer>) request.get("ids");
@@ -419,12 +400,8 @@ public class MerchantApiController {
      */
     @GetMapping("/services/{id}")
     public ResponseEntity<ApiResponse<Service>> getServiceById(
-            @PathVariable Integer id, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Service service = serviceService.findByIdWithMerchant(id);
             if (service == null) {
@@ -450,12 +427,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含预约列表
      */
     @GetMapping("/appointments")
-    public ResponseEntity<ApiResponse<List<Appointment>>> getAppointments(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<List<Appointment>>> getAppointments() {
+        Merchant merchant = getCurrentMerchant();
         try {
             List<Appointment> appointments = appointmentService.findByMerchantId(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(appointments));
@@ -480,13 +453,8 @@ public class MerchantApiController {
     @PutMapping("/appointments/{id}/status")
     public ResponseEntity<ApiResponse<Appointment>> updateAppointmentStatus(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         
         String status = request.get("status");
         if (status == null || status.trim().isEmpty()) {
@@ -538,13 +506,8 @@ public class MerchantApiController {
      */
     @GetMapping("/appointments/recent")
     public ResponseEntity<ApiResponse<List<Appointment>>> getRecentAppointments(
-            @RequestParam(defaultValue = "5") int limit,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(defaultValue = "5") int limit) {
+        Merchant merchant = getCurrentMerchant();
         try {
             List<Appointment> appointments = appointmentService.findByMerchantId(merchant.getId());
             // 限制返回数量
@@ -572,13 +535,8 @@ public class MerchantApiController {
     @GetMapping("/appointment-stats")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getAppointmentStats(
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(required = false) String endDate) {
+        Merchant merchant = getCurrentMerchant();
         try {
             LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
             LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
@@ -607,12 +565,8 @@ public class MerchantApiController {
     public ResponseEntity<byte[]> exportAppointmentStats(
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
-            @RequestParam(defaultValue = "excel") String format,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+            @RequestParam(defaultValue = "excel") String format) {
+        Merchant merchant = getCurrentMerchant();
         try {
             // 暂时返回空数组，因为 merchantStatsService 中可能没有 exportAppointmentStats 方法
             byte[] fileContent = new byte[0];
@@ -668,12 +622,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含订单列表
      */
     @GetMapping("/orders")
-    public ResponseEntity<ApiResponse<List<ProductOrder>>> getOrders(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<List<ProductOrder>>> getOrders() {
+        Merchant merchant = getCurrentMerchant();
         try {
             List<ProductOrder> orders = productOrderService.findByMerchantId(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(orders));
@@ -696,13 +646,8 @@ public class MerchantApiController {
     @PutMapping("/orders/{id}/status")
     public ResponseEntity<ApiResponse<ProductOrder>> updateOrderStatus(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         
         String status = request.get("status");
         if (status == null || status.trim().isEmpty()) {
@@ -750,13 +695,8 @@ public class MerchantApiController {
     public ResponseEntity<ApiResponse<List<ProductOrder>>> getProductOrders(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(defaultValue = "10") int pageSize) {
+        Merchant merchant = getCurrentMerchant();
         try {
             List<ProductOrder> orders = productOrderService.findByMerchantId(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(orders));
@@ -780,13 +720,8 @@ public class MerchantApiController {
     @PutMapping("/product-orders/{id}/status")
     public ResponseEntity<ApiResponse<ProductOrder>> updateProductOrderStatus(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         
         String status = request.get("status");
         if (status == null || status.trim().isEmpty()) {
@@ -832,13 +767,8 @@ public class MerchantApiController {
     @PutMapping("/product-orders/{id}/logistics")
     public ResponseEntity<ApiResponse<ProductOrder>> updateLogisticsInfo(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             ProductOrder order = productOrderService.findByIdWithMerchant(id);
             if (order == null) {
@@ -873,12 +803,8 @@ public class MerchantApiController {
      * GET /api/merchant/products
      */
     @GetMapping("/products")
-    public ResponseEntity<ApiResponse<List<Product>>> getProducts(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+    public ResponseEntity<ApiResponse<List<Product>>> getProducts() {
+        Merchant merchant = getCurrentMerchant();
         List<Product> products = productService.findByMerchantId(merchant.getId());
         return ResponseEntity.ok(ApiResponse.success(products));
     }
@@ -888,12 +814,8 @@ public class MerchantApiController {
      * POST /api/merchant/products
      */
     @PostMapping("/products")
-    public ResponseEntity<ApiResponse<Product>> addProduct(@RequestBody Product product, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+    public ResponseEntity<ApiResponse<Product>> addProduct(@RequestBody Product product) {
+        Merchant merchant = getCurrentMerchant();
         product.setMerchant(merchant);
         Product createdProduct = productService.create(product);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -905,12 +827,8 @@ public class MerchantApiController {
      * GET /api/merchant/products/{id}
      */
     @GetMapping("/products/{id}")
-    public ResponseEntity<ApiResponse<Product>> getProductById(@PathVariable Integer id, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+    public ResponseEntity<ApiResponse<Product>> getProductById(@PathVariable Integer id) {
+        Merchant merchant = getCurrentMerchant();
         Product product = productService.findByIdWithMerchant(id);
         if (product == null || product.getMerchant() == null || !product.getMerchant().getId().equals(merchant.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -924,12 +842,8 @@ public class MerchantApiController {
      * PUT /api/merchant/products/{id}
      */
     @PutMapping("/products/{id}")
-    public ResponseEntity<ApiResponse<Product>> updateProduct(@PathVariable Integer id, @RequestBody Product product, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+    public ResponseEntity<ApiResponse<Product>> updateProduct(@PathVariable Integer id, @RequestBody Product product) {
+        Merchant merchant = getCurrentMerchant();
         Product existingProduct = productService.findByIdWithMerchant(id);
         if (existingProduct == null || existingProduct.getMerchant() == null || !existingProduct.getMerchant().getId().equals(merchant.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -947,12 +861,8 @@ public class MerchantApiController {
      * DELETE /api/merchant/products/{id}
      */
     @DeleteMapping("/products/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Integer id, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Integer id) {
+        Merchant merchant = getCurrentMerchant();
         Product product = productService.findByIdWithMerchant(id);
         if (product == null || product.getMerchant() == null || !product.getMerchant().getId().equals(merchant.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -977,13 +887,8 @@ public class MerchantApiController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
-            @RequestParam(required = false) String stockStatus,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+            @RequestParam(required = false) String stockStatus) {
+        Merchant merchant = getCurrentMerchant();
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, pageSize, sort);
         Page<Product> productPage = productService.searchProducts(merchant.getId(), name, status, category, pageable);
@@ -1004,13 +909,8 @@ public class MerchantApiController {
     @PutMapping("/products/{id}/status")
     public ResponseEntity<ApiResponse<Product>> updateProductStatus(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         
         String status = request.get("status");
         if (status == null || status.trim().isEmpty()) {
@@ -1042,13 +942,8 @@ public class MerchantApiController {
      */
     @PutMapping("/products/batch/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> batchUpdateProductStatus(
-            @RequestBody Map<String, Object> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+            @RequestBody Map<String, Object> request) {
+        Merchant merchant = getCurrentMerchant();
         @SuppressWarnings("unchecked")
         List<Integer> ids = (List<Integer>) request.get("ids");
         String status = (String) request.get("status");
@@ -1085,13 +980,8 @@ public class MerchantApiController {
      */
     @DeleteMapping("/products/batch")
     public ResponseEntity<ApiResponse<Map<String, Object>>> batchDeleteProducts(
-            @RequestBody Map<String, Object> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问"));
-        }
+            @RequestBody Map<String, Object> request) {
+        Merchant merchant = getCurrentMerchant();
         @SuppressWarnings("unchecked")
         List<Integer> ids = (List<Integer>) request.get("ids");
 
@@ -1126,12 +1016,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含分类列表
      */
     @GetMapping("/categories")
-    public ResponseEntity<ApiResponse<List<Category>>> getCategories(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<List<Category>>> getCategories() {
+        Merchant merchant = getCurrentMerchant();
         try {
             List<Category> categories = categoryService.findByMerchantIdSorted(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(categories));
@@ -1150,12 +1036,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含创建的分类
      */
     @PostMapping("/categories")
-    public ResponseEntity<ApiResponse<Category>> addCategory(@RequestBody Category category, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Category>> addCategory(@RequestBody Category category) {
+        Merchant merchant = getCurrentMerchant();
         try {
             category.setMerchantId(merchant.getId());
             Category createdCategory = categoryService.create(category);
@@ -1182,13 +1064,8 @@ public class MerchantApiController {
     @PutMapping("/categories/{id}")
     public ResponseEntity<ApiResponse<Category>> updateCategory(
             @PathVariable Integer id,
-            @RequestBody Category category,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Category category) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Category existingCategory = categoryService.findById(id);
             if (existingCategory == null) {
@@ -1224,12 +1101,8 @@ public class MerchantApiController {
      * @return 统一响应格式
      */
     @DeleteMapping("/categories/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Integer id, HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Integer id) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Category category = categoryService.findById(id);
             if (category == null) {
@@ -1263,13 +1136,8 @@ public class MerchantApiController {
     @PutMapping("/categories/{id}/status")
     public ResponseEntity<ApiResponse<Category>> updateCategoryStatus(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         
         String status = request.get("status");
         if (status == null || status.trim().isEmpty()) {
@@ -1309,13 +1177,8 @@ public class MerchantApiController {
      */
     @PutMapping("/categories/batch/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> batchUpdateCategoryStatus(
-            @RequestBody Map<String, Object> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Object> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             @SuppressWarnings("unchecked")
             List<Integer> ids = (List<Integer>) request.get("ids");
@@ -1375,13 +1238,8 @@ public class MerchantApiController {
      */
     @DeleteMapping("/categories/batch")
     public ResponseEntity<ApiResponse<Map<String, Object>>> batchDeleteCategories(
-            @RequestBody Map<String, Object> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, Object> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             @SuppressWarnings("unchecked")
             List<Integer> ids = (List<Integer>) request.get("ids");
@@ -1444,13 +1302,8 @@ public class MerchantApiController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(required = false) Integer rating,
-            @RequestParam(required = false) String keyword,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(required = false) String keyword) {
+        Merchant merchant = getCurrentMerchant();
         try {
             com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> reviewPage = reviewService.getReviewsWithPaging(
                     merchant.getId(), rating, keyword, page, size, sortBy, sortDir);
@@ -1479,12 +1332,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含平均评分和评分分布
      */
     @GetMapping("/reviews/statistics")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getReviewStatistics(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getReviewsStatistics() {
+        Merchant merchant = getCurrentMerchant();
         try {
             Map<String, Object> statistics = reviewService.getReviewStatistics(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(statistics));
@@ -1504,13 +1353,8 @@ public class MerchantApiController {
      */
     @GetMapping("/reviews/{id}")
     public ResponseEntity<ApiResponse<Review>> getReviewById(
-            @PathVariable Integer id,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Review review = reviewService.findById(id);
             if (review == null) {
@@ -1543,13 +1387,8 @@ public class MerchantApiController {
     @PutMapping("/reviews/{id}/reply")
     public ResponseEntity<ApiResponse<Review>> replyToReview(
             @PathVariable Integer id,
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Review review = reviewService.findById(id);
             if (review == null) {
@@ -1587,13 +1426,8 @@ public class MerchantApiController {
      */
     @DeleteMapping("/reviews/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteReview(
-            @PathVariable Integer id,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @PathVariable Integer id) {
+        Merchant merchant = getCurrentMerchant();
         try {
             Review review = reviewService.findById(id);
             if (review == null) {
@@ -1625,13 +1459,8 @@ public class MerchantApiController {
      */
     @GetMapping("/reviews/recent")
     public ResponseEntity<ApiResponse<List<Review>>> getRecentReviews(
-            @RequestParam(defaultValue = "5") int limit,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(defaultValue = "5") int limit) {
+        Merchant merchant = getCurrentMerchant();
         try {
             List<Review> reviews = reviewService.getRecentReviews(merchant.getId(), limit);
             return ResponseEntity.ok(ApiResponse.success(reviews));
@@ -1655,13 +1484,8 @@ public class MerchantApiController {
      */
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             String oldPassword = request.get("oldPassword");
             String newPassword = request.get("newPassword");
@@ -1692,13 +1516,8 @@ public class MerchantApiController {
      */
     @PostMapping("/bind-phone")
     public ResponseEntity<ApiResponse<Void>> bindPhone(
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             String phone = request.get("phone");
             String verifyCode = request.get("verifyCode");
@@ -1728,13 +1547,8 @@ public class MerchantApiController {
      */
     @PostMapping("/bind-email")
     public ResponseEntity<ApiResponse<Void>> bindEmail(
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             String email = request.get("email");
             String verifyCode = request.get("verifyCode");
@@ -1764,15 +1578,13 @@ public class MerchantApiController {
      */
     @PostMapping("/send-verify-code")
     public ResponseEntity<ApiResponse<Void>> sendVerifyCode(
-            @RequestBody Map<String, String> request,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody Map<String, String> request) {
+        Merchant merchant = getCurrentMerchant();
         try {
             String target = request.get("target");
+            if (target == null) {
+                target = request.get("value");
+            }
             String type = request.get("type"); // phone 或 email
             if (target == null || type == null) {
                 return ResponseEntity.badRequest()
@@ -1797,12 +1609,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含首页统计数据
      */
     @GetMapping("/dashboard")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats() {
+        Merchant merchant = getCurrentMerchant();
         try {
             Map<String, Object> stats = merchantStatsService.getDashboardStats(merchant.getId());
             List<Appointment> recentAppointments = merchantStatsService.getRecentAppointments(merchant.getId(), 5);
@@ -1828,13 +1636,8 @@ public class MerchantApiController {
     @GetMapping("/revenue-stats")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getRevenueStats(
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(required = false) String endDate) {
+        Merchant merchant = getCurrentMerchant();
         try {
             LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
             LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
@@ -1856,23 +1659,43 @@ public class MerchantApiController {
      * @return 统一响应格式，包含导出数据
      */
     @GetMapping("/revenue-stats/export")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> exportRevenueStats(
+    public ResponseEntity<byte[]> exportRevenueStats(
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestParam(defaultValue = "excel") String format) {
+        Merchant merchant = getCurrentMerchant();
         try {
             LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
             LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
             List<Map<String, Object>> exportData = merchantStatsService.getRevenueStatsForExport(merchant.getId(), start, end);
-            return ResponseEntity.ok(ApiResponse.success("导出成功", exportData));
+
+            StringBuilder sb = new StringBuilder();
+            if ("csv".equals(format)) {
+                sb.append("date,revenue\n");
+                for (Map<String, Object> row : exportData) {
+                    sb.append(row.get("date")).append(",").append(row.get("revenue")).append("\n");
+                }
+            } else {
+                sb.append("date,revenue\n");
+                for (Map<String, Object> row : exportData) {
+                    sb.append(row.get("date")).append(",").append(row.get("revenue")).append("\n");
+                }
+            }
+
+            byte[] fileContent = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            String contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            String filename = "revenue-stats";
+            if ("csv".equals(format)) {
+                contentType = "text/csv";
+                filename = "revenue-stats";
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                    .header("Content-Disposition", "attachment; filename=" + filename + "." + format)
+                    .body(fileContent);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(500, "导出营收统计失败：" + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -1886,12 +1709,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含店铺设置信息
      */
     @GetMapping("/settings")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getSettings(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSettings() {
+        Merchant merchant = getCurrentMerchant();
         try {
             Map<String, Object> settings = merchantSettingsService.getSettingsOverview(merchant.getId());
             return ResponseEntity.ok(ApiResponse.success(settings));
@@ -1911,13 +1730,8 @@ public class MerchantApiController {
      */
     @PutMapping("/settings")
     public ResponseEntity<ApiResponse<MerchantSettings>> updateSettings(
-            @RequestBody MerchantSettings settings,
-            HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+            @RequestBody MerchantSettings settings) {
+        Merchant merchant = getCurrentMerchant();
         try {
             MerchantSettings updatedSettings = merchantSettingsService.updateSettings(merchant.getId(), settings);
             return ResponseEntity.ok(ApiResponse.success("店铺设置更新成功", updatedSettings));
@@ -1935,12 +1749,8 @@ public class MerchantApiController {
      * @return 统一响应格式，包含新的营业状态
      */
     @PostMapping("/settings/toggle-status")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> toggleShopStatus(HttpSession session) {
-        Merchant merchant = (Merchant) session.getAttribute("merchant");
-        if (merchant == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "未授权访问，请先登录"));
-        }
+    public ResponseEntity<ApiResponse<Map<String, Object>>> toggleShopStatus() {
+        Merchant merchant = getCurrentMerchant();
         try {
             boolean isOpen = merchantSettingsService.toggleShopStatus(merchant.getId());
             Map<String, Object> result = new HashMap<>();

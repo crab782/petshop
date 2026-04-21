@@ -37,7 +37,7 @@ const handleLogin = async () => {
 
     try {
       const response = await axios.post('/api/auth/login', {
-        phone: loginForm.phone,
+        loginIdentifier: loginForm.phone,
         password: loginForm.password,
         role: 'user'
       })

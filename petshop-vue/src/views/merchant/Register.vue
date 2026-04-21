@@ -13,7 +13,7 @@ interface FormData {
   password: string
   confirmPassword: string
   phone: string
-  contact_person: string
+  contactPerson: string
   name: string
   logo: string
   address: string
@@ -25,7 +25,7 @@ const initialFormData: FormData = {
   password: '',
   confirmPassword: '',
   phone: '',
-  contact_person: '',
+  contactPerson: '',
   name: '',
   logo: '',
   address: '',
@@ -67,7 +67,7 @@ const validationRules: Record<keyof FormData, (value: any) => string | null> = {
     if (!phoneRegex.test(value)) return '请输入正确的手机号格式'
     return null
   },
-  contact_person: () => null,
+  contactPerson: () => null,
   name: () => null,
   logo: () => null,
   address: () => null,
@@ -113,7 +113,7 @@ const elFormRules = computed(() => ({
       trigger: 'blur'
     }
   ],
-  contact_person: [],
+  contactPerson: [],
   name: [],
   address: []
 }))
@@ -162,7 +162,7 @@ const handleRegister = async () => {
       email: formData.email,
       password: formData.password,
       phone: formData.phone,
-      contact_person: formData.contact_person,
+      contactPerson: formData.contactPerson,
       name: formData.name,
       logo: formData.logo || undefined,
       address: formData.address
@@ -239,12 +239,12 @@ const showTermsDialog = () => {
           />
         </el-form-item>
 
-        <el-form-item prop="contact_person">
+        <el-form-item prop="contactPerson">
           <template #label>
             <span class="form-label">联系人</span>
           </template>
           <el-input
-            v-model="formData.contact_person"
+            v-model="formData.contactPerson"
             placeholder="请输入联系人姓名"
             size="large"
           />

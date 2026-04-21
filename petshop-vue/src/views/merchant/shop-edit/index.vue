@@ -15,7 +15,7 @@ const logoInputMethod = ref<'url' | 'upload'>('url')
 interface ShopFormData {
   name: string
   logo: string
-  contact_person: string
+  contactPerson: string
   phone: string
   email: string
   address: string
@@ -24,7 +24,7 @@ interface ShopFormData {
 const initialFormData: ShopFormData = {
   name: '',
   logo: '',
-  contact_person: '',
+  contactPerson: '',
   phone: '',
   email: '',
   address: ''
@@ -35,7 +35,7 @@ const rules: FormRules = {
     { required: true, message: '请输入店铺名称', trigger: 'blur' },
     { min: 2, max: 100, message: '店铺名称长度为2-100个字符', trigger: 'blur' }
   ],
-  contact_person: [
+  contactPerson: [
     { required: true, message: '请输入联系人', trigger: 'blur' },
     { max: 50, message: '联系人姓名最多50个字符', trigger: 'blur' }
   ],
@@ -92,7 +92,7 @@ const fetchShopInfo = async () => {
     resetForm({
       name: result.name || '',
       logo: result.logo || '',
-      contact_person: result.contact_person || '',
+      contactPerson: result.contactPerson || '',
       phone: result.phone || '',
       email: result.email || '',
       address: result.address || ''
@@ -133,7 +133,7 @@ const handleSave = async () => {
   const data: Partial<MerchantInfo> = {
     name: formData.name,
     logo: formData.logo,
-    contact_person: formData.contact_person,
+    contactPerson: formData.contactPerson,
     phone: formData.phone,
     email: formData.email,
     address: formData.address
@@ -223,9 +223,9 @@ onMounted(() => {
           </div>
         </el-form-item>
 
-        <el-form-item label="联系人" prop="contact_person">
+        <el-form-item label="联系人" prop="contactPerson">
           <el-input
-            v-model="formData.contact_person"
+            v-model="formData.contactPerson"
             placeholder="请输入联系人姓名"
             :disabled="loading"
           />

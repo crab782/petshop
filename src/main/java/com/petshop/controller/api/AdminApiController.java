@@ -5,6 +5,7 @@ import com.petshop.dto.DashboardStatsDTO;
 import com.petshop.dto.MerchantDetailDTO;
 import com.petshop.dto.PageResponse;
 import com.petshop.dto.RoleRequest;
+import com.petshop.dto.UserDetailDTO;
 import com.petshop.entity.User;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.Announcement;
@@ -12,6 +13,7 @@ import com.petshop.entity.Product;
 import com.petshop.entity.Review;
 import com.petshop.entity.Role;
 import com.petshop.entity.Permission;
+import com.petshop.entity.OperationLog;
 import com.petshop.entity.ScheduledTask;
 import com.petshop.entity.SystemConfig;
 import com.petshop.entity.SystemSettings;
@@ -35,6 +37,9 @@ import com.petshop.mapper.AnnouncementMapper;
 import com.petshop.mapper.ProductMapper;
 import com.petshop.mapper.SystemConfigMapper;
 import com.petshop.mapper.SystemSettingsMapper;
+import com.petshop.mapper.PetMapper;
+import com.petshop.mapper.ReviewMapper;
+import com.petshop.mapper.ProductOrderMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -98,6 +103,12 @@ public class AdminApiController {
     
     @Autowired
     private SystemSettingsService systemSettingsService;
+    @Autowired
+    private PetMapper petMapper;
+    @Autowired
+    private ReviewMapper reviewMapper;
+    @Autowired
+    private ProductOrderMapper productOrderMapper;
 
     @Operation(summary = "获取用户列表", description = "获取系统中所有用户的列表")
     @ApiResponses(value = {
@@ -128,7 +139,64 @@ public class AdminApiController {
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
-    
+
+    @Operation(summary = "获取用户详情", description = "根据用户ID获取用户详细信息，包括宠物数量、订单数量、评价数量等")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取用户详情"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "用户不存在")
+    })
+    @GetMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<UserDetailDTO>> getUserDetail(
+            @Parameter(description = "用户ID", required = true) @PathVariable Integer id,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        User user = userService.findById(id);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "User not found"));
+        }
+
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.petshop.entity.Pet> petWrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        petWrapper.eq(com.petshop.entity.Pet::getUserId, id);
+        long petCount = petMapper.selectCount(petWrapper);
+
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Appointment> apptWrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        apptWrapper.eq(Appointment::getUserId, id);
+        long appointmentCount = appointmentMapper.selectCount(apptWrapper);
+
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review> reviewWrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        reviewWrapper.eq(Review::getUserId, id);
+        long reviewCount = reviewMapper.selectCount(reviewWrapper);
+
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.petshop.entity.ProductOrder> orderWrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        orderWrapper.eq(com.petshop.entity.ProductOrder::getUserId, id);
+        long orderCount = productOrderMapper.selectCount(orderWrapper);
+
+        UserDetailDTO detail = UserDetailDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .avatar(user.getAvatar())
+                .status(user.getStatus())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+
+        Map<String, Object> extraInfo = new HashMap<>();
+        extraInfo.put("petCount", petCount);
+        extraInfo.put("appointmentCount", appointmentCount);
+        extraInfo.put("reviewCount", reviewCount);
+        extraInfo.put("orderCount", orderCount);
+
+        return ResponseEntity.ok(ApiResponse.success(Map.of("user", detail, "stats", extraInfo)));
+    }
+
     @Operation(summary = "更新用户状态", description = "更新指定用户的启用/禁用状态")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "用户状态更新成功"),
@@ -1720,15 +1788,20 @@ public class AdminApiController {
         
         Map<String, Object> result = new HashMap<>();
         result.put("id", config.getId());
-        result.put("siteName", config.getSiteName());
-        result.put("logo", config.getLogo());
+        result.put("websiteName", config.getSiteName());
+        result.put("websiteLogo", config.getLogo());
         result.put("contactEmail", config.getContactEmail());
         result.put("contactPhone", config.getContactPhone());
-        result.put("icpNumber", config.getIcpNumber());
+        result.put("copyright", config.getIcpNumber());
         result.put("siteDescription", config.getSiteDescription());
         result.put("siteKeywords", config.getSiteKeywords());
         result.put("footerText", config.getFooterText());
-        
+        result.put("appointmentOpenTime", "09:00");
+        result.put("minAdvanceHours", 2);
+        result.put("maxAdvanceDays", 30);
+        result.put("enableReview", true);
+        result.put("reviewCharLimit", 500);
+
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
@@ -1757,8 +1830,14 @@ public class AdminApiController {
         if (request.containsKey("siteName")) {
             config.setSiteName((String) request.get("siteName"));
         }
+        if (request.containsKey("websiteName")) {
+            config.setSiteName((String) request.get("websiteName"));
+        }
         if (request.containsKey("logo")) {
             config.setLogo((String) request.get("logo"));
+        }
+        if (request.containsKey("websiteLogo")) {
+            config.setLogo((String) request.get("websiteLogo"));
         }
         if (request.containsKey("contactEmail")) {
             config.setContactEmail((String) request.get("contactEmail"));
@@ -1768,6 +1847,9 @@ public class AdminApiController {
         }
         if (request.containsKey("icpNumber")) {
             config.setIcpNumber((String) request.get("icpNumber"));
+        }
+        if (request.containsKey("copyright")) {
+            config.setIcpNumber((String) request.get("copyright"));
         }
         if (request.containsKey("siteDescription")) {
             config.setSiteDescription((String) request.get("siteDescription"));
@@ -1783,15 +1865,20 @@ public class AdminApiController {
         
         Map<String, Object> result = new HashMap<>();
         result.put("id", config.getId());
-        result.put("siteName", config.getSiteName());
-        result.put("logo", config.getLogo());
+        result.put("websiteName", config.getSiteName());
+        result.put("websiteLogo", config.getLogo());
         result.put("contactEmail", config.getContactEmail());
         result.put("contactPhone", config.getContactPhone());
-        result.put("icpNumber", config.getIcpNumber());
+        result.put("copyright", config.getIcpNumber());
         result.put("siteDescription", config.getSiteDescription());
         result.put("siteKeywords", config.getSiteKeywords());
         result.put("footerText", config.getFooterText());
-        
+        result.put("appointmentOpenTime", "09:00");
+        result.put("minAdvanceHours", 2);
+        result.put("maxAdvanceDays", 30);
+        result.put("enableReview", true);
+        result.put("reviewCharLimit", 500);
+
         return ResponseEntity.ok(ApiResponse.success("System config updated successfully", result));
     }
 
@@ -2192,5 +2279,249 @@ public class AdminApiController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error(404, e.getMessage()));
         }
+    }
+
+    @Operation(summary = "获取角色列表", description = "分页获取角色列表")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取角色列表"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/roles")
+    public ResponseEntity<ApiResponse<PageResponse<Role>>> getRoles(
+            @Parameter(description = "页码，从1开始") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Role> rolePage = roleService.getRoles(page, pageSize);
+
+        PageResponse<Role> response = PageResponse.<Role>builder()
+                .data(rolePage.getRecords())
+                .total(rolePage.getTotal())
+                .page(page - 1)
+                .pageSize(pageSize)
+                .totalPages((int) rolePage.getPages())
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(summary = "添加角色", description = "创建新的角色")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "角色创建成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @PostMapping("/roles")
+    public ResponseEntity<ApiResponse<Role>> addRole(
+            @RequestBody RoleRequest request,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, "Role name cannot be empty"));
+        }
+
+        Role role = roleService.createRole(request.getName(), request.getDescription(), request.getPermissions());
+        return ResponseEntity.ok(ApiResponse.success("Role created successfully", role));
+    }
+
+    @Operation(summary = "更新角色", description = "更新指定角色的信息")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "角色更新成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "请求参数错误"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "角色不存在")
+    })
+    @PutMapping("/roles/{id}")
+    public ResponseEntity<ApiResponse<Role>> updateRole(
+            @Parameter(description = "角色ID", required = true) @PathVariable Integer id,
+            @RequestBody RoleRequest request,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        Role existingRole = roleService.findById(id);
+        if (existingRole == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Role not found"));
+        }
+
+        Role updatedRole = roleService.updateRole(id, request.getName(), request.getDescription(), request.getPermissions());
+        if (updatedRole == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Role not found"));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("Role updated successfully", updatedRole));
+    }
+
+    @Operation(summary = "删除角色", description = "根据角色ID删除指定角色")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "角色删除成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "角色不存在")
+    })
+    @DeleteMapping("/roles/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteRole(
+            @Parameter(description = "角色ID", required = true) @PathVariable Integer id,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        Role role = roleService.findById(id);
+        if (role == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Role not found"));
+        }
+
+        roleService.deleteRole(id);
+        return ResponseEntity.ok(ApiResponse.success("Role deleted successfully", null));
+    }
+
+    @Operation(summary = "获取权限列表", description = "获取所有权限列表")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取权限列表"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/permissions")
+    public ResponseEntity<ApiResponse<List<Permission>>> getPermissions(HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        List<Permission> permissions = roleService.getAllPermissions();
+        return ResponseEntity.ok(ApiResponse.success(permissions));
+    }
+
+    @Operation(summary = "获取操作日志列表", description = "分页获取操作日志列表，支持筛选")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取日志列表"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/operation-logs")
+    public ResponseEntity<ApiResponse<PageResponse<OperationLog>>> getOperationLogs(
+            @Parameter(description = "页码，从1开始") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "操作人ID") @RequestParam(required = false) Integer adminId,
+            @Parameter(description = "操作类型") @RequestParam(required = false) String action,
+            @Parameter(description = "开始日期(yyyy-MM-dd)") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期(yyyy-MM-dd)") @RequestParam(required = false) String endDate,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        java.time.LocalDate startLocalDate = null;
+        java.time.LocalDate endLocalDate = null;
+        if (startDate != null && !startDate.trim().isEmpty()) {
+            try {
+                startLocalDate = java.time.LocalDate.parse(startDate);
+            } catch (Exception e) {
+            }
+        }
+        if (endDate != null && !endDate.trim().isEmpty()) {
+            try {
+                endLocalDate = java.time.LocalDate.parse(endDate);
+            } catch (Exception e) {
+            }
+        }
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<OperationLog> logPage = operationLogService.getLogs(adminId, action, startLocalDate, endLocalDate, page, pageSize);
+
+        PageResponse<OperationLog> response = PageResponse.<OperationLog>builder()
+                .data(logPage.getRecords())
+                .total(logPage.getTotal())
+                .page(page - 1)
+                .pageSize(pageSize)
+                .totalPages((int) logPage.getPages())
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(summary = "删除操作日志", description = "根据日志ID删除指定操作日志")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "日志删除成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "日志不存在")
+    })
+    @DeleteMapping("/operation-logs/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteOperationLog(
+            @Parameter(description = "日志ID", required = true) @PathVariable Integer id,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        OperationLog log = operationLogService.findById(id);
+        if (log == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(404, "Operation log not found"));
+        }
+
+        operationLogService.deleteLog(id);
+        return ResponseEntity.ok(ApiResponse.success("Operation log deleted successfully", null));
+    }
+
+    @Operation(summary = "清空操作日志", description = "清空所有操作日志")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "日志清空成功"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @DeleteMapping("/operation-logs")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> clearOperationLogs(HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        long deletedCount = operationLogService.deleteAllLogs();
+        Map<String, Object> result = new HashMap<>();
+        result.put("deletedCount", deletedCount);
+        return ResponseEntity.ok(ApiResponse.success("All operation logs cleared", result));
+    }
+
+    @Operation(summary = "获取待审核评价（审核页面）", description = "审核页面获取待审核评价列表，路径别名")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取待审核评价列表"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "未授权访问")
+    })
+    @GetMapping("/reviews/audit")
+    public ResponseEntity<ApiResponse<PageResponse<Review>>> getAuditReviews(
+            @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "搜索关键字") @RequestParam(required = false) String keyword,
+            HttpSession session) {
+        if (session.getAttribute("admin") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Unauthorized"));
+        }
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Review> reviewPage = reviewService.getPendingReviews(keyword, page, pageSize);
+
+        PageResponse<Review> response = PageResponse.<Review>builder()
+                .data(reviewPage.getRecords())
+                .total(reviewPage.getTotal())
+                .page(page)
+                .pageSize(pageSize)
+                .totalPages((int) reviewPage.getPages())
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

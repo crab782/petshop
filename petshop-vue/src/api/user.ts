@@ -148,7 +148,7 @@ export const createAppointment = (data: {
   serviceId: number
   petId: number
   appointmentTime: string
-  notes?: string
+  remark?: string
 }) => {
   return request.post('/api/user/appointments', data)
 }
@@ -231,7 +231,7 @@ export const searchServices = (keyword: string) => {
   return request.get<Service[]>('/api/services/search', { params: { keyword } })
 }
 
-export const getProducts = (params?: { keyword?: string; category?: string; page?: number; pageSize?: number }) => {
+export const getProducts = (params?: { name?: string; categoryId?: string; page?: number; pageSize?: number }) => {
   return request.get<Product[]>('/api/products', { params })
 }
 
@@ -339,12 +339,12 @@ export const getCart = () => {
   return request.get<CartItem[]>('/api/user/cart')
 }
 
-export const updateCartItem = (productId: number, quantity: number) => {
-  return request.put('/api/user/cart', { productId, quantity })
+export const updateCartItem = (cartId: number, quantity: number) => {
+  return request.put('/api/user/cart', { cartId, quantity })
 }
 
-export const removeFromCart = (productId: number) => {
-  return request.delete(`/api/user/cart/${productId}`)
+export const removeFromCart = (id: number) => {
+  return request.delete(`/api/user/cart/${id}`)
 }
 
 export interface ProductOrder {
@@ -460,9 +460,8 @@ export interface MerchantListItem {
 }
 
 export const getMerchantList = (params?: {
-  keyword?: string
-  rating?: number
-  sortBy?: string
+  name?: string
+  minRating?: number
   page?: number
   pageSize?: number
 }) => {
@@ -486,7 +485,7 @@ export const getUserReviewsList = (params?: {
   startDate?: string
   endDate?: string
   page?: number
-  pageSize?: number
+  size?: number
 }) => {
   return request.get<{ data: UserReview[]; total: number }>('/api/user/reviews', { params })
 }
@@ -578,8 +577,8 @@ export const getUserPurchasedServices = (params?: {
   return request.get<{ data: UserPurchasedService[]; total: number }>('/api/user/services', { params })
 }
 
-export const batchRemoveFromCart = (productIds: number[]) => {
-  return request.delete('/api/user/cart/batch', { data: { productIds } })
+export const batchRemoveFromCart = (ids: number[]) => {
+  return request.delete('/api/user/cart/batch', { data: { ids } })
 }
 
 export interface OrderPreview {

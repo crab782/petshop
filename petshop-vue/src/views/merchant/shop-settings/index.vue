@@ -399,7 +399,7 @@ onUnmounted(() => {
                   {{ merchantInfo.name }}
                 </el-descriptions-item>
                 <el-descriptions-item label="联系人">
-                  {{ merchantInfo.contact_person || '-' }}
+                  {{ merchantInfo.contactPerson || '-' }}
                 </el-descriptions-item>
                 <el-descriptions-item label="联系电话">
                   {{ merchantInfo.phone || '-' }}
@@ -416,7 +416,7 @@ onUnmounted(() => {
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item label="注册时间">
-                  {{ formatDate(merchantInfo.created_at || '') }}
+                  {{ formatDate(merchantInfo.createdAt || '') }}
                 </el-descriptions-item>
               </el-descriptions>
             </el-col>

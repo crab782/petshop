@@ -515,14 +515,14 @@ export const updateMerchantSettings = (data: MerchantSettings) => {
 export interface MerchantInfo {
   id: number
   name: string
-  contact_person?: string
+  contactPerson?: string
   phone?: string
   email?: string
   address?: string
   logo?: string
   description?: string
   status?: 'pending' | 'approved' | 'rejected'
-  created_at?: string
+  createdAt?: string
 }
 
 export interface ChangePasswordData {
@@ -552,8 +552,8 @@ export const bindEmail = (data: BindEmailData) => {
   return request.post('/api/merchant/bind-email', data)
 }
 
-export const sendVerifyCode = (type: 'phone' | 'email', value: string) => {
-  return request.post('/api/merchant/send-verify-code', { type, value })
+export const sendVerifyCode = (type: 'phone' | 'email', target: string) => {
+  return request.post('/api/merchant/send-verify-code', { type, target })
 }
 
 export interface DashboardStats {
@@ -595,4 +595,24 @@ export const getRecentOrders = (limit: number = 5) => {
 
 export const getRecentReviews = (limit: number = 5) => {
   return request.get<RecentReview[]>('/api/merchant/reviews/recent', { params: { limit } })
+}
+
+export interface ReviewStatistics {
+  averageRating: number
+  totalCount: number
+  ratingDistribution: {
+    five: number
+    four: number
+    three: number
+    two: number
+    one: number
+  }
+}
+
+export const getReviewStatistics = () => {
+  return request.get<ReviewStatistics>('/api/merchant/reviews/statistics')
+}
+
+export const toggleShopStatus = () => {
+  return request.post<{ isOpen: boolean }>('/api/merchant/settings/toggle-status')
 }

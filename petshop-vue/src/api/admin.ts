@@ -377,7 +377,7 @@ export const executeTask = (id: number) => {
 }
 
 export const getReviewsForAudit = () => {
-  return request.get<Review[]>('/api/admin/reviews/audit')
+  return request.get<Review[]>('/api/admin/reviews/pending')
 }
 
 export const approveReview = (id: number) => {

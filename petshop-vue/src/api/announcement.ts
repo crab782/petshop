@@ -17,21 +17,21 @@ export const getAnnouncementById = (id: number) => {
 }
 
 export const addAnnouncement = (data: { title: string; content: string }) => {
-  return request.post<Announcement>('/api/announcements', data)
+  return request.post<Announcement>('/api/admin/announcements', data)
 }
 
 export const updateAnnouncement = (id: number, data: { title: string; content: string }) => {
-  return request.put<Announcement>(`/api/announcements/${id}`, data)
+  return request.put<Announcement>(`/api/admin/announcements/${id}`, data)
 }
 
 export const deleteAnnouncement = (id: number) => {
-  return request.delete<void>(`/api/announcements/${id}`)
+  return request.delete<void>(`/api/admin/announcements/${id}`)
 }
 
 export const publishAnnouncement = (id: number) => {
-  return request.put<Announcement>(`/api/announcements/${id}/publish`, {})
+  return request.put<Announcement>(`/api/admin/announcements/${id}/publish`, {})
 }
 
 export const unpublishAnnouncement = (id: number) => {
-  return request.put<Announcement>(`/api/announcements/${id}/unpublish`, {})
+  return request.put<Announcement>(`/api/admin/announcements/${id}/unpublish`, {})
 }

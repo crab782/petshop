@@ -56,7 +56,7 @@ const fetchCart = async () => {
 const handleQuantityChange = async (item: CartItem, quantity: number) => {
   if (quantity < 1) return
   try {
-    await updateCartItem(item.productId, quantity)
+    await updateCartItem(item.id, quantity)
     item.quantity = quantity
   } catch (error) {
     console.error('更新数量失败:', error)
@@ -72,7 +72,7 @@ const handleRemove = async (item: CartItem) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await removeFromCart(item.productId)
+    await removeFromCart(item.id)
     ElMessage.success('已移除')
     fetchCart()
   } catch (error: any) {
@@ -97,7 +97,7 @@ const handleBatchRemove = async () => {
     for (const id of selectedItems.value) {
       const item = cartItems.value.find((i) => i.id === id)
       if (item) {
-        await removeFromCart(item.productId)
+        await removeFromCart(item.id)
       }
     }
     ElMessage.success('已删除选中商品')
