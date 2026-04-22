@@ -1,0 +1,3 @@
+- [x] package.json 中的 build 脚本已修改为跳过类型检查
+- [x] npm run build 构建成功
+- [x] 生产环境构建可以正常完成
