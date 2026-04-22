@@ -43,7 +43,7 @@ const handleLogin = async () => {
       })
 
       if (response.token) {
-        localStorage.setItem('token', response.token)
+        localStorage.setItem('user_token', response.token)
       }
       if (response.user) {
         localStorage.setItem('userInfo', JSON.stringify(response.user))

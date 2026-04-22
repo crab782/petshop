@@ -9,8 +9,20 @@ const request: AxiosInstance = axios.create({
 
 request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // 优先使用用户token，然后使用商家token
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('merchant_token') || sessionStorage.getItem('merchant_token')
+    let token = ''
+    const path = window.location.pathname
+    
+    if (path.startsWith('/merchant/')) {
+      // 商家端
+      token = localStorage.getItem('merchant_token') || sessionStorage.getItem('merchant_token')
+    } else if (path.startsWith('/admin/')) {
+      // 平台端
+      token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token')
+    } else {
+      // 用户端
+      token = localStorage.getItem('user_token') || sessionStorage.getItem('user_token')
+    }
+    
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -43,18 +55,21 @@ request.interceptors.response.use(
       switch (status) {
         case 401:
           ElMessage.error('未授权，请重新登录')
-          localStorage.removeItem('token')
+          // 清除所有token
+          localStorage.removeItem('user_token')
           localStorage.removeItem('merchant_token')
-          sessionStorage.removeItem('token')
+          localStorage.removeItem('admin_token')
+          sessionStorage.removeItem('user_token')
           sessionStorage.removeItem('merchant_token')
-          // 根据用户类型跳转到对应的登录页
-          const userInfo = localStorage.getItem('userInfo')
-          if (userInfo) {
-            // 如果有用户信息，跳转到用户登录页
-            window.location.href = '/login'
-          } else {
-            // 否则跳转到商家登录页
+          sessionStorage.removeItem('admin_token')
+          // 根据当前路径跳转到对应的登录页
+          const path = window.location.pathname
+          if (path.startsWith('/merchant/')) {
             window.location.href = '/merchant/login'
+          } else if (path.startsWith('/admin/')) {
+            window.location.href = '/admin/login'
+          } else {
+            window.location.href = '/login'
           }
           break
         case 403:

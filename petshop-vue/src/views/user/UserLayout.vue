@@ -38,9 +38,9 @@ const username = computed(() => {
 
 const handleCommand = (command: string) => {
   if (command === 'logout') {
-    localStorage.removeItem('token')
+    localStorage.removeItem('user_token')
     localStorage.removeItem('userInfo')
-    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user_token')
     sessionStorage.removeItem('userInfo')
     router.push('/login')
   }

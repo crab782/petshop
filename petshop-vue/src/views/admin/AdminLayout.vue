@@ -39,7 +39,11 @@ const handleMenuSelect = (path: string) => {
 }
 
 const handleLogout = () => {
-  router.push('/login')
+  localStorage.removeItem('admin_token')
+  sessionStorage.removeItem('admin_token')
+  localStorage.removeItem('adminInfo')
+  sessionStorage.removeItem('adminInfo')
+  router.push('/admin/login')
 }
 </script>
 
