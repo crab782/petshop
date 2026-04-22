@@ -131,10 +131,6 @@ onMounted(() => {
             <el-icon><Star /></el-icon>
             <template #title>服务评价列表</template>
           </el-menu-item>
-          <el-menu-item index="/logout">
-            <el-icon><SwitchButton /></el-icon>
-            <template #title>退出登录</template>
-          </el-menu-item>
         </el-menu>
       </el-aside>
 
