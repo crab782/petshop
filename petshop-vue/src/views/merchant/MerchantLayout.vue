@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { HomeFilled, ShoppingBag, Calendar, Grid, Star, SwitchButton, Bell, ArrowDown, Setting } from '@element-plus/icons-vue'
+import { HomeFilled, ShoppingBag, Calendar, Grid, Star, SwitchButton, Bell, ArrowDown, Setting, List, Goods, Document, DataLine, TrendCharts, FolderOpened } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getMerchantInfo, type MerchantInfo } from '@/api/merchant'
 import { useAsync } from '@/composables'
@@ -130,6 +130,34 @@ onMounted(() => {
           <el-menu-item index="/merchant/reviews">
             <el-icon><Star /></el-icon>
             <template #title>服务评价列表</template>
+          </el-menu-item>
+          <el-menu-item index="/merchant/orders">
+            <el-icon><List /></el-icon>
+            <template #title>服务订单</template>
+          </el-menu-item>
+          <el-menu-item index="/merchant/products">
+            <el-icon><Goods /></el-icon>
+            <template #title>商品管理</template>
+          </el-menu-item>
+          <el-menu-item index="/merchant/product-orders">
+            <el-icon><Document /></el-icon>
+            <template #title>商品订单</template>
+          </el-menu-item>
+          <el-menu-item index="/merchant/categories">
+            <el-icon><FolderOpened /></el-icon>
+            <template #title>分类管理</template>
+          </el-menu-item>
+          <el-menu-item index="/merchant/shop/settings">
+            <el-icon><Setting /></el-icon>
+            <template #title>店铺设置</template>
+          </el-menu-item>
+          <el-menu-item index="/merchant/stats/appointments">
+            <el-icon><DataLine /></el-icon>
+            <template #title>预约统计</template>
+          </el-menu-item>
+          <el-menu-item index="/merchant/stats/revenue">
+            <el-icon><TrendCharts /></el-icon>
+            <template #title>营收统计</template>
           </el-menu-item>
         </el-menu>
       </el-aside>

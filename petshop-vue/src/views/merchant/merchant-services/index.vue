@@ -68,7 +68,7 @@ const fetchServices = async () => {
   loading.value = true
   try {
     const res = await getMerchantServices()
-    let data = res.data || []
+    let data = res || []
 
     if (searchForm.value.keyword) {
       data = data.filter(s => s.name.toLowerCase().includes(searchForm.value.keyword.toLowerCase()))
