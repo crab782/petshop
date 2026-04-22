@@ -206,7 +206,11 @@ public class ReviewService {
         statistics.put("averageRating", avgRating);
         
         Map<Integer, Long> distribution = getRatingDistribution(merchantId);
-        statistics.put("ratingDistribution", distribution);
+        statistics.put("fiveStarCount", distribution.getOrDefault(5, 0L));
+        statistics.put("fourStarCount", distribution.getOrDefault(4, 0L));
+        statistics.put("threeStarCount", distribution.getOrDefault(3, 0L));
+        statistics.put("twoStarCount", distribution.getOrDefault(2, 0L));
+        statistics.put("oneStarCount", distribution.getOrDefault(1, 0L));
         
         LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Review::getMerchantId, merchantId);
