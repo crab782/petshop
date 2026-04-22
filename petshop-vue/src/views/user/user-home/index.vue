@@ -130,7 +130,7 @@ onMounted(() => {
                   <el-rate :model-value="merchant.rating || 0" disabled :size="12" />
                 </div>
               </div>
-              <el-badge :value="merchant.serviceCount + '项服务'" class="merchant-service-badge" type="success" />
+              <el-badge :value="(merchant.serviceCount || 0) + '项服务'" class="merchant-service-badge" type="success" />
             </div>
           </el-card>
         </el-col>
@@ -216,7 +216,7 @@ onMounted(() => {
                   <el-icon color="#f5a623"><StarFilled /></el-icon>
                   {{ service.rating || 0 }}
                 </span>
-                <span class="service-price">¥{{ service.price }}</span>
+                <span class="service-price">¥{{ service.price || 0 }}</span>
               </div>
             </div>
           </el-card>
