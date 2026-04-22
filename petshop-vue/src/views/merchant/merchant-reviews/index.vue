@@ -81,7 +81,7 @@ const fetchReviews = async () => {
   try {
     // 获取评价列表
     const res = await getMerchantReviews(queryParams.value)
-    const data = res.data.data
+    const data = res
     reviews.value = (data.content || []).map(item => ({
       id: item.id,
       userId: item.userId,
@@ -101,7 +101,7 @@ const fetchReviews = async () => {
 
     // 获取评分分布
     const statsRes = await request.get('/api/merchant/reviews/statistics')
-    const statsData = statsRes.data.data
+    const statsData = statsRes
     ratingDistribution.value = {
       five: statsData.fiveStarCount || 0,
       four: statsData.fourStarCount || 0,

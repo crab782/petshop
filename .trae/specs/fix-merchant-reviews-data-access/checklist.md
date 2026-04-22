@@ -1,0 +1,5 @@
+- [x] merchant-reviews/index.vue 中的评价列表数据访问逻辑已修复
+- [x] merchant-reviews/index.vue 中的评分统计数据访问逻辑已修复
+- [x] 商家评价页面能正确显示评价列表
+- [x] 商家评价页面能正确显示评分统计
+- [x] 商家评价页面能正确显示评分分布
