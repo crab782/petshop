@@ -278,4 +278,25 @@ public class AuthApiController {
                     .body(ApiResponse.error(500, "Merchant registration failed: " + e.getMessage()));
         }
     }
+
+    @Operation(summary = "管理员注册", description = "注册新管理员账号")
+    @PostMapping("/admin/register")
+    public ResponseEntity<ApiResponse<Map<String, String>>> adminRegister(@RequestBody AdminRegisterRequest request) {
+        try {
+            if (request.getPassword() == null || request.getPassword().length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(400, "Password must be at least 6 characters"));
+            }
+
+            Map<String, String> response = authService.adminRegister(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Admin registration successful", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(400, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(500, "Admin registration failed: " + e.getMessage()));
+        }
+    }
 }

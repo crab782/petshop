@@ -215,6 +215,35 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
+    public Map<String, String> adminRegister(AdminRegisterRequest request) {
+        String username = request.getUsername();
+        if (username == null || username.isEmpty()) {
+            username = request.getPhone();
+        }
+        
+        if (username == null || username.isEmpty()) {
+            throw new BadRequestException("Username or phone is required");
+        }
+
+        Admin existingAdmin = adminRepository.selectByUsername(username);
+        if (existingAdmin != null) {
+            throw new BadRequestException("Username already exists");
+        }
+
+        Admin admin = new Admin();
+        admin.setUsername(username);
+        admin.setPassword(passwordEncoder.encode(request.getPassword()));
+        admin.setCreatedAt(LocalDateTime.now());
+        admin.setUpdatedAt(LocalDateTime.now());
+
+        adminRepository.insert(admin);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("message", "Admin registration successful");
+        return result;
+    }
+
     public void logout() {
         SecurityContextHolder.clearContext();
     }
