@@ -16,7 +16,16 @@ import {
   Star,
   Ticket,
   Shop,
-  ShoppingCart
+  ShoppingCart,
+  List,
+  Document,
+  Edit,
+  Notification,
+  Location,
+  ChatDotRound,
+  Reading,
+  House,
+  UserFilled
 } from '@element-plus/icons-vue'
 import { getCart } from '@/api/user'
 
@@ -75,11 +84,23 @@ const loadCartCount = async () => {
 const menuItems = [
   { key: '/user/home', icon: Shop, label: '商店浏览' },
   { key: '/user/services', icon: ScaleToOriginal, label: '服务浏览' },
+  { key: '/user/services/list', icon: List, label: '服务列表' },
+  { key: '/user/appointments/book', icon: Calendar, label: '预约服务' },
   { key: '/user/pets', icon: Goods, label: '宠物管理' },
-  { key: '/user/appointments', icon: Calendar, label: '预约管理' },
-  { key: '/user/orders', icon: Ticket, label: '订单管理' },
+  { key: '/user/appointments', icon: Ticket, label: '预约管理' },
+  { key: '/user/orders', icon: Document, label: '订单管理' },
   { key: '/user/favorites', icon: Star, label: '收藏评价' },
-  { key: '/user/profile', icon: Setting, label: '个人中心' }
+  { key: '/user/profile', icon: Setting, label: '个人中心' },
+  { key: '/user/profile/edit', icon: Edit, label: '编辑资料' },
+  { key: '/user/announcements', icon: Reading, label: '公告列表' },
+  { key: '/user/shop', icon: House, label: '店铺详情' },
+  { key: '/user/cart', icon: ShoppingCart, label: '购物车' },
+  { key: '/user/merchant/1', icon: Shop, label: '商家详情' },
+  { key: '/user/reviews', icon: ChatDotRound, label: '服务评价' },
+  { key: '/user/reviews/my', icon: Star, label: '我的评价' },
+  { key: '/user/search', icon: Search, label: '搜索页' },
+  { key: '/user/notifications', icon: Notification, label: '消息通知' },
+  { key: '/user/addresses', icon: Location, label: '收货地址' }
 ]
 
 onMounted(() => {
