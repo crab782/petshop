@@ -82,7 +82,21 @@ const fetchReviews = async () => {
     // 获取评价列表
     const res = await getMerchantReviews(queryParams.value)
     const data = res.data.data
-    reviews.value = data.content || []
+    reviews.value = (data.content || []).map(item => ({
+      id: item.id,
+      userId: item.userId,
+      userName: `用户${item.userId}`,
+      userAvatar: '',
+      serviceId: item.serviceId,
+      serviceName: `服务${item.serviceId}`,
+      orderId: item.appointmentId,
+      rating: item.rating,
+      content: item.comment,
+      reviewTime: item.createdAt,
+      replyStatus: item.status,
+      replyContent: item.replyContent,
+      replyTime: item.replyTime
+    }))
     setTotal(data.totalElements || 0)
 
     // 获取评分分布
