@@ -34,10 +34,9 @@ const handleLogin = async () => {
     loginLoading.value = true
 
     try {
-      const response = await request.post('/api/auth/login', {
+      const response = await request.post('/api/auth/admin/login', {
         loginIdentifier: loginForm.value.phone,
-        password: loginForm.value.password,
-        role: 'admin'
+        password: loginForm.value.password
       })
 
       if (response.token) {
