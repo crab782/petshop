@@ -7,9 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
@@ -393,7 +391,9 @@ public class AdminApiControllerMerchantsTest extends AdminApiControllerTestBase 
             Merchant merchant2 = TestDataFactory.createMerchant(2, "待审核商家2", "pending2@test.com");
             merchant2.setStatus("pending");
             List<Merchant> merchants = Arrays.asList(merchant1, merchant2);
-            Page<Merchant> merchantPage = new PageImpl<>(merchants, PageRequest.of(0, 10), 2);
+            Page<Merchant> merchantPage = new Page<>(1, 10);
+            merchantPage.setRecords(merchants);
+            merchantPage.setTotal(2);
 
             when(merchantService.getPendingMerchants(any(), eq(0), eq(10))).thenReturn(merchantPage);
 
@@ -411,7 +411,9 @@ public class AdminApiControllerMerchantsTest extends AdminApiControllerTestBase 
             Merchant merchant = TestDataFactory.createMerchant(1, "待审核商家", "pending@test.com");
             merchant.setStatus("pending");
             List<Merchant> merchants = Collections.singletonList(merchant);
-            Page<Merchant> merchantPage = new PageImpl<>(merchants, PageRequest.of(0, 10), 1);
+            Page<Merchant> merchantPage = new Page<>(1, 10);
+            merchantPage.setRecords(merchants);
+            merchantPage.setTotal(1);
 
             when(merchantService.getPendingMerchants(eq("测试"), eq(0), eq(10))).thenReturn(merchantPage);
 

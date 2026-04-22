@@ -5,15 +5,12 @@ import com.petshop.entity.Review;
 import com.petshop.entity.Service;
 import com.petshop.entity.User;
 import com.petshop.factory.TestDataFactory;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -70,7 +67,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviews(3);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 3);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(3);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), isNull(), isNull(), eq(0), eq(10), eq("createdAt"), eq("desc")))
                     .thenReturn(reviewPage);
@@ -94,7 +93,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviewsWithRating(2, 5);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 2);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(2);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), eq(5), isNull(), eq(0), eq(10), eq("createdAt"), eq("desc")))
                     .thenReturn(reviewPage);
@@ -117,7 +118,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviews(1);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 1);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(1);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), isNull(), eq("很好"), eq(0), eq(10), eq("createdAt"), eq("desc")))
                     .thenReturn(reviewPage);
@@ -140,7 +143,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviews(5);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(1, 5), 15);
+            Page<Review> reviewPage = new Page<>(1, 5);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(15);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), isNull(), isNull(), eq(1), eq(5), eq("rating"), eq("asc")))
                     .thenReturn(reviewPage);
@@ -163,7 +168,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
         void testGetReviews_EmptyList() throws Exception {
             mockMerchantSession();
 
-            Page<Review> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Page<Review> emptyPage = new Page<>(0, 10);
+            emptyPage.setRecords(Collections.emptyList());
+            emptyPage.setTotal(0);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), isNull(), isNull(), eq(0), eq(10), eq("createdAt"), eq("desc")))
                     .thenReturn(emptyPage);
@@ -682,7 +689,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviews(10);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 50);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(50);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), isNull(), isNull(), eq(0), eq(10), anyString(), anyString()))
                     .thenReturn(reviewPage);
@@ -704,7 +713,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviews(5);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(4, 10), 45);
+            Page<Review> reviewPage = new Page<>(4, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(45);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), isNull(), isNull(), eq(4), eq(10), anyString(), anyString()))
                     .thenReturn(reviewPage);
@@ -726,7 +737,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviewsWithRating(1, 1);
-            Page<Review> reviewPage = new PageImpl<>(reviews);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(1);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), eq(1), isNull(), anyInt(), anyInt(), anyString(), anyString()))
                     .thenReturn(reviewPage);
@@ -747,7 +760,9 @@ public class MerchantApiControllerReviewsTest extends MerchantApiControllerTestB
             mockMerchantSession();
 
             List<Review> reviews = createTestReviewsWithRating(1, 5);
-            Page<Review> reviewPage = new PageImpl<>(reviews);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(1);
 
             when(reviewService.getReviewsWithPaging(eq(testMerchantId), eq(5), isNull(), anyInt(), anyInt(), anyString(), anyString()))
                     .thenReturn(reviewPage);

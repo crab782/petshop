@@ -9,7 +9,8 @@ const request: AxiosInstance = axios.create({
 
 request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('merchant_token') || sessionStorage.getItem('token') || sessionStorage.getItem('merchant_token')
+    // 优先使用用户token，然后使用商家token
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('merchant_token') || sessionStorage.getItem('merchant_token')
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -46,7 +47,15 @@ request.interceptors.response.use(
           localStorage.removeItem('merchant_token')
           sessionStorage.removeItem('token')
           sessionStorage.removeItem('merchant_token')
-          window.location.href = '/merchant/login'
+          // 根据用户类型跳转到对应的登录页
+          const userInfo = localStorage.getItem('userInfo')
+          if (userInfo) {
+            // 如果有用户信息，跳转到用户登录页
+            window.location.href = '/login'
+          } else {
+            // 否则跳转到商家登录页
+            window.location.href = '/merchant/login'
+          }
           break
         case 403:
           ElMessage.error('拒绝访问')

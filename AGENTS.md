@@ -1,6 +1,12 @@
 # 终端操作要求
-- 终端是powershell7，需要使用powershell语法
-- 不能使用bash或者cmd语法避免出现问题
+- 终端环境是 **PowerShell 7**（Windows PowerShell），不是 Linux bash 终端
+- 所有命令必须使用 **PowerShell 语法**，不能使用 bash 或 cmd 语法
+- 路径分隔符使用反斜杠 `\`（Windows 风格），例如 `E:\g\petshop`
+- 环境变量引用使用 `$env:NAME` 或 `%NAME%` 格式，而非 `$NAME`
+- 管道操作使用 PowerShell 的 `|` 而不是 bash 的
+- 条件判断使用 PowerShell 的 `-eq`, `-ne`, `-gt`, `-lt` 等操作符
+- 禁止使用 `source`, `export`, `alias` 等 bash 特有命令
+- 如果不确定某个命令是否为 PowerShell 命令，可以先使用 `Get-Command <command>` 验证
 
 
 # 商家端页面功能模块需求分析

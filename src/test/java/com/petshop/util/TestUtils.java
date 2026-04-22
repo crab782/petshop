@@ -270,8 +270,8 @@ public final class TestUtils {
 
         ProductOrder order = new ProductOrder();
         order.setId(1);
-        order.setUser(user);
-        order.setMerchant(merchant);
+        order.setUserId(user.getId());
+        order.setMerchantId(merchant.getId());
         order.setTotalPrice(TEST_PRODUCT_PRICE);
         order.setStatus("pending");
         order.setShippingAddress("测试收货地址");
@@ -327,7 +327,7 @@ public final class TestUtils {
     public static MerchantSettings createMockMerchantSettings(Merchant merchant) {
         MerchantSettings settings = new MerchantSettings();
         settings.setId(1);
-        settings.setMerchant(merchant);
+        settings.setMerchantId(merchant.getId());
         settings.setIsOpen(true);
         settings.setAppointmentNotification(true);
         settings.setOrderNotification(true);

@@ -65,14 +65,14 @@ public class AdminApiControllerActivitiesTest extends AdminApiControllerTestBase
             List<Activity> activities = Arrays.asList(activity1, activity2);
             Page<Activity> activityPage = new PageImpl<>(activities, PageRequest.of(0, 10), 2);
 
-            when(activityService.findAll(any(Pageable.class))).thenReturn(activityPage);
+            when(activityService.findAll(anyInt(), anyInt())).thenReturn(activityPage);
 
             var result = performGet("/api/admin/activities");
 
             assertPaginatedResponse(result);
             result.andExpect(jsonPath("$.data.data.length()").value(2));
 
-            verify(activityService).findAll(any(Pageable.class));
+            verify(activityService).findAll(anyInt(), anyInt());
         }
 
         @Test
@@ -82,7 +82,7 @@ public class AdminApiControllerActivitiesTest extends AdminApiControllerTestBase
             List<Activity> activities = Collections.singletonList(activity);
             Page<Activity> activityPage = new PageImpl<>(activities, PageRequest.of(0, 10), 1);
 
-            when(activityService.searchActivities(eq("搜索"), any(), any(), any(), any(), any(Pageable.class)))
+            when(activityService.searchActivities(eq("搜索"), any(), any(), any(), any(), anyInt(), anyInt()))
                     .thenReturn(activityPage);
 
             var result = mockMvc.perform(get("/api/admin/activities")
@@ -92,7 +92,7 @@ public class AdminApiControllerActivitiesTest extends AdminApiControllerTestBase
                     .andDo(res -> {});
 
             assertPaginatedResponse(result);
-            verify(activityService).searchActivities(eq("搜索"), any(), any(), any(), any(), any(Pageable.class));
+            verify(activityService).searchActivities(eq("搜索"), any(), any(), any(), any(), anyInt(), anyInt());
         }
 
         @Test
@@ -102,7 +102,7 @@ public class AdminApiControllerActivitiesTest extends AdminApiControllerTestBase
             List<Activity> activities = Collections.singletonList(activity);
             Page<Activity> activityPage = new PageImpl<>(activities, PageRequest.of(0, 10), 1);
 
-            when(activityService.searchActivities(any(), eq("promotion"), any(), any(), any(), any(Pageable.class)))
+            when(activityService.searchActivities(any(), eq("promotion"), any(), any(), any(), anyInt(), anyInt()))
                     .thenReturn(activityPage);
 
             var result = mockMvc.perform(get("/api/admin/activities")
@@ -121,7 +121,7 @@ public class AdminApiControllerActivitiesTest extends AdminApiControllerTestBase
             List<Activity> activities = Collections.singletonList(activity);
             Page<Activity> activityPage = new PageImpl<>(activities, PageRequest.of(0, 10), 1);
 
-            when(activityService.searchActivities(any(), any(), eq("enabled"), any(), any(), any(Pageable.class)))
+            when(activityService.searchActivities(any(), any(), eq("enabled"), any(), any(), anyInt(), anyInt()))
                     .thenReturn(activityPage);
 
             var result = mockMvc.perform(get("/api/admin/activities")
@@ -142,7 +142,7 @@ public class AdminApiControllerActivitiesTest extends AdminApiControllerTestBase
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(activityService, never()).findAll(any(Pageable.class));
+            verify(activityService, never()).findAll(anyInt(), anyInt());
         }
     }
 

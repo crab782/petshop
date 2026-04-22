@@ -250,25 +250,21 @@ public class AuthApiControllerTest extends BaseTest {
                     .password("password123")
                     .email("merchant@example.com")
                     .phone("13900139002")
-                    .businessName("Pet Shop Test")
-                    .businessAddress("Test Address")
+                    .name("Pet Shop Test")
+                    .address("Test Address")
                     .build();
 
             MerchantDTO merchantDTO = MerchantDTO.builder()
                     .id(1)
-                    .username("newmerchant")
-                    .email("merchant@example.com")
+                    .name("Pet Shop Test")
                     .phone("13900139002")
-                    .businessName("Pet Shop Test")
-                    .role("merchant")
+                    .address("Test Address")
                     .build();
 
-            LoginResponse response = LoginResponse.builder()
-                    .token(JwtUtil.generateMerchantToken())
-                    .user(merchantDTO)
-                    .build();
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Merchant registration successful. Please wait for admin approval.");
 
-            when(authService.registerMerchant(any(MerchantRegisterRequest.class))).thenReturn(response);
+            when(authService.merchantRegister(any(MerchantRegisterRequest.class))).thenReturn(response);
 
             mockMvc.perform(post("/api/auth/merchant/register")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -280,7 +276,7 @@ public class AuthApiControllerTest extends BaseTest {
                     .andExpect(jsonPath("$.data.token").isNotEmpty())
                     .andExpect(jsonPath("$.data.user.username").value("newmerchant"));
 
-            verify(authService, times(1)).registerMerchant(any(MerchantRegisterRequest.class));
+            verify(authService, times(1)).merchantRegister(any(MerchantRegisterRequest.class));
         }
 
         @Test
@@ -291,11 +287,11 @@ public class AuthApiControllerTest extends BaseTest {
                     .password("password123")
                     .email("merchant@example.com")
                     .phone("13900139000")
-                    .businessName("Pet Shop Test")
-                    .businessAddress("Test Address")
+                    .name("Pet Shop Test")
+                    .address("Test Address")
                     .build();
 
-            when(authService.registerMerchant(any(MerchantRegisterRequest.class)))
+            when(authService.merchantRegister(any(MerchantRegisterRequest.class)))
                     .thenThrow(new RuntimeException("Phone number already in use"));
 
             mockMvc.perform(post("/api/auth/merchant/register")
@@ -306,7 +302,7 @@ public class AuthApiControllerTest extends BaseTest {
                     .andExpect(jsonPath("$.code").value(400))
                     .andExpect(jsonPath("$.message").value("Phone number already in use"));
 
-            verify(authService, times(1)).registerMerchant(any(MerchantRegisterRequest.class));
+            verify(authService, times(1)).merchantRegister(any(MerchantRegisterRequest.class));
         }
     }
 

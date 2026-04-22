@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -43,6 +44,7 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
         org.springframework.test.util.ReflectionTestUtils.setField(controller, "appointmentMapper", appointmentMapper);
         org.springframework.test.util.ReflectionTestUtils.setField(controller, "serviceMapper", serviceMapper);
         org.springframework.test.util.ReflectionTestUtils.setField(controller, "announcementMapper", announcementMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "announcementService", announcementService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -53,10 +55,10 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
         @Test
         @DisplayName("成功获取仪表盘统计数据")
         void testGetDashboardStats_Success() throws Exception {
-            when(userMapper.count()).thenReturn(100L);
-            when(merchantMapper.count()).thenReturn(50L);
-            when(appointmentMapper.count()).thenReturn(500L);
-            when(serviceMapper.count()).thenReturn(200L);
+            when(userMapper.selectCount(null)).thenReturn(100L);
+            when(merchantMapper.selectCount(null)).thenReturn(50L);
+            when(appointmentMapper.selectCount(null)).thenReturn(500L);
+            when(serviceMapper.selectCount(null)).thenReturn(200L);
 
             var result = performGet("/api/admin/dashboard");
 
@@ -66,10 +68,10 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
                     .andExpect(jsonPath("$.data.orderCount").value(500))
                     .andExpect(jsonPath("$.data.serviceCount").value(200));
 
-            verify(userRepository).count();
-            verify(merchantRepository).count();
-            verify(appointmentRepository).count();
-            verify(serviceRepository).count();
+            verify(userMapper).selectCount(null);
+            verify(merchantMapper).selectCount(null);
+            verify(appointmentMapper).selectCount(null);
+            verify(serviceMapper).selectCount(null);
         }
 
         @Test
@@ -82,16 +84,16 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
                     .andExpect(jsonPath("$.code").value(401))
                     .andExpect(jsonPath("$.message").value("未授权访问"));
 
-            verify(userRepository, never()).count();
+            verify(userMapper, never()).selectCount(null);
         }
 
         @Test
         @DisplayName("零数据统计")
         void testGetDashboardStats_ZeroCounts() throws Exception {
-            when(userRepository.count()).thenReturn(0L);
-            when(merchantRepository.count()).thenReturn(0L);
-            when(appointmentRepository.count()).thenReturn(0L);
-            when(serviceRepository.count()).thenReturn(0L);
+            when(userMapper.selectCount(null)).thenReturn(0L);
+            when(merchantMapper.selectCount(null)).thenReturn(0L);
+            when(appointmentMapper.selectCount(null)).thenReturn(0L);
+            when(serviceMapper.selectCount(null)).thenReturn(0L);
 
             var result = performGet("/api/admin/dashboard");
 
@@ -113,24 +115,28 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
             User user1 = TestDataFactory.createUser(1, "用户1", "user1@test.com");
             User user2 = TestDataFactory.createUser(2, "用户2", "user2@test.com");
             List<User> users = Arrays.asList(user1, user2);
-            Page<User> userPage = new PageImpl<>(users, PageRequest.of(0, 10), 2);
+            Page<User> userPage = new Page<>(0, 10);
+            userPage.setRecords(users);
+            userPage.setTotal(2);
 
-            when(userRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(userPage);
+            when(userService.findAll(any(Pageable.class))).thenReturn(userPage);
 
             var result = performGet("/api/admin/dashboard/recent-users");
 
             assertPaginatedResponse(result);
             result.andExpect(jsonPath("$.data.data.length()").value(2));
 
-            verify(userRepository).findAllByOrderByCreatedAtDesc(any(Pageable.class));
+            verify(userService).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("成功获取空用户列表")
         void testGetRecentUsers_EmptyList() throws Exception {
-            Page<User> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Page<User> emptyPage = new Page<>(0, 10);
+            emptyPage.setRecords(Collections.emptyList());
+            emptyPage.setTotal(0);
 
-            when(userRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(emptyPage);
+            when(userService.findAll(any(Pageable.class))).thenReturn(emptyPage);
 
             var result = performGet("/api/admin/dashboard/recent-users");
 
@@ -147,15 +153,17 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(userRepository, never()).findAllByOrderByCreatedAtDesc(any(Pageable.class));
+            verify(userService, never()).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("分页参数正确传递")
         void testGetRecentUsers_Pagination() throws Exception {
-            Page<User> userPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(1, 20), 0);
+            Page<User> userPage = new Page<>(1, 20);
+            userPage.setRecords(Collections.emptyList());
+            userPage.setTotal(0);
 
-            when(userRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(userPage);
+            when(userService.findAll(any(Pageable.class))).thenReturn(userPage);
 
             var result = mockMvc.perform(get("/api/admin/dashboard/recent-users")
                     .sessionAttr("admin", testAdmin)
@@ -180,24 +188,28 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
             Merchant merchant2 = TestDataFactory.createMerchant(2, "待审核商家2", "pending2@test.com");
             merchant2.setStatus("pending");
             List<Merchant> merchants = Arrays.asList(merchant1, merchant2);
-            Page<Merchant> merchantPage = new PageImpl<>(merchants, PageRequest.of(0, 10), 2);
+            Page<Merchant> merchantPage = new Page<>(0, 10);
+            merchantPage.setRecords(merchants);
+            merchantPage.setTotal(2);
 
-            when(merchantRepository.findByStatus(eq("pending"), any(Pageable.class))).thenReturn(merchantPage);
+            when(merchantService.getPendingMerchants(anyString(), anyInt(), anyInt())).thenReturn(merchantPage);
 
             var result = performGet("/api/admin/dashboard/pending-merchants");
 
             assertPaginatedResponse(result);
             result.andExpect(jsonPath("$.data.data.length()").value(2));
 
-            verify(merchantRepository).findByStatus(eq("pending"), any(Pageable.class));
+            verify(merchantService).getPendingMerchants(anyString(), anyInt(), anyInt());
         }
 
         @Test
         @DisplayName("成功获取空待审核商家列表")
         void testGetPendingMerchants_EmptyList() throws Exception {
-            Page<Merchant> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Page<Merchant> emptyPage = new Page<>(0, 10);
+            emptyPage.setRecords(Collections.emptyList());
+            emptyPage.setTotal(0);
 
-            when(merchantRepository.findByStatus(eq("pending"), any(Pageable.class))).thenReturn(emptyPage);
+            when(merchantService.getPendingMerchants(anyString(), anyInt(), anyInt())).thenReturn(emptyPage);
 
             var result = performGet("/api/admin/dashboard/pending-merchants");
 
@@ -214,7 +226,7 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(merchantRepository, never()).findByStatus(anyString(), any(Pageable.class));
+            verify(merchantService, never()).getPendingMerchants(anyString(), anyInt(), anyInt());
         }
     }
 
@@ -232,24 +244,24 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
             announcement2.setId(2);
             announcement2.setTitle("公告2");
             List<Announcement> announcements = Arrays.asList(announcement1, announcement2);
-            Page<Announcement> announcementPage = new PageImpl<>(announcements, PageRequest.of(0, 10), 2);
+            org.springframework.data.domain.Page<Announcement> announcementPage = new PageImpl<>(announcements, PageRequest.of(0, 10), 2);
 
-            when(announcementMapper.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(announcementPage);
+            when(announcementService.findAll(any(Pageable.class))).thenReturn(announcementPage);
 
             var result = performGet("/api/admin/dashboard/announcements");
 
             assertPaginatedResponse(result);
             result.andExpect(jsonPath("$.data.data.length()").value(2));
 
-            verify(announcementRepository).findAllByOrderByCreatedAtDesc(any(Pageable.class));
+            verify(announcementService).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("成功获取空公告列表")
         void testGetAnnouncements_EmptyList() throws Exception {
-            Page<Announcement> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            org.springframework.data.domain.Page<Announcement> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
 
-            when(announcementRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(emptyPage);
+            when(announcementService.findAll(any(Pageable.class))).thenReturn(emptyPage);
 
             var result = performGet("/api/admin/dashboard/announcements");
 
@@ -266,7 +278,7 @@ public class AdminApiControllerDashboardTest extends AdminApiControllerTestBase 
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(announcementRepository, never()).findAllByOrderByCreatedAtDesc(any(Pageable.class));
+            verify(announcementService, never()).findAll(any(Pageable.class));
         }
     }
 }

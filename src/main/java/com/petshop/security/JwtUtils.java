@@ -17,9 +17,6 @@ public class JwtUtils {
     @Value("${jwt.secret:petshop-default-secret-key-for-jwt-token-generation-and-validation-must-be-at-least-256-bits}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:86400000}")
-    private int jwtExpirationMs;
-
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -30,7 +27,6 @@ public class JwtUtils {
         return Jwts.builder()
                 .subject(userPrincipal.getUsername())
                 .issuedAt(new Date())
-                .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -39,7 +35,6 @@ public class JwtUtils {
         return Jwts.builder()
                 .subject(username)
                 .issuedAt(new Date())
-                .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -59,8 +54,6 @@ public class JwtUtils {
             return true;
         } catch (MalformedJwtException e) {
             System.err.println("Invalid JWT token: " + e.getMessage());
-        } catch (ExpiredJwtException e) {
-            System.err.println("JWT token is expired: " + e.getMessage());
         } catch (UnsupportedJwtException e) {
             System.err.println("JWT token is unsupported: " + e.getMessage());
         } catch (IllegalArgumentException e) {

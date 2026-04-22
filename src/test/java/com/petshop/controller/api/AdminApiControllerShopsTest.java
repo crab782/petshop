@@ -1,14 +1,12 @@
 package com.petshop.controller.api;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.petshop.entity.Merchant;
 import com.petshop.factory.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
@@ -51,7 +49,9 @@ public class AdminApiControllerShopsTest extends AdminApiControllerTestBase {
             Merchant merchant2 = TestDataFactory.createMerchant(2, "待审核店铺2", "pending2@test.com");
             merchant2.setStatus("pending");
             List<Merchant> merchants = Arrays.asList(merchant1, merchant2);
-            Page<Merchant> merchantPage = new PageImpl<>(merchants, PageRequest.of(0, 10), 2);
+            Page<Merchant> merchantPage = new Page<>(0, 10);
+            merchantPage.setRecords(merchants);
+            merchantPage.setTotal(2);
 
             when(merchantService.getPendingMerchants(any(), eq(0), eq(10))).thenReturn(merchantPage);
 
@@ -66,7 +66,9 @@ public class AdminApiControllerShopsTest extends AdminApiControllerTestBase {
         @Test
         @DisplayName("成功获取空待审核店铺列表")
         void testGetPendingShops_EmptyList() throws Exception {
-            Page<Merchant> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Page<Merchant> emptyPage = new Page<>(0, 10);
+            emptyPage.setRecords(Collections.emptyList());
+            emptyPage.setTotal(0);
 
             when(merchantService.getPendingMerchants(any(), eq(0), eq(10))).thenReturn(emptyPage);
 
@@ -82,7 +84,9 @@ public class AdminApiControllerShopsTest extends AdminApiControllerTestBase {
             Merchant merchant = TestDataFactory.createMerchant(1, "搜索店铺", "search@test.com");
             merchant.setStatus("pending");
             List<Merchant> merchants = Collections.singletonList(merchant);
-            Page<Merchant> merchantPage = new PageImpl<>(merchants, PageRequest.of(0, 10), 1);
+            Page<Merchant> merchantPage = new Page<>(0, 10);
+            merchantPage.setRecords(merchants);
+            merchantPage.setTotal(1);
 
             when(merchantService.getPendingMerchants(eq("搜索"), eq(0), eq(10))).thenReturn(merchantPage);
 
@@ -99,7 +103,9 @@ public class AdminApiControllerShopsTest extends AdminApiControllerTestBase {
         @Test
         @DisplayName("分页参数正确传递")
         void testGetPendingShops_Pagination() throws Exception {
-            Page<Merchant> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(2, 20), 0);
+            Page<Merchant> emptyPage = new Page<>(2, 20);
+            emptyPage.setRecords(Collections.emptyList());
+            emptyPage.setTotal(0);
 
             when(merchantService.getPendingMerchants(any(), eq(2), eq(20))).thenReturn(emptyPage);
 

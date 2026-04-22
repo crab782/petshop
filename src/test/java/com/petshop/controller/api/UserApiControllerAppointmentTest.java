@@ -96,10 +96,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
             AppointmentDTO dto2 = createAppointmentDTO(2, "confirmed", "美容服务", "宠物店B");
             AppointmentDTO dto3 = createAppointmentDTO(3, "completed", "寄养服务", "宠物店C");
             List<AppointmentDTO> appointments = Arrays.asList(dto1, dto2, dto3);
-            Page<AppointmentDTO> page = new PageImpl<>(appointments, PageRequest.of(0, 10), 3);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", appointments);
+            resultMap.put("total", 3);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), any(), any(), any(), any(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/appointments");
 
@@ -113,10 +118,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
         @Test
         @DisplayName("成功获取预约列表 - 返回空列表")
         void testGetAppointments_Success_EmptyList() throws Exception {
-            Page<AppointmentDTO> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Map<String, Object> emptyResultMap = new HashMap<>();
+            emptyResultMap.put("data", Collections.emptyList());
+            emptyResultMap.put("total", 0);
+            emptyResultMap.put("page", 0);
+            emptyResultMap.put("pageSize", 10);
+            emptyResultMap.put("totalPages", 0);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), any(), any(), any(), any(), anyInt(), anyInt()))
-                    .thenReturn(emptyPage);
+                    .thenReturn(emptyResultMap);
 
             var result = performGet("/api/user/appointments");
 
@@ -130,10 +140,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
         @DisplayName("按状态筛选预约 - pending")
         void testGetAppointments_FilterByStatus() throws Exception {
             AppointmentDTO dto = createAppointmentDTO(1, "pending", "洗澡服务", "宠物店A");
-            Page<AppointmentDTO> page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", List.of(dto));
+            resultMap.put("total", 1);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), eq("pending"), any(), any(), any(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = mockMvc.perform(get("/api/user/appointments")
                     .param("status", "pending")
@@ -151,10 +166,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
         @DisplayName("按关键字搜索预约")
         void testGetAppointments_FilterByKeyword() throws Exception {
             AppointmentDTO dto = createAppointmentDTO(1, "pending", "洗澡服务", "宠物店A");
-            Page<AppointmentDTO> page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", List.of(dto));
+            resultMap.put("total", 1);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), any(), eq("洗澡"), any(), any(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = mockMvc.perform(get("/api/user/appointments")
                     .param("keyword", "洗澡")
@@ -171,10 +191,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
         @DisplayName("按日期范围筛选预约")
         void testGetAppointments_FilterByDateRange() throws Exception {
             AppointmentDTO dto = createAppointmentDTO(1, "pending", "洗澡服务", "宠物店A");
-            Page<AppointmentDTO> page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", List.of(dto));
+            resultMap.put("total", 1);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), any(), any(), any(LocalDateTime.class), any(LocalDateTime.class), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = mockMvc.perform(get("/api/user/appointments")
                     .param("startDate", "2024-01-01T00:00:00")
@@ -191,10 +216,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
         @Test
         @DisplayName("分页参数测试")
         void testGetAppointments_Pagination() throws Exception {
-            Page<AppointmentDTO> page = new PageImpl<>(Collections.emptyList(), PageRequest.of(2, 20), 0);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.emptyList());
+            resultMap.put("total", 0);
+            resultMap.put("page", 2);
+            resultMap.put("pageSize", 20);
+            resultMap.put("totalPages", 0);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), any(), any(), any(), any(), eq(2), eq(20)))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = mockMvc.perform(get("/api/user/appointments")
                     .param("page", "2")
@@ -779,10 +809,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
         @Test
         @DisplayName("分页边界 - 第一页")
         void testGetAppointments_FirstPage() throws Exception {
-            Page<AppointmentDTO> page = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.emptyList());
+            resultMap.put("total", 0);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 0);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), any(), any(), any(), any(), eq(0), eq(10)))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = mockMvc.perform(get("/api/user/appointments")
                     .param("page", "0")
@@ -828,10 +863,15 @@ public class UserApiControllerAppointmentTest extends UserApiControllerTestBase 
             AppointmentDTO dto2 = createAppointmentDTO(2, "confirmed", "服务B", "商家B");
             AppointmentDTO dto3 = createAppointmentDTO(3, "completed", "服务C", "商家C");
             List<AppointmentDTO> appointments = Arrays.asList(dto1, dto2, dto3);
-            Page<AppointmentDTO> page = new PageImpl<>(appointments, PageRequest.of(0, 10), 3);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", appointments);
+            resultMap.put("total", 3L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findByUserIdWithFilters(eq(testUserId), any(), any(), any(), any(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/appointments");
 

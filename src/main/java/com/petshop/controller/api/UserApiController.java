@@ -443,7 +443,7 @@ public class UserApiController {
     }
 
     @GetMapping("/reviews")
-    public ResponseEntity<ApiResponse<Page<ReviewDTO>>> getReviews(
+    public ResponseEntity<ApiResponse<?>> getReviews(
             @RequestParam(required = false) Integer rating,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -451,7 +451,7 @@ public class UserApiController {
 
         try {
             com.baomidou.mybatisplus.extension.plugins.pagination.Page<ReviewDTO> reviews = reviewService.findByUserIdWithPaging(user.getId(), rating, page, size);
-            return ResponseEntity.ok(ApiResponse.success(reviews));
+            return ResponseEntity.ok(ApiResponse.success((Object) reviews));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error(500, "获取评价列表失败：" + e.getMessage()));

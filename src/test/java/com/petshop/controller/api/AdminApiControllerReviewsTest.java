@@ -3,13 +3,11 @@ package com.petshop.controller.api;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.Review;
 import com.petshop.factory.TestDataFactory;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
@@ -53,7 +51,9 @@ public class AdminApiControllerReviewsTest extends AdminApiControllerTestBase {
             Review review1 = TestDataFactory.createReview(1, merchant, 5, "非常好的服务");
             Review review2 = TestDataFactory.createReview(2, merchant, 4, "服务不错");
             List<Review> reviews = Arrays.asList(review1, review2);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 2);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(2);
 
             when(reviewService.getAllReviews(0, 10)).thenReturn(reviewPage);
 
@@ -71,7 +71,9 @@ public class AdminApiControllerReviewsTest extends AdminApiControllerTestBase {
             Merchant merchant = TestDataFactory.createMerchant(1);
             Review review = TestDataFactory.createReview(1, merchant, 5, "非常好的服务");
             List<Review> reviews = Collections.singletonList(review);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 1);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(1);
 
             when(reviewService.searchAdminReviews(eq(5), any(), any(), any(), eq(0), eq(10)))
                     .thenReturn(reviewPage);
@@ -92,7 +94,9 @@ public class AdminApiControllerReviewsTest extends AdminApiControllerTestBase {
             Merchant merchant = TestDataFactory.createMerchant(1);
             Review review = TestDataFactory.createReview(1, merchant, 5, "非常好的服务");
             List<Review> reviews = Collections.singletonList(review);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 1);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(1);
 
             when(reviewService.searchAdminReviews(any(), any(), eq(1), any(), eq(0), eq(10)))
                     .thenReturn(reviewPage);
@@ -130,7 +134,9 @@ public class AdminApiControllerReviewsTest extends AdminApiControllerTestBase {
             Review review1 = TestDataFactory.createReview(1, merchant, 5, "待审核评价1");
             Review review2 = TestDataFactory.createReview(2, merchant, 4, "待审核评价2");
             List<Review> reviews = Arrays.asList(review1, review2);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 2);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(2);
 
             when(reviewService.getPendingReviews(any(), eq(0), eq(10))).thenReturn(reviewPage);
 
@@ -148,7 +154,9 @@ public class AdminApiControllerReviewsTest extends AdminApiControllerTestBase {
             Merchant merchant = TestDataFactory.createMerchant(1);
             Review review = TestDataFactory.createReview(1, merchant, 5, "搜索评价");
             List<Review> reviews = Collections.singletonList(review);
-            Page<Review> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 1);
+            Page<Review> reviewPage = new Page<>(0, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(1);
 
             when(reviewService.getPendingReviews(eq("搜索"), eq(0), eq(10))).thenReturn(reviewPage);
 

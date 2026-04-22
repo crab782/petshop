@@ -504,7 +504,7 @@ public final class TestDataFactory {
     public static MerchantSettings createMerchantSettings(Merchant merchant) {
         MerchantSettings settings = new MerchantSettings();
         settings.setId(1);
-        // settings.setMerchant(merchant); // 移除这个方法调用
+        settings.setMerchantId(merchant.getId());
         settings.setIsOpen(true);
         settings.setAppointmentNotification(true);
         settings.setOrderNotification(true);
@@ -535,7 +535,7 @@ public final class TestDataFactory {
                                                           String notificationType) {
         MerchantSettings settings = new MerchantSettings();
         settings.setId(id);
-        settings.setMerchant(merchant);
+        settings.setMerchantId(merchant.getId());
         settings.setIsOpen(isOpen);
         settings.setAppointmentNotification(appointmentNotification);
         settings.setOrderNotification(orderNotification);

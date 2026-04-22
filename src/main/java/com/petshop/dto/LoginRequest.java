@@ -29,6 +29,16 @@ public class LoginRequest {
         this.phone = phone;
     }
 
+    public void setLoginIdentifier(String loginIdentifier) {
+        if (loginIdentifier != null && !loginIdentifier.isEmpty()) {
+            if (loginIdentifier.contains("@")) {
+                this.username = loginIdentifier;
+            } else {
+                this.phone = loginIdentifier;
+            }
+        }
+    }
+
     public String getPassword() {
         return password;
     }

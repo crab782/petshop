@@ -27,8 +27,8 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
     @BeforeEach
     public void setupController() {
         controller = new AdminApiController();
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "systemConfigRepository", systemConfigRepository);
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "systemSettingsRepository", systemSettingsRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "systemConfigMapper", systemConfigMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "systemSettingsService", systemSettingsService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -50,7 +50,7 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             config.setSiteKeywords("宠物,服务,美容");
             config.setFooterText("版权所有");
 
-            when(systemConfigRepository.findById(1)).thenReturn(Optional.of(config));
+            when(systemConfigMapper.selectOne(any())).thenReturn(config);
 
             var result = performGet("/api/admin/system/config");
 
@@ -59,7 +59,7 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
                     .andExpect(jsonPath("$.data.contactEmail").value("contact@example.com"))
                     .andExpect(jsonPath("$.data.icpNumber").value("京ICP备12345678号"));
 
-            verify(systemConfigRepository).findById(1);
+            verify(systemConfigMapper).selectOne(any());
         }
 
         @Test
@@ -69,16 +69,16 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             defaultConfig.setId(1);
             defaultConfig.setSiteName("宠物服务平台");
 
-            when(systemConfigRepository.findById(1)).thenReturn(Optional.empty());
-            when(systemConfigRepository.save(any(SystemConfig.class))).thenReturn(defaultConfig);
+            when(systemConfigMapper.selectOne(any())).thenReturn(null);
+            when(systemConfigMapper.insert(any())).thenReturn(1);
 
             var result = performGet("/api/admin/system/config");
 
             assertSuccess(result);
             result.andExpect(jsonPath("$.data.siteName").value("宠物服务平台"));
 
-            verify(systemConfigRepository).findById(1);
-            verify(systemConfigRepository).save(any(SystemConfig.class));
+            verify(systemConfigMapper).selectOne(any());
+            verify(systemConfigMapper).insert(any());
         }
 
         @Test
@@ -90,7 +90,7 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(systemConfigRepository, never()).findById(any());
+            verify(systemConfigMapper, never()).selectOne(any());
         }
     }
 
@@ -126,8 +126,8 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             request.put("siteKeywords", "新关键词");
             request.put("footerText", "新版权信息");
 
-            when(systemConfigRepository.findById(1)).thenReturn(Optional.of(existingConfig));
-            when(systemConfigRepository.save(any(SystemConfig.class))).thenReturn(updatedConfig);
+            when(systemConfigMapper.selectOne(any())).thenReturn(existingConfig);
+            when(systemConfigMapper.updateById(any())).thenReturn(1);
 
             var result = performPut("/api/admin/system/config", request);
 
@@ -135,8 +135,8 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             result.andExpect(jsonPath("$.data.siteName").value("新平台名称"))
                     .andExpect(jsonPath("$.data.contactEmail").value("new@example.com"));
 
-            verify(systemConfigRepository).findById(1);
-            verify(systemConfigRepository).save(any(SystemConfig.class));
+            verify(systemConfigMapper).selectOne(any());
+            verify(systemConfigMapper).insert(any());
         }
 
         @Test
@@ -149,16 +149,16 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             Map<String, Object> request = new HashMap<>();
             request.put("siteName", "新平台");
 
-            when(systemConfigRepository.findById(1)).thenReturn(Optional.empty());
-            when(systemConfigRepository.save(any(SystemConfig.class))).thenReturn(newConfig);
+            when(systemConfigMapper.selectOne(any())).thenReturn(null);
+            when(systemConfigMapper.insert(any())).thenReturn(1);
 
             var result = performPut("/api/admin/system/config", request);
 
             assertSuccess(result, "System config updated successfully");
             result.andExpect(jsonPath("$.data.siteName").value("新平台"));
 
-            verify(systemConfigRepository).findById(1);
-            verify(systemConfigRepository).save(any(SystemConfig.class));
+            verify(systemConfigMapper).selectOne(any());
+            verify(systemConfigMapper).insert(any());
         }
 
         @Test
@@ -177,15 +177,15 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             Map<String, Object> request = new HashMap<>();
             request.put("siteName", "新名称");
 
-            when(systemConfigRepository.findById(1)).thenReturn(Optional.of(existingConfig));
-            when(systemConfigRepository.save(any(SystemConfig.class))).thenReturn(updatedConfig);
+            when(systemConfigMapper.selectOne(any())).thenReturn(existingConfig);
+            when(systemConfigMapper.updateById(any())).thenReturn(1);
 
             var result = performPut("/api/admin/system/config", request);
 
             assertSuccess(result, "System config updated successfully");
             result.andExpect(jsonPath("$.data.siteName").value("新名称"));
 
-            verify(systemConfigRepository).save(any(SystemConfig.class));
+            verify(systemConfigMapper).insert(any());
         }
 
         @Test
@@ -201,7 +201,8 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(systemConfigRepository, never()).save(any(SystemConfig.class));
+            verify(systemConfigMapper, never()).insert(any());
+            verify(systemConfigMapper, never()).updateById(any());
         }
     }
 
@@ -235,7 +236,7 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             settings.setMaxFileSize(10485760L);
             settings.setAllowedFileTypes("jpg,jpeg,png,gif,pdf");
 
-            when(systemSettingsRepository.findById(1)).thenReturn(Optional.of(settings));
+            when(systemSettingsService.getSystemSettings()).thenReturn(settings);
 
             var result = performGet("/api/admin/system/settings");
 
@@ -244,7 +245,7 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
                     .andExpect(jsonPath("$.data.smsSettings.provider").value("aliyun"))
                     .andExpect(jsonPath("$.data.uploadSettings.maxFileSize").value(10485760));
 
-            verify(systemSettingsRepository).findById(1);
+            verify(systemSettingsService).getSystemSettings();
         }
 
         @Test
@@ -255,16 +256,16 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             defaultSettings.setMaxFileSize(10485760L);
             defaultSettings.setAllowedFileTypes("jpg,jpeg,png,gif,pdf");
 
-            when(systemSettingsRepository.findById(1)).thenReturn(Optional.empty());
-            when(systemSettingsRepository.save(any(SystemSettings.class))).thenReturn(defaultSettings);
+            when(systemSettingsService.getSystemSettings()).thenReturn(null);
+            when(systemSettingsService.updateSystemSettings(any(SystemSettings.class))).thenReturn(defaultSettings);
 
             var result = performGet("/api/admin/system/settings");
 
             assertSuccess(result);
             result.andExpect(jsonPath("$.data.uploadSettings.maxFileSize").value(10485760));
 
-            verify(systemSettingsRepository).findById(1);
-            verify(systemSettingsRepository).save(any(SystemSettings.class));
+            verify(systemSettingsService).getSystemSettings();
+            verify(systemSettingsService).updateSystemSettings(any(SystemSettings.class));
         }
 
         @Test
@@ -276,7 +277,7 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(systemSettingsRepository, never()).findById(any());
+            verify(systemSettingsService, never()).getSystemSettings();
         }
     }
 
@@ -308,15 +309,15 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             Map<String, Object> request = new HashMap<>();
             request.put("emailSettings", emailSettings);
 
-            when(systemSettingsRepository.findById(1)).thenReturn(Optional.of(existingSettings));
-            when(systemSettingsRepository.save(any(SystemSettings.class))).thenReturn(updatedSettings);
+            when(systemSettingsService.getSystemSettings()).thenReturn(existingSettings);
+            when(systemSettingsService.updateSystemSettings(any(SystemSettings.class))).thenReturn(updatedSettings);
 
             var result = performPut("/api/admin/system/settings", request);
 
             assertSuccess(result, "System settings updated successfully");
             result.andExpect(jsonPath("$.data.emailSettings.smtp").value("new.smtp.com"));
 
-            verify(systemSettingsRepository).save(any(SystemSettings.class));
+            verify(systemSettingsService).updateSystemSettings(any(SystemSettings.class));
         }
 
         @Test
@@ -341,8 +342,8 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             Map<String, Object> request = new HashMap<>();
             request.put("smsSettings", smsSettings);
 
-            when(systemSettingsRepository.findById(1)).thenReturn(Optional.of(existingSettings));
-            when(systemSettingsRepository.save(any(SystemSettings.class))).thenReturn(updatedSettings);
+            when(systemSettingsService.getSystemSettings()).thenReturn(existingSettings);
+            when(systemSettingsService.updateSystemSettings(any(SystemSettings.class))).thenReturn(updatedSettings);
 
             var result = performPut("/api/admin/system/settings", request);
 
@@ -370,8 +371,8 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             Map<String, Object> request = new HashMap<>();
             request.put("uploadSettings", uploadSettings);
 
-            when(systemSettingsRepository.findById(1)).thenReturn(Optional.of(existingSettings));
-            when(systemSettingsRepository.save(any(SystemSettings.class))).thenReturn(updatedSettings);
+            when(systemSettingsService.getSystemSettings()).thenReturn(existingSettings);
+            when(systemSettingsService.updateSystemSettings(any(SystemSettings.class))).thenReturn(updatedSettings);
 
             var result = performPut("/api/admin/system/settings", request);
 
@@ -392,14 +393,14 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
             Map<String, Object> request = new HashMap<>();
             request.put("emailSettings", emailSettings);
 
-            when(systemSettingsRepository.findById(1)).thenReturn(Optional.empty());
-            when(systemSettingsRepository.save(any(SystemSettings.class))).thenReturn(newSettings);
+            when(systemSettingsService.getSystemSettings()).thenReturn(null);
+            when(systemSettingsService.updateSystemSettings(any(SystemSettings.class))).thenReturn(newSettings);
 
             var result = performPut("/api/admin/system/settings", request);
 
             assertSuccess(result, "System settings updated successfully");
 
-            verify(systemSettingsRepository).save(any(SystemSettings.class));
+            verify(systemSettingsService).updateSystemSettings(any(SystemSettings.class));
         }
 
         @Test
@@ -415,7 +416,7 @@ public class AdminApiControllerSystemTest extends AdminApiControllerTestBase {
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value(401));
 
-            verify(systemSettingsRepository, never()).save(any(SystemSettings.class));
+            verify(systemSettingsService, never()).updateSystemSettings(any(SystemSettings.class));
         }
     }
 }

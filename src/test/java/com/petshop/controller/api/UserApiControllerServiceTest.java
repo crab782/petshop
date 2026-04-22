@@ -22,6 +22,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -68,10 +70,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             UserPurchasedServiceDTO dto1 = createPurchasedServiceDTO(appointment1, "used");
             UserPurchasedServiceDTO dto2 = createPurchasedServiceDTO(appointment2, "active");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Arrays.asList(dto1, dto2), PageRequest.of(0, 10), 2);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Arrays.asList(dto1, dto2));
+            resultMap.put("total", 2L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services");
 
@@ -89,10 +96,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
         @Test
         @DisplayName("成功获取空服务列表")
         void testGetPurchasedServices_EmptyList() throws Exception {
-            Page<UserPurchasedServiceDTO> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.emptyList());
+            resultMap.put("total", 0L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 0);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), anyInt(), anyInt()))
-                    .thenReturn(emptyPage);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services");
 
@@ -125,10 +137,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             Appointment appointment = createTestAppointment(1, testUser, merchant, service, pet, "confirmed", LocalDateTime.now().plusDays(1));
             UserPurchasedServiceDTO dto = createPurchasedServiceDTO(appointment, "active");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 1L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), eq("active"), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?status=active");
 
@@ -150,10 +167,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             Appointment appointment = createTestAppointment(1, testUser, merchant, service, pet, "completed", LocalDateTime.now().minusDays(5));
             UserPurchasedServiceDTO dto = createPurchasedServiceDTO(appointment, "used");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 1L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), eq("used"), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?status=used");
 
@@ -175,10 +197,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             Appointment appointment = createTestAppointment(1, testUser, merchant, service, pet, "cancelled", LocalDateTime.now().minusDays(10));
             UserPurchasedServiceDTO dto = createPurchasedServiceDTO(appointment, "expired");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 1L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), eq("expired"), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?status=expired");
 
@@ -200,10 +227,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             Appointment appointment = createTestAppointment(1, testUser, merchant, service, pet, "confirmed", LocalDateTime.now().plusDays(1));
             UserPurchasedServiceDTO dto = createPurchasedServiceDTO(appointment, "active");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 1L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), eq("洗澡"), anyString(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?keyword=洗澡");
 
@@ -225,10 +257,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             Appointment appointment = createTestAppointment(1, testUser, merchant, service, pet, "confirmed", LocalDateTime.now().plusDays(1));
             UserPurchasedServiceDTO dto = createPurchasedServiceDTO(appointment, "active");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 5), 15);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 15L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 5);
+            resultMap.put("totalPages", 3);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), eq(0), eq(5)))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?page=0&pageSize=5");
 
@@ -253,10 +290,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             Appointment appointment = createTestAppointment(2, testUser, merchant, service, pet, "confirmed", LocalDateTime.now().plusDays(2));
             UserPurchasedServiceDTO dto = createPurchasedServiceDTO(appointment, "active");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(1, 5), 15);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 15L);
+            resultMap.put("page", 1);
+            resultMap.put("pageSize", 5);
+            resultMap.put("totalPages", 3);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), eq(1), eq(5)))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?page=1&pageSize=5");
 
@@ -270,10 +312,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
         @Test
         @DisplayName("分页 - 默认分页参数")
         void testGetPurchasedServices_DefaultPagination() throws Exception {
-            Page<UserPurchasedServiceDTO> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.emptyList());
+            resultMap.put("total", 0L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 0);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), eq(0), eq(10)))
-                    .thenReturn(emptyPage);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services");
 
@@ -288,10 +335,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
         @Test
         @DisplayName("分页 - 自定义分页大小")
         void testGetPurchasedServices_CustomPageSize() throws Exception {
-            Page<UserPurchasedServiceDTO> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.emptyList());
+            resultMap.put("total", 0L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 20);
+            resultMap.put("totalPages", 0);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), eq(0), eq(20)))
-                    .thenReturn(emptyPage);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?pageSize=20");
 
@@ -312,10 +364,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             Appointment appointment = createTestAppointment(1, testUser, merchant, service, pet, "confirmed", LocalDateTime.now().plusDays(1));
             UserPurchasedServiceDTO dto = createPurchasedServiceDTO(appointment, "active");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 1L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), eq("洗澡"), eq("active"), eq(0), eq(10)))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services?keyword=洗澡&status=active&page=0&pageSize=10");
 
@@ -349,10 +406,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
                     .serviceId(1)
                     .build();
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 10), 1);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Collections.singletonList(dto));
+            resultMap.put("total", 1L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services");
 
@@ -396,10 +458,15 @@ public class UserApiControllerServiceTest extends UserApiControllerTestBase {
             UserPurchasedServiceDTO dto2 = createPurchasedServiceDTO(appointment2, "used");
             UserPurchasedServiceDTO dto3 = createPurchasedServiceDTO(appointment3, "expired");
 
-            Page<UserPurchasedServiceDTO> page = new PageImpl<>(Arrays.asList(dto1, dto2, dto3), PageRequest.of(0, 10), 3);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("data", Arrays.asList(dto1, dto2, dto3));
+            resultMap.put("total", 3L);
+            resultMap.put("page", 0);
+            resultMap.put("pageSize", 10);
+            resultMap.put("totalPages", 1);
 
             when(appointmentService.findPurchasedServices(eq(testUserId), anyString(), anyString(), anyInt(), anyInt()))
-                    .thenReturn(page);
+                    .thenReturn(resultMap);
 
             var result = performGet("/api/user/services");
 

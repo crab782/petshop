@@ -15,6 +15,8 @@ import com.petshop.service.ReviewService;
 import com.petshop.test.BaseTest;
 import com.petshop.test.JwtUtil;
 import com.petshop.test.TestDataGenerator;
+import com.petshop.dto.CreateOrderRequest;
+import com.petshop.dto.CreateOrderResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Collections;
 
 @AutoConfigureMockMvc
 public class MerchantApiControllerTest extends BaseTest {
@@ -69,29 +72,33 @@ public class MerchantApiControllerTest extends BaseTest {
         // 生成测试商家数据
         testMerchant = testDataGenerator.generateMerchant();
         // 保存商家到数据库
-        testMerchant = merchantService.save(testMerchant);
+        testMerchant = merchantService.register(testMerchant);
         // 生成商家token
         merchantToken = JwtUtil.generateToken(testMerchant.getPhone());
         // 生成测试服务数据
         testService = testDataGenerator.generateService(testMerchant);
         // 保存服务到数据库
-        testService = serviceService.save(testService);
+        testService = serviceService.create(testService);
         // 生成测试商品数据
         testProduct = testDataGenerator.generateProduct(testMerchant);
         // 保存商品到数据库
-        testProduct = productService.save(testProduct);
+        testProduct = productService.create(testProduct);
         // 生成测试预约数据
         testAppointment = testDataGenerator.generateAppointment(testMerchant);
         // 保存预约到数据库
-        testAppointment = appointmentService.save(testAppointment);
+        testAppointment = appointmentService.create(testAppointment);
         // 生成测试订单数据
         testOrder = testDataGenerator.generateProductOrder(testMerchant);
+        // 创建订单请求
+        CreateOrderRequest.OrderItemRequest item = new CreateOrderRequest.OrderItemRequest(testProduct.getId(), 1);
+        CreateOrderRequest orderRequest = new CreateOrderRequest(Collections.singletonList(item), 1, "wechat", null);
         // 保存订单到数据库
-        testOrder = productOrderService.save(testOrder);
+        CreateOrderResponse response = productOrderService.createOrder(1, orderRequest);
+        testOrder = productOrderService.findById(response.getOrderId());
         // 生成测试评价数据
         testReview = testDataGenerator.generateReview(testMerchant);
         // 保存评价到数据库
-        testReview = reviewService.save(testReview);
+        testReview = reviewService.create(testReview);
     }
 
     @AfterEach
@@ -101,7 +108,7 @@ public class MerchantApiControllerTest extends BaseTest {
             reviewService.delete(testReview.getId());
         }
         if (testOrder != null) {
-            productOrderService.delete(testOrder.getId());
+            productOrderService.deleteOrder(testOrder.getId(), 1);
         }
         if (testAppointment != null) {
             appointmentService.delete(testAppointment.getId());

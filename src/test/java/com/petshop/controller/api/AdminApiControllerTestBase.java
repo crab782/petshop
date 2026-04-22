@@ -13,6 +13,7 @@ import com.petshop.mapper.SystemConfigMapper;
 import com.petshop.mapper.SystemSettingsMapper;
 import com.petshop.mapper.UserMapper;
 import com.petshop.service.ActivityService;
+import com.petshop.service.AnnouncementService;
 import com.petshop.service.MerchantService;
 import com.petshop.service.ProductService;
 import com.petshop.service.ReviewService;
@@ -69,6 +70,9 @@ public abstract class AdminApiControllerTestBase {
     protected ScheduledTaskService scheduledTaskService;
 
     @Mock
+    protected AnnouncementService announcementService;
+
+    @Mock
     protected UserMapper userMapper;
 
     @Mock
@@ -91,6 +95,9 @@ public abstract class AdminApiControllerTestBase {
 
     @Mock
     protected SystemSettingsMapper systemSettingsMapper;
+
+    @Mock
+    protected com.petshop.service.SystemSettingsService systemSettingsService;
 
     protected User testAdmin;
     protected Merchant testMerchant;

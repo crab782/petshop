@@ -9,6 +9,7 @@ import com.petshop.dto.UserDetailDTO;
 import com.petshop.entity.User;
 import com.petshop.entity.Merchant;
 import com.petshop.entity.Announcement;
+import com.petshop.entity.Appointment;
 import com.petshop.entity.Product;
 import com.petshop.entity.Review;
 import com.petshop.entity.Role;
@@ -109,6 +110,8 @@ public class AdminApiController {
     private ReviewMapper reviewMapper;
     @Autowired
     private ProductOrderMapper productOrderMapper;
+    @Autowired
+    private OperationLogService operationLogService;
 
     @Operation(summary = "获取用户列表", description = "获取系统中所有用户的列表")
     @ApiResponses(value = {

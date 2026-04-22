@@ -52,7 +52,7 @@ public class UserApiControllerTest extends BaseTest {
         testAddress = new Address();
         testAddress.setId(1);
         testAddress.setUser(testUser);
-        testAddress.setFullName("Test User");
+        testAddress.setContactName("Test User");
         testAddress.setPhone("13800138000");
         testAddress.setProvince("Guangdong");
         testAddress.setCity("Shenzhen");
@@ -62,11 +62,11 @@ public class UserApiControllerTest extends BaseTest {
         testAppointment = testDataGenerator.generateAppointment(1, testMerchant);
         testAppointment.setUser(testUser);
         testOrder = testDataGenerator.generateProductOrder(1, testMerchant);
-        testOrder.setUser(testUser);
+        testOrder.setUserId(testUser.getId());
         testCart = new Cart();
         testCart.setId(1);
-        testCart.setUser(testUser);
-        testCart.setProduct(testProduct);
+        testCart.setUserId(testUser.getId());
+        testCart.setProductId(testProduct.getId());
         testCart.setQuantity(1);
     }
 

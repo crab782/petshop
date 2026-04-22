@@ -8,9 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -361,7 +359,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
             mockUserSession();
 
             List<ReviewDTO> reviews = createTestReviewDTOs(3);
-            Page<ReviewDTO> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 3);
+            Page<ReviewDTO> reviewPage = new Page<>(1, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(3);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), isNull(Integer.class), eq(0), eq(10)))
                     .thenReturn(reviewPage);
@@ -385,7 +385,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
             mockUserSession();
 
             List<ReviewDTO> reviews = createTestReviewDTOsWithRating(2, 5);
-            Page<ReviewDTO> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 2);
+            Page<ReviewDTO> reviewPage = new Page<>(1, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(2);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), eq(5), eq(0), eq(10)))
                     .thenReturn(reviewPage);
@@ -408,7 +410,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
             mockUserSession();
 
             List<ReviewDTO> reviews = createTestReviewDTOs(5);
-            Page<ReviewDTO> reviewPage = new PageImpl<>(reviews, PageRequest.of(1, 5), 15);
+            Page<ReviewDTO> reviewPage = new Page<>(2, 5);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(15);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), isNull(Integer.class), eq(1), eq(5)))
                     .thenReturn(reviewPage);
@@ -431,7 +435,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
         void testGetReviews_EmptyList() throws Exception {
             mockUserSession();
 
-            Page<ReviewDTO> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            Page<ReviewDTO> emptyPage = new Page<>(1, 10);
+            emptyPage.setRecords(Collections.emptyList());
+            emptyPage.setTotal(0);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), isNull(Integer.class), eq(0), eq(10)))
                     .thenReturn(emptyPage);
@@ -839,7 +845,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
             mockUserSession();
 
             List<ReviewDTO> reviews = createTestReviewDTOs(10);
-            Page<ReviewDTO> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 10), 50);
+            Page<ReviewDTO> reviewPage = new Page<>(1, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(50);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), isNull(Integer.class), eq(0), eq(10)))
                     .thenReturn(reviewPage);
@@ -860,7 +868,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
             mockUserSession();
 
             List<ReviewDTO> reviews = createTestReviewDTOs(5);
-            Page<ReviewDTO> reviewPage = new PageImpl<>(reviews, PageRequest.of(4, 10), 45);
+            Page<ReviewDTO> reviewPage = new Page<>(5, 10);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(45);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), isNull(Integer.class), eq(4), eq(10)))
                     .thenReturn(reviewPage);
@@ -968,7 +978,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
             mockUserSession();
 
             List<ReviewDTO> reviews = createTestReviewDTOs(1);
-            Page<ReviewDTO> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 1), 10);
+            Page<ReviewDTO> reviewPage = new Page<>(1, 1);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(10);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), isNull(Integer.class), eq(0), eq(1)))
                     .thenReturn(reviewPage);
@@ -990,7 +1002,9 @@ public class UserApiControllerReviewTest extends UserApiControllerTestBase {
             mockUserSession();
 
             List<ReviewDTO> reviews = createTestReviewDTOs(50);
-            Page<ReviewDTO> reviewPage = new PageImpl<>(reviews, PageRequest.of(0, 50), 50);
+            Page<ReviewDTO> reviewPage = new Page<>(1, 50);
+            reviewPage.setRecords(reviews);
+            reviewPage.setTotal(50);
 
             when(reviewService.findByUserIdWithPaging(eq(testUserId), isNull(Integer.class), eq(0), eq(50)))
                     .thenReturn(reviewPage);

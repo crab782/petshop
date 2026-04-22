@@ -50,6 +50,12 @@ public class TestDataGenerator {
         return merchant;
     }
 
+    public Merchant generateMerchant(Integer id, String name, String email) {
+        Merchant merchant = TestDataFactory.createMerchant(id, name, email);
+        createdEntities.add(merchant);
+        return merchant;
+    }
+
     // 生成测试服务
     public Service generateService(Merchant merchant) {
         Service service = TestDataFactory.createService(merchant);
