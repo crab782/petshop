@@ -46,7 +46,7 @@ public class ReviewService {
         return reviewMapper.selectList(wrapper);
     }
     
-    public Page<Review> findByUserId(Integer userId, Page page) {
+    public Page<Review> findByUserId(Integer userId, Page<Review> page) {
         LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Review::getUserId, userId);
         wrapper.orderByDesc(Review::getCreatedAt);
@@ -109,14 +109,14 @@ public class ReviewService {
         return reviewMapper.selectList(wrapper);
     }
     
-    public Page<Review> findByMerchantId(Integer merchantId, Page page) {
+    public Page<Review> findByMerchantId(Integer merchantId, Page<Review> page) {
         LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Review::getMerchantId, merchantId);
         wrapper.orderByDesc(Review::getCreatedAt);
         return reviewMapper.selectPage(page, wrapper);
     }
     
-    public Page<Review> searchReviews(Integer merchantId, Integer rating, String keyword, Page page) {
+    public Page<Review> searchReviews(Integer merchantId, Integer rating, String keyword, Page<Review> page) {
         LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
         
         if (merchantId != null) {

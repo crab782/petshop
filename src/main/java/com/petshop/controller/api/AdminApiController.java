@@ -150,18 +150,18 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "用户不存在")
     })
     @GetMapping("/users/{id}")
-    public ResponseEntity<ApiResponse<UserDetailDTO>> getUserDetail(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserDetail(
             @Parameter(description = "用户ID", required = true) @PathVariable Integer id,
             HttpSession session) {
         if (session.getAttribute("admin") == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(401, "Unauthorized"));
+                    .body(ApiResponse.<Map<String, Object>>error(401, "Unauthorized"));
         }
 
         User user = userService.findById(id);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error(404, "User not found"));
+                    .body(ApiResponse.<Map<String, Object>>error(404, "User not found"));
         }
 
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.petshop.entity.Pet> petWrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
@@ -197,7 +197,7 @@ public class AdminApiController {
         extraInfo.put("reviewCount", reviewCount);
         extraInfo.put("orderCount", orderCount);
 
-        return ResponseEntity.ok(ApiResponse.success(Map.of("user", detail, "stats", extraInfo)));
+        return ResponseEntity.ok(ApiResponse.<Map<String, Object>>success(Map.of("user", detail, "stats", extraInfo)));
     }
 
     @Operation(summary = "更新用户状态", description = "更新指定用户的启用/禁用状态")
