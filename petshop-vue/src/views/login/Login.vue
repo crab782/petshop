@@ -2,8 +2,8 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Lock, Phone, Shop } from '@element-plus/icons-vue'
-import axios from 'axios'
+import { Lock, Phone, Shop, Setting } from '@element-plus/icons-vue'
+import request from '@/api/request'
 
 const router = useRouter()
 
@@ -36,25 +36,20 @@ const handleLogin = async () => {
     loginLoading.value = true
 
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await request.post('/api/auth/login', {
         loginIdentifier: loginForm.phone,
         password: loginForm.password,
         role: 'user'
       })
 
-      if (response.data.code === 200 || response.data.code === 0) {
-        const result = response.data.data
-        if (result.token) {
-          localStorage.setItem('token', result.token)
-        }
-        if (result.user) {
-          localStorage.setItem('userInfo', JSON.stringify(result.user))
-        }
-        ElMessage.success('登录成功')
-        router.push('/user/home')
-      } else {
-        ElMessage.error(response.data.message || '登录失败')
+      if (response.token) {
+        localStorage.setItem('token', response.token)
       }
+      if (response.user) {
+        localStorage.setItem('userInfo', JSON.stringify(response.user))
+      }
+      ElMessage.success('登录成功')
+      router.push('/user/home')
     } catch (error: any) {
       ElMessage.error(error.response?.data?.message || '登录失败，请检查手机号和密码')
     } finally {
@@ -69,6 +64,10 @@ const goToRegister = () => {
 
 const goToMerchantLogin = () => {
   router.push('/merchant/login')
+}
+
+const goToAdminLogin = () => {
+  router.push('/admin/login')
 }
 </script>
 
@@ -140,6 +139,11 @@ const goToMerchantLogin = () => {
         <div class="merchant-login-entry" @click="goToMerchantLogin">
           <el-icon class="merchant-icon"><Shop /></el-icon>
           <span class="merchant-text">商家登录</span>
+        </div>
+
+        <div class="admin-login-entry" @click="goToAdminLogin">
+          <el-icon class="admin-icon"><Setting /></el-icon>
+          <span class="admin-text">平台登录</span>
         </div>
       </el-form>
 
@@ -290,6 +294,38 @@ const goToMerchantLogin = () => {
 .merchant-text {
   font-size: 14px;
   color: #f57c00;
+  font-weight: 500;
+}
+
+/* 平台登录入口 */
+.admin-login-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px dashed #2196f3;
+  background-color: #e3f2fd;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin-login-entry:hover {
+  background-color: #bbdefb;
+  border-color: #1976d2;
+  transform: translateY(-1px);
+}
+
+.admin-icon {
+  font-size: 18px;
+  color: #2196f3;
+}
+
+.admin-text {
+  font-size: 14px;
+  color: #1976d2;
   font-weight: 500;
 }
 

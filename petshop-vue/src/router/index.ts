@@ -41,6 +41,18 @@ const router = createRouter({
       meta: { title: '商家登录' },
     },
     {
+      path: '/admin/register',
+      name: 'admin-register',
+      component: () => import('../views/admin/Register.vue'),
+      meta: { title: '平台注册' },
+    },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: () => import('../views/admin/Login.vue'),
+      meta: { title: '平台登录' },
+    },
+    {
       path: '/user',
       component: () => import('../views/user/UserLayout.vue'),
       meta: { requiresAuth: true, role: 'user' },

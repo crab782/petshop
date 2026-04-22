@@ -820,7 +820,7 @@ public class UserApiController {
         } else {
             phone = authentication.getPrincipal().toString();
         }
-        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getPhone, phone));
+        User user = userMapper.selectByPhone(phone);
         if (user == null) {
             throw new UnauthorizedException("用户不存在");
         }

@@ -22,6 +22,13 @@ export interface MerchantRegisterData {
   address?: string
 }
 
+export interface AdminRegisterData {
+  password: string
+  email?: string
+  phone: string
+  username?: string
+}
+
 export interface UserInfo {
   id: number
   username: string
@@ -41,6 +48,10 @@ export const register = (data: RegisterData) => {
 
 export const merchantRegister = (data: MerchantRegisterData) => {
   return request.post<{ message: string }>('/api/auth/merchant/register', data)
+}
+
+export const adminRegister = (data: AdminRegisterData) => {
+  return request.post<{ message: string }>('/api/auth/admin/register', data)
 }
 
 export const logout = () => {

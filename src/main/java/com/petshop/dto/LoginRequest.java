@@ -4,6 +4,7 @@ public class LoginRequest {
     private String username;
     private String phone;
     private String password;
+    private String role;
 
     public LoginRequest() {
     }
@@ -47,6 +48,14 @@ public class LoginRequest {
         this.password = password;
     }
 
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     public String getLoginIdentifier() {
         if (phone != null && !phone.isEmpty()) {
             return phone;
@@ -62,6 +71,7 @@ public class LoginRequest {
         private String username;
         private String phone;
         private String password;
+        private String role;
 
         public Builder username(String username) {
             this.username = username;
@@ -78,11 +88,17 @@ public class LoginRequest {
             return this;
         }
 
+        public Builder role(String role) {
+            this.role = role;
+            return this;
+        }
+
         public LoginRequest build() {
             LoginRequest request = new LoginRequest();
             request.username = this.username;
             request.phone = this.phone;
             request.password = this.password;
+            request.role = this.role;
             return request;
         }
     }
