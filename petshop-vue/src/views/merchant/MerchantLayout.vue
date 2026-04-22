@@ -89,7 +89,7 @@ onMounted(() => {
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item @click="router.push('/merchant/profile')">
+              <el-dropdown-item @click="router.push('/merchant/shop/settings')">
                 <el-icon><Setting /></el-icon>
                 店铺设置
               </el-dropdown-item>
@@ -115,7 +115,7 @@ onMounted(() => {
             <el-icon><HomeFilled /></el-icon>
             <template #title>后台首页</template>
           </el-menu-item>
-          <el-menu-item index="/merchant/profile">
+          <el-menu-item index="/merchant/shop/edit">
             <el-icon><ShoppingBag /></el-icon>
             <template #title>店铺管理</template>
           </el-menu-item>
