@@ -88,13 +88,12 @@ const fetchReviews = async () => {
     // 获取评分分布
     const statsRes = await request.get('/api/merchant/reviews/statistics')
     const statsData = statsRes.data.data
-    const distribution = statsData.ratingDistribution || {}
     ratingDistribution.value = {
-      five: distribution[5] || 0,
-      four: distribution[4] || 0,
-      three: distribution[3] || 0,
-      two: distribution[2] || 0,
-      one: distribution[1] || 0
+      five: statsData.fiveStarCount || 0,
+      four: statsData.fourStarCount || 0,
+      three: statsData.threeStarCount || 0,
+      two: statsData.twoStarCount || 0,
+      one: statsData.oneStarCount || 0
     }
   } catch (error) {
     console.error('获取评价列表失败:', error)
