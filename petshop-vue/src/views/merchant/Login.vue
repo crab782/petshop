@@ -34,10 +34,9 @@ const handleLogin = async () => {
     loginLoading.value = true
 
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await axios.post('/api/auth/merchant/login', {
         loginIdentifier: loginForm.value.phone,
-        password: loginForm.value.password,
-        role: 'merchant'
+        password: loginForm.value.password
       })
 
       if (response.data.code === 200 || response.data.code === 0) {
