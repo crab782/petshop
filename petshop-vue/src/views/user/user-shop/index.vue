@@ -118,7 +118,9 @@ const formatPrice = (price: number) => {
 }
 
 const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('zh-CN')
+  if (!date) return ''
+  const d = new Date(date)
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-CN')
 }
 
 const handleRetry = () => {
