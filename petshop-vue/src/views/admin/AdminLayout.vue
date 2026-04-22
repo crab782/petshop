@@ -13,7 +13,13 @@ import {
   Setting,
   List,
   Bell,
-  Goods
+  Goods,
+  Document,
+  DataLine,
+  TrendCharts,
+  FolderOpened,
+  Checked,
+  Timer
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -25,13 +31,20 @@ const menuItems = [
   { path: '/admin/dashboard', name: '后台首页', icon: HomeFilled },
   { path: '/admin/users', name: '用户管理', icon: User },
   { path: '/admin/merchants', name: '商家管理', icon: Shop },
+  { path: '/admin/merchants/audit', name: '商家审核', icon: Checked },
   { path: '/admin/services', name: '服务管理', icon: Service },
   { path: '/admin/products', name: '商品管理', icon: Goods },
   { path: '/admin/appointments', name: '预约管理', icon: Calendar },
   { path: '/admin/pets', name: '宠物管理', icon: Grid },
   { path: '/admin/reviews', name: '评价管理', icon: Star },
+  { path: '/admin/reviews/audit', name: '评价审核', icon: Checked },
   { path: '/admin/announcements', name: '公告管理', icon: Notification },
-  { path: '/admin/system', name: '系统设置', icon: Setting }
+  { path: '/admin/shop/audit', name: '店铺审核', icon: Checked },
+  { path: '/admin/activities', name: '活动管理', icon: TrendCharts },
+  { path: '/admin/tasks', name: '任务管理', icon: Timer },
+  { path: '/admin/system', name: '系统设置', icon: Setting },
+  { path: '/admin/system/roles', name: '角色管理', icon: User },
+  { path: '/admin/system/logs', name: '操作日志', icon: Document }
 ]
 
 const handleMenuSelect = (path: string) => {

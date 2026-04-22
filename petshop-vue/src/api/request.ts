@@ -62,15 +62,7 @@ request.interceptors.response.use(
           sessionStorage.removeItem('user_token')
           sessionStorage.removeItem('merchant_token')
           sessionStorage.removeItem('admin_token')
-          // 根据当前路径跳转到对应的登录页
-          const path = window.location.pathname
-          if (path.startsWith('/merchant/')) {
-            window.location.href = '/merchant/login'
-          } else if (path.startsWith('/admin/')) {
-            window.location.href = '/admin/login'
-          } else {
-            window.location.href = '/login'
-          }
+          // 不自动跳转，让用户手动选择是否登录
           break
         case 403:
           ElMessage.error('拒绝访问')
