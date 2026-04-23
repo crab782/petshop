@@ -8,6 +8,12 @@
 - 禁止使用 `source`, `export`, `alias` 等 bash 特有命令
 - 如果不确定某个命令是否为 PowerShell 命令，可以先使用 `Get-Command <command>` 验证
 
+# 系统环境说明
+- 操作系统：**Windows**
+- Docker 环境：**Docker Desktop**
+- Docker 命令：直接在 PowerShell 中使用 `docker` 命令
+- Bash 终端：如需使用 bash 终端，需要通过 WSL（Windows Subsystem for Linux）执行
+
 
 # 商家端页面功能模块需求分析
 

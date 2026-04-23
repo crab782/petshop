@@ -52,7 +52,7 @@
   - `human-judgment` TR-4.2: 确认测试用例质量高
 - **Notes**: 优先覆盖核心业务逻辑
 
-## [ ] Task 5: 运行完整测试套件并生成报告
+## [x] Task 5: 运行完整测试套件并生成报告
 - **Priority**: P0
 - **Depends On**: Task 4
 - **Description**:
