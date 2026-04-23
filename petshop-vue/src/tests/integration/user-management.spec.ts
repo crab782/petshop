@@ -40,13 +40,11 @@ vi.mock('@/api/auth', () => ({
 }))
 
 vi.mock('@/api/user', () => ({
-  getPetById: vi.fn((id: number) => Promise.resolve({ 
-    data: createPet({ id }) 
-  })),
-  addPet: vi.fn(() => Promise.resolve({ success: true, data: { id: 1 } })),
+  getPetById: vi.fn((id: number) => Promise.resolve(createPet({ id }))),
+  addPet: vi.fn(() => Promise.resolve({ id: 1 })),
   updatePet: vi.fn(() => Promise.resolve({ success: true })),
   deletePet: vi.fn(() => Promise.resolve({ success: true })),
-  getUserPets: vi.fn(() => Promise.resolve({ data: createPetList(3) })),
+  getUserPets: vi.fn(() => Promise.resolve(createPetList(3))),
 }))
 
 vi.mock('vue-router', async () => {

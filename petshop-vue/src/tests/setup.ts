@@ -1,9 +1,20 @@
-import { vi, beforeEach, afterEach } from 'vitest'
+import { vi, beforeEach, afterEach, afterAll } from 'vitest'
 import { config } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
+import { ElLoading } from 'element-plus'
 
 config.global.plugins = []
+
+const vLoading = {
+  mounted: () => {},
+  updated: () => {},
+  unmounted: () => {}
+}
+
+config.global.directives = {
+  loading: vLoading
+}
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -88,10 +99,23 @@ beforeEach(() => {
   localStorageMock.clear()
   sessionStorageMock.clear()
   vi.clearAllMocks()
+  vi.clearAllTimers()
 })
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0)
+  })
+})
+
+afterAll(async () => {
+  vi.clearAllTimers()
+  vi.useRealTimers()
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0)
+  })
 })
 
 vi.mock('element-plus', async () => {

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mountUserComponent, createMerchant, createService, createProduct, mockUserStore, createServiceList, createProductList } from '@/tests/utils/userTestUtils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mountUserComponent, createMerchant, createService, createProduct, mockUserStore, createServiceList, createProductList, flushPromises } from '@/tests/utils/userTestUtils'
 import UserShop from '../index.vue'
 
 vi.mock('@/stores/user', () => ({
@@ -29,8 +29,8 @@ const createFavoriteMerchant = (overrides: any = {}) => ({
 })
 
 const mockUserApi = {
-  getMerchantInfo: vi.fn(() => Promise.resolve({ 
-    data: createMerchant({ id: 1, name: '测试宠物店' }) 
+  getMerchantInfo: vi.fn(() => Promise.resolve({
+    data: createMerchant({ id: 1, name: '测试宠物店' })
   })),
   getMerchantServices: vi.fn(() => Promise.resolve(createServiceList(3))),
   getMerchantReviews: vi.fn(() => Promise.resolve([createMerchantReview()])),
@@ -53,21 +53,25 @@ vi.mock('@/api/user', () => ({
 describe('UserShop', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, name: '测试宠物店' }) })
     )
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve(createServiceList(3))
     )
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([createMerchantReview()])
     )
-    mockUserApi.getFavorites.mockImplementation(() => 
+    mockUserApi.getFavorites.mockImplementation(() =>
       Promise.resolve([])
     )
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve(createProductList(3))
     )
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
   })
 
   it('should render correctly', () => {
@@ -78,88 +82,88 @@ describe('UserShop', () => {
   it('should display shop header card', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.shop-header-card').exists()).toBe(true)
   })
 
   it('should display merchant name', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, name: '宠物乐园' }) })
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('宠物乐园')
   })
 
   it('should display merchant logo', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, logo: 'https://example.com/logo.png' }) })
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.shop-avatar').exists()).toBe(true)
   })
 
   it('should display merchant address', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, address: '北京市朝阳区测试路1号' }) })
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('北京市朝阳区测试路1号')
   })
 
   it('should display merchant phone', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, phone: '13800138000' }) })
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('13800138000')
   })
 
   it('should display merchant description', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, description: '专业宠物服务' }) })
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('专业宠物服务')
   })
 
   it('should display rating', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, rating: 4.5 }) })
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.shop-rating').exists()).toBe(true)
   })
 
   it('should have favorite button', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const favoriteBtn = wrapper.findAll('.el-button').find(b => b.text().includes('收藏'))
     expect(favoriteBtn?.exists()).toBe(true)
   })
@@ -167,8 +171,8 @@ describe('UserShop', () => {
   it('should have contact button', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const contactBtn = wrapper.findAll('.el-button').find(b => b.text().includes('联系商家'))
     expect(contactBtn?.exists()).toBe(true)
   })
@@ -176,37 +180,37 @@ describe('UserShop', () => {
   it('should display tabs for services, products and reviews', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.el-tabs').exists()).toBe(true)
   })
 
   it('should display services tab', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('服务列表')
   })
 
   it('should display products tab', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('商品列表')
   })
 
   it('should display reviews tab', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('用户评价')
   })
 
   it('should display service list', async () => {
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve([
         createService({ id: 1, name: '宠物美容', price: 100 }),
         createService({ id: 2, name: '宠物寄养', price: 200 }),
@@ -215,62 +219,62 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.service-card').exists() || wrapper.text().includes('宠物美容')).toBe(true)
   })
 
   it('should display service name', async () => {
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve([createService({ id: 1, name: '宠物美容' })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('宠物美容')
   })
 
   it('should display service price', async () => {
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve([createService({ id: 1, name: '宠物美容', price: 100 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('100')
   })
 
   it('should display service duration', async () => {
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve([createService({ id: 1, name: '宠物美容', duration: 60 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('60')
   })
 
   it('should have book button on service card', async () => {
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve([createService({ id: 1, name: '宠物美容' })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const bookBtn = wrapper.findAll('.el-button').find(b => b.text().includes('立即预约'))
     expect(bookBtn?.exists()).toBe(true)
   })
 
   it('should display product list', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([
         createProduct({ id: 1, name: '宠物狗粮', price: 99, merchantId: 1 }),
         createProduct({ id: 2, name: '宠物猫粮', price: 88, merchantId: 1 }),
@@ -279,62 +283,62 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.product-card').exists() || wrapper.text().includes('宠物狗粮')).toBe(true)
   })
 
   it('should display product name', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([createProduct({ id: 1, name: '宠物狗粮', merchantId: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('宠物狗粮')
   })
 
   it('should display product price', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([createProduct({ id: 1, name: '宠物狗粮', price: 99, merchantId: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('99')
   })
 
   it('should display product stock', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([createProduct({ id: 1, name: '宠物狗粮', stock: 50, merchantId: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('50')
   })
 
   it('should have view detail button on product card', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([createProduct({ id: 1, name: '宠物狗粮', merchantId: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const viewBtn = wrapper.findAll('.el-button').find(b => b.text().includes('查看详情'))
     expect(viewBtn?.exists()).toBe(true)
   })
 
   it('should display review list', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([
         createMerchantReview({ id: 1, content: '服务非常好' }),
         createMerchantReview({ id: 2, content: '很满意' }),
@@ -343,49 +347,49 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.review-list').exists() || wrapper.text().includes('服务非常好')).toBe(true)
   })
 
   it('should display review content', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([createMerchantReview({ id: 1, content: '非常满意的服务' })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('非常满意的服务')
   })
 
   it('should display review rating', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([createMerchantReview({ id: 1, rating: 5 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.review-item').exists() || wrapper.text().includes('评价')).toBe(true)
   })
 
   it('should display review user name', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([createMerchantReview({ id: 1, userName: '张三' })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('张三')
   })
 
   it('should display average rating', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([
         createMerchantReview({ id: 1, rating: 5 }),
         createMerchantReview({ id: 2, rating: 4 }),
@@ -394,8 +398,8 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.rating-summary').exists() || wrapper.find('.rating-score').exists()).toBe(true)
   })
 
@@ -404,8 +408,8 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const favoriteBtn = wrapper.findAll('.el-button').find(b => b.text().includes('收藏店铺'))
     if (favoriteBtn?.exists()) {
       await favoriteBtn.trigger('click')
@@ -418,21 +422,21 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const favoriteBtn = wrapper.findAll('.el-button').find(b => b.text().includes('收藏店铺'))
     expect(favoriteBtn?.exists()).toBe(true)
   })
 
   it('should show favorited state when in favorites', async () => {
-    mockUserApi.getFavorites.mockImplementation(() => 
+    mockUserApi.getFavorites.mockImplementation(() =>
       Promise.resolve([createFavoriteMerchant({ merchantId: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const favoriteBtn = wrapper.findAll('.el-button').find(b => b.text().includes('已收藏'))
     expect(favoriteBtn?.exists()).toBe(true)
   })
@@ -442,36 +446,36 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const favoriteBtn = wrapper.findAll('.el-button').find(b => b.text().includes('收藏店铺'))
     if (favoriteBtn?.exists()) {
       await favoriteBtn.trigger('click')
       await wrapper.vm.$nextTick()
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await flushPromises()
     }
   })
 
   it('should call removeFavorite when unfavoriting', async () => {
-    mockUserApi.getFavorites.mockImplementation(() => 
+    mockUserApi.getFavorites.mockImplementation(() =>
       Promise.resolve([createFavoriteMerchant({ merchantId: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const favoriteBtn = wrapper.findAll('.el-button').find(b => b.text().includes('已收藏'))
     if (favoriteBtn?.exists()) {
       await favoriteBtn.trigger('click')
       await wrapper.vm.$nextTick()
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await flushPromises()
     }
   })
 
   it('should navigate to book service when clicking book button', async () => {
     const mockPush = vi.fn()
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve([createService({ id: 1, name: '宠物美容' })])
     )
 
@@ -485,8 +489,8 @@ describe('UserShop', () => {
       },
     })
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const bookBtn = wrapper.findAll('.el-button').find(b => b.text().includes('立即预约'))
     if (bookBtn?.exists()) {
       await bookBtn.trigger('click')
@@ -495,7 +499,7 @@ describe('UserShop', () => {
 
   it('should navigate to product detail when clicking view button', async () => {
     const mockPush = vi.fn()
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([createProduct({ id: 1, name: '宠物狗粮', merchantId: 1 })])
     )
 
@@ -509,8 +513,8 @@ describe('UserShop', () => {
       },
     })
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const viewBtn = wrapper.findAll('.el-button').find(b => b.text().includes('查看详情'))
     if (viewBtn?.exists()) {
       await viewBtn.trigger('click')
@@ -518,14 +522,14 @@ describe('UserShop', () => {
   })
 
   it('should show contact info when clicking contact button', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.resolve({ data: createMerchant({ id: 1, phone: '13800138000' }) })
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const contactBtn = wrapper.findAll('.el-button').find(b => b.text().includes('联系商家'))
     if (contactBtn?.exists()) {
       await contactBtn.trigger('click')
@@ -537,8 +541,8 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('暂无服务')
   })
 
@@ -547,8 +551,8 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const productTab = wrapper.findAll('.el-tabs__item').find(t => t.text().includes('商品列表'))
     if (productTab?.exists()) {
       await productTab.trigger('click')
@@ -561,8 +565,8 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('暂无评价')
   })
 
@@ -571,55 +575,52 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('店铺不存在')
   })
 
   it('should handle API error gracefully', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
+    mockUserApi.getMerchantInfo.mockImplementation(() =>
       Promise.reject(new Error('Network error'))
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.exists()).toBe(true)
   })
 
   it('should handle favorite API error gracefully', async () => {
     mockUserApi.getFavorites.mockImplementation(() => Promise.resolve([]))
-    mockUserApi.addFavorite.mockImplementation(() => 
+    mockUserApi.addFavorite.mockImplementation(() =>
       Promise.reject(new Error('Network error'))
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     const favoriteBtn = wrapper.findAll('.el-button').find(b => b.text().includes('收藏店铺'))
     if (favoriteBtn?.exists()) {
       await favoriteBtn.trigger('click')
       await wrapper.vm.$nextTick()
     }
-    
+
     expect(wrapper.exists()).toBe(true)
   })
 
   it('should have loading state', async () => {
-    mockUserApi.getMerchantInfo.mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve({ data: createMerchant() }), 100))
-    )
-
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    
+    await flushPromises()
+
     expect(wrapper.exists()).toBe(true)
   })
 
   it('should calculate average rating correctly', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([
         createMerchantReview({ id: 1, rating: 5 }),
         createMerchantReview({ id: 2, rating: 4 }),
@@ -629,8 +630,8 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.vm.avgRating).toBe('4.0')
   })
 
@@ -639,8 +640,8 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.vm.avgRating).toBe(0)
   })
 
@@ -657,7 +658,7 @@ describe('UserShop', () => {
   })
 
   it('should filter products by merchantId', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([
         createProduct({ id: 1, name: '产品A', merchantId: 1 }),
         createProduct({ id: 2, name: '产品B', merchantId: 2 }),
@@ -666,13 +667,13 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.exists()).toBe(true)
   })
 
   it('should display review count', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([
         createMerchantReview({ id: 1 }),
         createMerchantReview({ id: 2 }),
@@ -682,111 +683,111 @@ describe('UserShop', () => {
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('3')
   })
 
   it('should display service card with correct structure', async () => {
-    mockUserApi.getMerchantServices.mockImplementation(() => 
+    mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve([createService({ id: 1, name: '宠物美容' })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.service-card').exists() || wrapper.find('.service-info').exists()).toBe(true)
   })
 
   it('should display product card with correct structure', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([createProduct({ id: 1, name: '宠物狗粮', merchantId: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.product-card').exists() || wrapper.find('.product-info').exists()).toBe(true)
   })
 
   it('should display review item with correct structure', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([createMerchantReview({ id: 1 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.review-item').exists() || wrapper.find('.review-header').exists()).toBe(true)
   })
 
   it('should display rating summary section', async () => {
-    mockUserApi.getMerchantReviews.mockImplementation(() => 
+    mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([createMerchantReview({ id: 1, rating: 5 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.rating-summary').exists() || wrapper.find('.rating-score').exists()).toBe(true)
   })
 
   it('should display shop actions', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.shop-actions').exists()).toBe(true)
   })
 
   it('should display shop info section', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.shop-info').exists()).toBe(true)
   })
 
   it('should display shop meta information', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.shop-meta').exists()).toBe(true)
   })
 
   it('should display content section', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.find('.content-section').exists()).toBe(true)
   })
 
   it('should handle tab change', async () => {
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     wrapper.vm.activeTab = 'products'
     await wrapper.vm.$nextTick()
-    
+
     expect(wrapper.vm.activeTab).toBe('products')
   })
 
   it('should display disabled button when product stock is 0', async () => {
-    mockUserApi.getProducts.mockImplementation(() => 
+    mockUserApi.getProducts.mockImplementation(() =>
       Promise.resolve([createProduct({ id: 1, name: '宠物狗粮', merchantId: 1, stock: 0 })])
     )
 
     const wrapper = mountUserComponent(UserShop)
     await wrapper.vm.$nextTick()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await flushPromises()
+
     expect(wrapper.text()).toContain('缺货')
   })
 })

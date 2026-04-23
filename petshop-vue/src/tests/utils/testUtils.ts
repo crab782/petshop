@@ -1,6 +1,8 @@
 import { mount, VueWrapper } from '@vue/test-utils'
 import type { Component, ComponentOptions } from 'vue'
 import { vi } from 'vitest'
+import { createRouter, createWebHistory } from 'vue-router'
+import { createPinia, setActivePinia } from 'pinia'
 
 export interface MountOptions {
   global?: {
@@ -35,12 +37,36 @@ export const createComponentWrapper = <T extends Component>(
   return createWrapper(component, options)
 }
 
-export const waitFor = (ms: number): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+export const waitFor = async (ms: number): Promise<void> => {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms)
+    return () => clearTimeout(timer)
+  })
 }
 
-export const flushPromises = (): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, 0))
+export const flushPromises = async (): Promise<void> => {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, 0)
+    return () => clearTimeout(timer)
+  })
+}
+
+export const waitForCondition = async (
+  condition: () => boolean,
+  options: { timeout?: number; interval?: number } = {}
+): Promise<void> => {
+  const { timeout = 5000, interval = 50 } = options
+  const startTime = Date.now()
+
+  while (!condition()) {
+    if (Date.now() - startTime > timeout) {
+      throw new Error('Condition not met within timeout')
+    }
+    await new Promise((resolve) => {
+      const timer = setTimeout(resolve, interval)
+      return () => clearTimeout(timer)
+    })
+  }
 }
 
 export const mockRouterPush = () => {
@@ -62,6 +88,23 @@ export const createMockRouter = () => ({
     },
   },
 })
+
+export const createTestRouter = (routes: any[] = []) => {
+  return createRouter({
+    history: createWebHistory(),
+    routes: [
+      { path: '/', name: 'home', component: { template: '<div>Home</div>' } },
+      { path: '/login', name: 'login', component: { template: '<div>Login</div>' } },
+      ...routes,
+    ],
+  })
+}
+
+export const createTestPinia = () => {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  return pinia
+}
 
 export const createMockStore = <T extends Record<string, any>>(initialState: T) => {
   const state = { ...initialState }

@@ -111,7 +111,7 @@ public class UserApiController {
     public ResponseEntity<Pet> updatePet(@PathVariable Integer id, @RequestBody Pet pet) {
         User user = getCurrentUser();
         Pet existingPet = petService.findById(id);
-        if (existingPet == null || !existingPet.getUser().getId().equals(user.getId())) {
+        if (existingPet == null || !existingPet.getUserId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
         pet.setId(id);
@@ -124,7 +124,7 @@ public class UserApiController {
     public ResponseEntity<Void> deletePet(@PathVariable Integer id) {
         User user = getCurrentUser();
         Pet pet = petService.findById(id);
-        if (pet == null || !pet.getUser().getId().equals(user.getId())) {
+        if (pet == null || !pet.getUserId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
         petService.delete(id);
@@ -135,7 +135,7 @@ public class UserApiController {
     public ResponseEntity<Pet> getPetById(@PathVariable Integer id) {
         User user = getCurrentUser();
         Pet pet = petService.findById(id);
-        if (pet == null || !pet.getUser().getId().equals(user.getId())) {
+        if (pet == null || !pet.getUserId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
         return ResponseEntity.ok(pet);
@@ -177,7 +177,7 @@ public class UserApiController {
         }
 
         Pet pet = petService.findById(request.getPetId());
-        if (pet == null || !pet.getUser().getId().equals(user.getId())) {
+        if (pet == null || !pet.getUserId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", "Pet not found or does not belong to user"));
         }
@@ -350,7 +350,7 @@ public class UserApiController {
             @RequestBody Address address) {
         User user = getCurrentUser();
         Address existingAddress = addressService.findByIdEntity(id);
-        if (existingAddress == null || !existingAddress.getUser().getId().equals(user.getId())) {
+        if (existingAddress == null || !existingAddress.getUserId().equals(user.getId())) {
             throw new ResourceNotFoundException("地址不存在");
         }
         address.setId(id);
@@ -364,7 +364,7 @@ public class UserApiController {
     public ResponseEntity<ApiResponse<Void>> deleteAddress(@PathVariable Integer id) {
         User user = getCurrentUser();
         Address existingAddress = addressService.findByIdEntity(id);
-        if (existingAddress == null || !existingAddress.getUser().getId().equals(user.getId())) {
+        if (existingAddress == null || !existingAddress.getUserId().equals(user.getId())) {
             throw new ResourceNotFoundException("地址不存在");
         }
         addressService.delete(id);
@@ -376,7 +376,7 @@ public class UserApiController {
             @PathVariable Integer id) {
         User user = getCurrentUser();
         Address existingAddress = addressService.findByIdEntity(id);
-        if (existingAddress == null || !existingAddress.getUser().getId().equals(user.getId())) {
+        if (existingAddress == null || !existingAddress.getUserId().equals(user.getId())) {
             throw new ResourceNotFoundException("地址不存在");
         }
         AddressDTO updatedAddress = addressService.setDefault(user.getId(), id);

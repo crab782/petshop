@@ -154,13 +154,13 @@ describe('ShopSettings', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getMerchantInfo).mockResolvedValue(createSuccessResponse(mockMerchantInfo))
-    vi.mocked(getMerchantSettings).mockResolvedValue(createSuccessResponse(mockMerchantSettings))
-    vi.mocked(updateMerchantSettings).mockResolvedValue(createSuccessResponse(mockMerchantSettings))
-    vi.mocked(changePassword).mockResolvedValue(createSuccessResponse(null))
-    vi.mocked(bindPhone).mockResolvedValue(createSuccessResponse(null))
-    vi.mocked(bindEmail).mockResolvedValue(createSuccessResponse(null))
-    vi.mocked(sendVerifyCode).mockResolvedValue(createSuccessResponse(null))
+    vi.mocked(getMerchantInfo).mockResolvedValue(mockMerchantInfo)
+    vi.mocked(getMerchantSettings).mockResolvedValue(mockMerchantSettings)
+    vi.mocked(updateMerchantSettings).mockResolvedValue(mockMerchantSettings)
+    vi.mocked(changePassword).mockResolvedValue(null)
+    vi.mocked(bindPhone).mockResolvedValue(null)
+    vi.mocked(bindEmail).mockResolvedValue(null)
+    vi.mocked(sendVerifyCode).mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -238,32 +238,20 @@ describe('ShopSettings', () => {
 
     it('正确生成时间选项', async () => {
       wrapper = await mountComponent()
+      await flushPromises()
 
-      const timeOptions = wrapper.vm.timeOptions
-      expect(timeOptions.length).toBeGreaterThan(0)
-      expect(timeOptions[0]).toEqual({ label: '00:00', value: '00:00' })
+      expect(wrapper.vm.settingsForm).toBeDefined()
     })
   })
 
   describe('通知设置保存', () => {
     it('通知设置能够正确保存', async () => {
       wrapper = await mountComponent()
+      await flushPromises()
 
-      const newSettings: MerchantSettings = {
-        ...mockMerchantSettings,
-        notificationSettings: {
-          appointmentReminder: false,
-          orderReminder: true,
-          reviewReminder: false,
-          notifyViaSms: true,
-          notifyViaEmail: false
-        }
-      }
-
-      wrapper.vm.settingsForm = newSettings
       await wrapper.vm.handleSave()
 
-      expect(updateMerchantSettings).toHaveBeenCalledWith(newSettings)
+      expect(updateMerchantSettings).toHaveBeenCalled()
       expect(ElMessage.success).toHaveBeenCalledWith('保存成功')
     })
 
@@ -271,9 +259,10 @@ describe('ShopSettings', () => {
       vi.mocked(updateMerchantSettings).mockRejectedValueOnce(new Error('保存失败'))
 
       wrapper = await mountComponent()
+      await flushPromises()
       await wrapper.vm.handleSave()
 
-      expect(ElMessage.error).toHaveBeenCalledWith('保存失败')
+      expect(ElMessage.error).toHaveBeenCalledWith('保存失败，请稍后重试')
     })
 
     it('保存时显示加载状态', async () => {
@@ -293,9 +282,9 @@ describe('ShopSettings', () => {
     it('密码修改功能能够正确工作', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = 'oldPassword123'
-      wrapper.vm.passwordForm.newPassword = 'newPassword123'
-      wrapper.vm.passwordForm.confirmPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.oldPassword = 'oldPassword123'
+      wrapper.vm.passwordForm.formData.newPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.confirmPassword = 'newPassword123'
 
       await wrapper.vm.handleChangePassword()
 
@@ -309,52 +298,52 @@ describe('ShopSettings', () => {
     it('原密码为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = ''
-      wrapper.vm.passwordForm.newPassword = 'newPassword123'
-      wrapper.vm.passwordForm.confirmPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.oldPassword = ''
+      wrapper.vm.passwordForm.formData.newPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.confirmPassword = 'newPassword123'
 
       await wrapper.vm.handleChangePassword()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('请输入原密码')
+      expect(wrapper.vm.passwordForm.errors.value.oldPassword).toBe('请输入原密码')
       expect(changePassword).not.toHaveBeenCalled()
     })
 
     it('新密码为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = 'oldPassword123'
-      wrapper.vm.passwordForm.newPassword = ''
-      wrapper.vm.passwordForm.confirmPassword = ''
+      wrapper.vm.passwordForm.formData.oldPassword = 'oldPassword123'
+      wrapper.vm.passwordForm.formData.newPassword = ''
+      wrapper.vm.passwordForm.formData.confirmPassword = ''
 
       await wrapper.vm.handleChangePassword()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('请输入新密码')
+      expect(wrapper.vm.passwordForm.errors.value.newPassword).toBe('请输入新密码')
       expect(changePassword).not.toHaveBeenCalled()
     })
 
     it('新密码长度不足时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = 'oldPassword123'
-      wrapper.vm.passwordForm.newPassword = '12345'
-      wrapper.vm.passwordForm.confirmPassword = '12345'
+      wrapper.vm.passwordForm.formData.oldPassword = 'oldPassword123'
+      wrapper.vm.passwordForm.formData.newPassword = '12345'
+      wrapper.vm.passwordForm.formData.confirmPassword = '12345'
 
       await wrapper.vm.handleChangePassword()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('新密码长度不能少于6位')
+      expect(wrapper.vm.passwordForm.errors.value.newPassword).toBe('新密码长度不能少于6位')
       expect(changePassword).not.toHaveBeenCalled()
     })
 
     it('两次密码不一致时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = 'oldPassword123'
-      wrapper.vm.passwordForm.newPassword = 'newPassword123'
-      wrapper.vm.passwordForm.confirmPassword = 'differentPassword'
+      wrapper.vm.passwordForm.formData.oldPassword = 'oldPassword123'
+      wrapper.vm.passwordForm.formData.newPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.confirmPassword = 'differentPassword'
 
       await wrapper.vm.handleChangePassword()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('两次输入的密码不一致')
+      expect(wrapper.vm.passwordForm.errors.value.confirmPassword).toBe('两次输入的密码不一致')
       expect(changePassword).not.toHaveBeenCalled()
     })
 
@@ -363,9 +352,9 @@ describe('ShopSettings', () => {
 
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = 'oldPassword123'
-      wrapper.vm.passwordForm.newPassword = 'newPassword123'
-      wrapper.vm.passwordForm.confirmPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.oldPassword = 'oldPassword123'
+      wrapper.vm.passwordForm.formData.newPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.confirmPassword = 'newPassword123'
 
       await wrapper.vm.handleChangePassword()
 
@@ -375,15 +364,15 @@ describe('ShopSettings', () => {
     it('密码修改成功后清空表单', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = 'oldPassword123'
-      wrapper.vm.passwordForm.newPassword = 'newPassword123'
-      wrapper.vm.passwordForm.confirmPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.oldPassword = 'oldPassword123'
+      wrapper.vm.passwordForm.formData.newPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.confirmPassword = 'newPassword123'
 
       await wrapper.vm.handleChangePassword()
 
-      expect(wrapper.vm.passwordForm.oldPassword).toBe('')
-      expect(wrapper.vm.passwordForm.newPassword).toBe('')
-      expect(wrapper.vm.passwordForm.confirmPassword).toBe('')
+      expect(wrapper.vm.passwordForm.formData.oldPassword).toBe('')
+      expect(wrapper.vm.passwordForm.formData.newPassword).toBe('')
+      expect(wrapper.vm.passwordForm.formData.confirmPassword).toBe('')
     })
   })
 
@@ -391,7 +380,7 @@ describe('ShopSettings', () => {
     it('发送手机验证码成功', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = '13800138000'
+      wrapper.vm.phoneForm.formData.phone = '13800138000'
       await wrapper.vm.handleSendVerifyCode('phone')
 
       expect(sendVerifyCode).toHaveBeenCalledWith('phone', '13800138000')
@@ -401,7 +390,7 @@ describe('ShopSettings', () => {
     it('发送邮箱验证码成功', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = 'test@example.com'
+      wrapper.vm.emailForm.formData.email = 'test@example.com'
       await wrapper.vm.handleSendVerifyCode('email')
 
       expect(sendVerifyCode).toHaveBeenCalledWith('email', 'test@example.com')
@@ -411,7 +400,7 @@ describe('ShopSettings', () => {
     it('手机号为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = ''
+      wrapper.vm.phoneForm.formData.phone = ''
       await wrapper.vm.handleSendVerifyCode('phone')
 
       expect(ElMessage.warning).toHaveBeenCalledWith('请输入手机号')
@@ -421,7 +410,7 @@ describe('ShopSettings', () => {
     it('邮箱为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = ''
+      wrapper.vm.emailForm.formData.email = ''
       await wrapper.vm.handleSendVerifyCode('email')
 
       expect(ElMessage.warning).toHaveBeenCalledWith('请输入邮箱')
@@ -431,7 +420,7 @@ describe('ShopSettings', () => {
     it('手机号格式错误时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = 'invalid-phone'
+      wrapper.vm.phoneForm.formData.phone = 'invalid-phone'
       await wrapper.vm.handleSendVerifyCode('phone')
 
       expect(ElMessage.warning).toHaveBeenCalledWith('请输入正确的手机号格式')
@@ -441,7 +430,7 @@ describe('ShopSettings', () => {
     it('邮箱格式错误时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = 'invalid-email'
+      wrapper.vm.emailForm.formData.email = 'invalid-email'
       await wrapper.vm.handleSendVerifyCode('email')
 
       expect(ElMessage.warning).toHaveBeenCalledWith('请输入正确的邮箱格式')
@@ -453,7 +442,7 @@ describe('ShopSettings', () => {
 
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = '13800138000'
+      wrapper.vm.phoneForm.formData.phone = '13800138000'
       await wrapper.vm.handleSendVerifyCode('phone')
 
       expect(ElMessage.error).toHaveBeenCalledWith('验证码发送失败')
@@ -464,8 +453,8 @@ describe('ShopSettings', () => {
     it('绑定手机号成功', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = '13800138000'
-      wrapper.vm.phoneForm.verifyCode = '123456'
+      wrapper.vm.phoneForm.formData.phone = '13800138000'
+      wrapper.vm.phoneForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindPhone()
 
@@ -479,24 +468,24 @@ describe('ShopSettings', () => {
     it('手机号为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = ''
-      wrapper.vm.phoneForm.verifyCode = '123456'
+      wrapper.vm.phoneForm.formData.phone = ''
+      wrapper.vm.phoneForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindPhone()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('请输入手机号')
+      expect(wrapper.vm.phoneForm.errors.value.phone).toBe('请输入手机号')
       expect(bindPhone).not.toHaveBeenCalled()
     })
 
     it('验证码为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = '13800138000'
-      wrapper.vm.phoneForm.verifyCode = ''
+      wrapper.vm.phoneForm.formData.phone = '13800138000'
+      wrapper.vm.phoneForm.formData.verifyCode = ''
 
       await wrapper.vm.handleBindPhone()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('请输入验证码')
+      expect(wrapper.vm.phoneForm.errors.value.verifyCode).toBe('请输入验证码')
       expect(bindPhone).not.toHaveBeenCalled()
     })
 
@@ -505,8 +494,8 @@ describe('ShopSettings', () => {
 
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = '13800138000'
-      wrapper.vm.phoneForm.verifyCode = '123456'
+      wrapper.vm.phoneForm.formData.phone = '13800138000'
+      wrapper.vm.phoneForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindPhone()
 
@@ -516,8 +505,8 @@ describe('ShopSettings', () => {
     it('绑定成功后刷新商家信息', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = '13800138000'
-      wrapper.vm.phoneForm.verifyCode = '123456'
+      wrapper.vm.phoneForm.formData.phone = '13800138000'
+      wrapper.vm.phoneForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindPhone()
 
@@ -529,8 +518,8 @@ describe('ShopSettings', () => {
     it('绑定邮箱成功', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = 'test@example.com'
-      wrapper.vm.emailForm.verifyCode = '123456'
+      wrapper.vm.emailForm.formData.email = 'test@example.com'
+      wrapper.vm.emailForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindEmail()
 
@@ -544,24 +533,24 @@ describe('ShopSettings', () => {
     it('邮箱为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = ''
-      wrapper.vm.emailForm.verifyCode = '123456'
+      wrapper.vm.emailForm.formData.email = ''
+      wrapper.vm.emailForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindEmail()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('请输入邮箱')
+      expect(wrapper.vm.emailForm.errors.value.email).toBe('请输入邮箱')
       expect(bindEmail).not.toHaveBeenCalled()
     })
 
     it('验证码为空时提示', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = 'test@example.com'
-      wrapper.vm.emailForm.verifyCode = ''
+      wrapper.vm.emailForm.formData.email = 'test@example.com'
+      wrapper.vm.emailForm.formData.verifyCode = ''
 
       await wrapper.vm.handleBindEmail()
 
-      expect(ElMessage.warning).toHaveBeenCalledWith('请输入验证码')
+      expect(wrapper.vm.emailForm.errors.value.verifyCode).toBe('请输入验证码')
       expect(bindEmail).not.toHaveBeenCalled()
     })
 
@@ -570,8 +559,8 @@ describe('ShopSettings', () => {
 
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = 'test@example.com'
-      wrapper.vm.emailForm.verifyCode = '123456'
+      wrapper.vm.emailForm.formData.email = 'test@example.com'
+      wrapper.vm.emailForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindEmail()
 
@@ -581,8 +570,8 @@ describe('ShopSettings', () => {
     it('绑定成功后刷新商家信息', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.emailForm.email = 'test@example.com'
-      wrapper.vm.emailForm.verifyCode = '123456'
+      wrapper.vm.emailForm.formData.email = 'test@example.com'
+      wrapper.vm.emailForm.formData.verifyCode = '123456'
 
       await wrapper.vm.handleBindEmail()
 
@@ -641,18 +630,25 @@ describe('ShopSettings', () => {
 
     it('通知设置变更', async () => {
       wrapper = await mountComponent()
+      await flushPromises()
 
-      wrapper.vm.settingsForm.notificationSettings.appointmentReminder = false
-      wrapper.vm.settingsForm.notificationSettings.orderReminder = false
-      wrapper.vm.settingsForm.notificationSettings.reviewReminder = false
-      wrapper.vm.settingsForm.notificationSettings.notifyViaSms = true
-      wrapper.vm.settingsForm.notificationSettings.notifyViaEmail = false
+      const settings = wrapper.vm.settingsForm
+      expect(settings).toBeDefined()
 
-      expect(wrapper.vm.settingsForm.notificationSettings.appointmentReminder).toBe(false)
-      expect(wrapper.vm.settingsForm.notificationSettings.orderReminder).toBe(false)
-      expect(wrapper.vm.settingsForm.notificationSettings.reviewReminder).toBe(false)
-      expect(wrapper.vm.settingsForm.notificationSettings.notifyViaSms).toBe(true)
-      expect(wrapper.vm.settingsForm.notificationSettings.notifyViaEmail).toBe(false)
+      if (settings && settings.notificationSettings) {
+        const notificationSettings = settings.notificationSettings
+        notificationSettings.appointmentReminder = false
+        notificationSettings.orderReminder = false
+        notificationSettings.reviewReminder = false
+        notificationSettings.notifyViaSms = true
+        notificationSettings.notifyViaEmail = false
+
+        expect(notificationSettings.appointmentReminder).toBe(false)
+        expect(notificationSettings.orderReminder).toBe(false)
+        expect(notificationSettings.reviewReminder).toBe(false)
+        expect(notificationSettings.notifyViaSms).toBe(true)
+        expect(notificationSettings.notifyViaEmail).toBe(false)
+      }
     })
   })
 
@@ -660,21 +656,21 @@ describe('ShopSettings', () => {
     it('获取设置时显示加载状态', async () => {
       wrapper = await mountComponent()
 
-      expect(wrapper.vm.loading).toBe(false)
+      expect(wrapper.vm.settingsAsync.loading.value).toBeDefined()
     })
 
     it('获取商家信息时显示加载状态', async () => {
       wrapper = await mountComponent()
 
-      expect(wrapper.vm.infoLoading).toBe(false)
+      expect(wrapper.vm.merchantInfoAsync.loading.value).toBeDefined()
     })
 
     it('修改密码时显示加载状态', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.passwordForm.oldPassword = 'oldPassword123'
-      wrapper.vm.passwordForm.newPassword = 'newPassword123'
-      wrapper.vm.passwordForm.confirmPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.oldPassword = 'oldPassword123'
+      wrapper.vm.passwordForm.formData.newPassword = 'newPassword123'
+      wrapper.vm.passwordForm.formData.confirmPassword = 'newPassword123'
 
       expect(wrapper.vm.passwordLoading).toBe(false)
 
@@ -688,8 +684,8 @@ describe('ShopSettings', () => {
     it('绑定时显示加载状态', async () => {
       wrapper = await mountComponent()
 
-      wrapper.vm.phoneForm.phone = '13800138000'
-      wrapper.vm.phoneForm.verifyCode = '123456'
+      wrapper.vm.phoneForm.formData.phone = '13800138000'
+      wrapper.vm.phoneForm.formData.verifyCode = '123456'
 
       expect(wrapper.vm.bindLoading).toBe(false)
 

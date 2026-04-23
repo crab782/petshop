@@ -175,11 +175,11 @@ public class ProductOrderService {
         }
         
         Integer merchantId = merchantProductCount.keySet().iterator().next();
-        Merchant merchant = productMap.values().iterator().next().getMerchant();
         
         ProductOrder order = new ProductOrder();
+        order.setOrderNo("ORD" + System.currentTimeMillis());
         order.setUserId(user.getId());
-        order.setMerchantId(merchant.getId());
+        order.setMerchantId(merchantId);
         order.setTotalPrice(totalProductPrice);
         order.setFreight(BigDecimal.ZERO);
         order.setStatus("pending");
@@ -446,15 +446,18 @@ public class ProductOrderService {
         List<ProductOrderItem> items = productOrderItemMapper.selectList(wrapper);
         
         List<OrderItemDTO> itemDTOs = items.stream()
-                .map(item -> OrderItemDTO.builder()
-                        .id(item.getId())
-                        .productId(item.getProductId())
-                        .productName(item.getProduct().getName())
-                        .productImage(item.getProduct().getImage())
-                        .price(item.getPrice())
-                        .quantity(item.getQuantity())
-                        .subtotal(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                        .build())
+                .map(item -> {
+                    Product product = productMapper.selectById(item.getProductId());
+                    return OrderItemDTO.builder()
+                            .id(item.getId())
+                            .productId(item.getProductId())
+                            .productName(product != null ? product.getName() : "Unknown Product")
+                            .productImage(product != null ? product.getImage() : null)
+                            .price(item.getPrice())
+                            .quantity(item.getQuantity())
+                            .subtotal(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                            .build();
+                })
                 .collect(Collectors.toList());
         
         return OrderDTO.builder()

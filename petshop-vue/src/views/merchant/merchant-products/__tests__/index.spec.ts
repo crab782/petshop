@@ -20,11 +20,11 @@ import {
   ElInputNumber,
   ElTag
 } from 'element-plus'
-import { getMerchantProducts, updateProduct, deleteProduct, updateProductStatus, batchUpdateProductStatus, batchDeleteProducts } from '@/api/merchant'
+import { getMerchantProductsPaged, updateProduct, deleteProduct, updateProductStatus, batchUpdateProductStatus, batchDeleteProducts } from '@/api/merchant'
 import { createProductList, createSuccessResponse, createProduct } from '@/tests/fixtures/merchantData'
 
 vi.mock('@/api/merchant', () => ({
-  getMerchantProducts: vi.fn(),
+  getMerchantProductsPaged: vi.fn(),
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
   updateProductStatus: vi.fn(),
@@ -120,8 +120,12 @@ describe('MerchantProducts', () => {
   const mockProducts = createProductList(15)
 
   const mountComponent = async (products: any[] = mockProducts) => {
-    ;(getMerchantProducts as any).mockResolvedValue({
-      data: products
+    ;(getMerchantProductsPaged as any).mockResolvedValue({
+      content: products,
+      totalElements: products.length,
+      totalPages: Math.ceil(products.length / 10),
+      size: 10,
+      number: 0
     })
 
     wrapper = mount(MerchantProducts, {
@@ -179,7 +183,7 @@ describe('MerchantProducts', () => {
     it('应该正确渲染商品列表', async () => {
       await mountComponent()
 
-      expect(getMerchantProducts).toHaveBeenCalled()
+      expect(getMerchantProductsPaged).toHaveBeenCalled()
       expect(wrapper.vm.products.length).toBe(15)
     })
 
@@ -642,7 +646,7 @@ describe('MerchantProducts', () => {
 
   describe('API 错误处理', () => {
     it('获取商品列表失败时应该显示错误信息', async () => {
-      ;(getMerchantProducts as any).mockRejectedValue(new Error('获取失败'))
+      ;(getMerchantProductsPaged as any).mockRejectedValue(new Error('获取失败'))
 
       wrapper = mount(MerchantProducts, {
         global: {

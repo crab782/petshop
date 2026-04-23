@@ -282,37 +282,37 @@ export const createAnnouncement = (overrides: Partial<AnnouncementTestData> = {}
   ...overrides,
 })
 
-export const createUserList = (count: number): UserTestData[] => 
+export const createUserList = (count: number): UserTestData[] =>
   Array.from({ length: count }, (_, i) => createUser({ id: i + 1, username: `user${i + 1}` }))
 
-export const createPetList = (count: number): PetTestData[] => 
+export const createPetList = (count: number): PetTestData[] =>
   Array.from({ length: count }, (_, i) => createPet({ id: i + 1, name: `宠物${i + 1}` }))
 
-export const createAddressList = (count: number): AddressTestData[] => 
+export const createAddressList = (count: number): AddressTestData[] =>
   Array.from({ length: count }, (_, i) => createAddress({ id: i + 1, isDefault: i === 0 }))
 
-export const createAppointmentList = (count: number): AppointmentTestData[] => 
+export const createAppointmentList = (count: number): AppointmentTestData[] =>
   Array.from({ length: count }, (_, i) => createAppointment({ id: i + 1 }))
 
-export const createProductOrderList = (count: number): ProductOrderTestData[] => 
+export const createProductOrderList = (count: number): ProductOrderTestData[] =>
   Array.from({ length: count }, (_, i) => createProductOrder({ id: i + 1 }))
 
-export const createServiceList = (count: number): ServiceTestData[] => 
+export const createServiceList = (count: number): ServiceTestData[] =>
   Array.from({ length: count }, (_, i) => createService({ id: i + 1, name: `服务${i + 1}` }))
 
-export const createProductList = (count: number): ProductTestData[] => 
+export const createProductList = (count: number): ProductTestData[] =>
   Array.from({ length: count }, (_, i) => createProduct({ id: i + 1, name: `商品${i + 1}` }))
 
-export const createMerchantList = (count: number): MerchantTestData[] => 
+export const createMerchantList = (count: number): MerchantTestData[] =>
   Array.from({ length: count }, (_, i) => createMerchant({ id: i + 1, name: `商家${i + 1}` }))
 
-export const createReviewList = (count: number): ReviewTestData[] => 
+export const createReviewList = (count: number): ReviewTestData[] =>
   Array.from({ length: count }, (_, i) => createReview({ id: i + 1, rating: Math.min(5, Math.floor(Math.random() * 5) + 1) }))
 
-export const createNotificationList = (count: number): NotificationTestData[] => 
+export const createNotificationList = (count: number): NotificationTestData[] =>
   Array.from({ length: count }, (_, i) => createNotification({ id: i + 1, isRead: i > 0 }))
 
-export const createAnnouncementList = (count: number): AnnouncementTestData[] => 
+export const createAnnouncementList = (count: number): AnnouncementTestData[] =>
   Array.from({ length: count }, (_, i) => createAnnouncement({ id: i + 1, title: `公告${i + 1}` }))
 
 export const createTestRouter = (routes: any[] = []): Router => {
@@ -461,48 +461,48 @@ export const mockUserApi = {
 }
 
 export const mockServiceApi = {
-  getServices: vi.fn(() => Promise.resolve({ data: createServiceList(10) })),
-  getService: vi.fn(() => Promise.resolve({ data: createService() })),
-  getMerchantServices: vi.fn(() => Promise.resolve({ data: createServiceList(5) })),
+  getServices: vi.fn(() => Promise.resolve(createServiceList(10))),
+  getService: vi.fn(() => Promise.resolve(createService())),
+  getMerchantServices: vi.fn(() => Promise.resolve(createServiceList(5))),
 }
 
 export const mockProductApi = {
-  getProducts: vi.fn(() => Promise.resolve({ data: createProductList(10) })),
-  getProduct: vi.fn(() => Promise.resolve({ data: createProduct() })),
-  getMerchantProducts: vi.fn(() => Promise.resolve({ data: createProductList(5) })),
+  getProducts: vi.fn(() => Promise.resolve(createProductList(10))),
+  getProduct: vi.fn(() => Promise.resolve(createProduct())),
+  getMerchantProducts: vi.fn(() => Promise.resolve(createProductList(5))),
 }
 
 export const mockMerchantApi = {
-  getMerchants: vi.fn(() => Promise.resolve({ data: createMerchantList(10) })),
-  getMerchant: vi.fn(() => Promise.resolve({ data: createMerchant() })),
+  getMerchants: vi.fn(() => Promise.resolve(createMerchantList(10))),
+  getMerchant: vi.fn(() => Promise.resolve(createMerchant())),
 }
 
 export const mockAppointmentApi = {
-  createAppointment: vi.fn(() => Promise.resolve({ data: createAppointment() })),
-  getAppointments: vi.fn(() => Promise.resolve({ data: createAppointmentList(5) })),
-  cancelAppointment: vi.fn(() => Promise.resolve({ data: { ...createAppointment(), status: 'cancelled' } })),
+  createAppointment: vi.fn(() => Promise.resolve(createAppointment())),
+  getAppointments: vi.fn(() => Promise.resolve(createAppointmentList(5))),
+  cancelAppointment: vi.fn(() => Promise.resolve({ ...createAppointment(), status: 'cancelled' })),
 }
 
 export const mockOrderApi = {
-  createOrder: vi.fn(() => Promise.resolve({ data: createProductOrder() })),
-  getOrders: vi.fn(() => Promise.resolve({ data: createProductOrderList(5) })),
-  cancelOrder: vi.fn(() => Promise.resolve({ data: { ...createProductOrder(), status: 'cancelled' } })),
+  createOrder: vi.fn(() => Promise.resolve(createProductOrder())),
+  getOrders: vi.fn(() => Promise.resolve(createProductOrderList(5))),
+  cancelOrder: vi.fn(() => Promise.resolve({ ...createProductOrder(), status: 'cancelled' })),
 }
 
 export const mockReviewApi = {
-  createReview: vi.fn(() => Promise.resolve({ data: createReview() })),
-  getReviews: vi.fn(() => Promise.resolve({ data: createReviewList(5) })),
+  createReview: vi.fn(() => Promise.resolve(createReview())),
+  getReviews: vi.fn(() => Promise.resolve(createReviewList(5))),
 }
 
 export const mockAnnouncementApi = {
-  getAnnouncements: vi.fn(() => Promise.resolve({ data: createAnnouncementList(10) })),
-  getAnnouncement: vi.fn(() => Promise.resolve({ data: createAnnouncement() })),
+  getAnnouncements: vi.fn(() => Promise.resolve(createAnnouncementList(10))),
+  getAnnouncement: vi.fn(() => Promise.resolve(createAnnouncement())),
 }
 
 export const mockNotificationApi = {
-  getNotifications: vi.fn(() => Promise.resolve({ data: createNotificationList(5) })),
-  markAsRead: vi.fn(() => Promise.resolve({ data: { ...createNotification(), isRead: true } })),
-  markAllAsRead: vi.fn(() => Promise.resolve({ data: null })),
+  getNotifications: vi.fn(() => Promise.resolve(createNotificationList(5))),
+  markAsRead: vi.fn(() => Promise.resolve({ ...createNotification(), isRead: true })),
+  markAllAsRead: vi.fn(() => Promise.resolve(null)),
 }
 
 export const mockCartStore = () => ({
@@ -522,11 +522,37 @@ export const mockFavoriteStore = () => ({
   isFavorite: vi.fn(() => false),
 })
 
-export const waitFor = (ms: number): Promise<void> => 
-  new Promise((resolve) => setTimeout(resolve, ms))
+export const waitFor = async (ms: number): Promise<void> => {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms)
+    return () => clearTimeout(timer)
+  })
+}
 
-export const flushPromises = (): Promise<void> => 
-  new Promise((resolve) => setTimeout(resolve, 0))
+export const flushPromises = async (): Promise<void> => {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, 0)
+    return () => clearTimeout(timer)
+  })
+}
+
+export const waitForCondition = async (
+  condition: () => boolean,
+  options: { timeout?: number; interval?: number } = {}
+): Promise<void> => {
+  const { timeout = 5000, interval = 50 } = options
+  const startTime = Date.now()
+
+  while (!condition()) {
+    if (Date.now() - startTime > timeout) {
+      throw new Error('Condition not met within timeout')
+    }
+    await new Promise((resolve) => {
+      const timer = setTimeout(resolve, interval)
+      return () => clearTimeout(timer)
+    })
+  }
+}
 
 export const mockLoginState = (isLoggedIn: boolean = true) => {
   if (isLoggedIn) {
