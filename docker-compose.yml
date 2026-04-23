@@ -43,11 +43,22 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       JWT_SECRET: petshop-default-secret-key-for-jwt-token-generation-and-validation-must-be-at-least-256-bits
-    ports:
-      - "8080:8080"
     networks:
       - petshop-network
     depends_on:
       - mysql
       - redis
+    restart: always
+
+  nginx:
+    build:
+      context: ./petshop-vue
+      dockerfile: Dockerfile
+    container_name: petshop-nginx
+    ports:
+      - "80:80"
+    networks:
+      - petshop-network
+    depends_on:
+      - app
     restart: always
