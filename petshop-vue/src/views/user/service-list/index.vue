@@ -5,97 +5,7 @@ import { Search, Sort } from '@element-plus/icons-vue'
 import { getServices, getServicesByKeyword, type Service } from '@/api/user'
 import { ElMessage } from 'element-plus'
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockServices: Service[] = [
-  {
-    id: 1,
-    name: '宠物洗澡美容套餐',
-    description: '包含洗澡、剪毛、修指甲等全套美容服务',
-    price: 88,
-    duration: 90,
-    merchantId: 1,
-    merchantName: '爱心宠物会所',
-    category: 'beauty',
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: '宠物体检套餐',
-    description: '全面的健康检查，包括血常规、尿常规、X光等',
-    price: 199,
-    duration: 60,
-    merchantId: 2,
-    merchantName: '宠物健康中心',
-    category: 'health',
-    rating: 4.9
-  },
-  {
-    id: 3,
-    name: '宠物寄养服务',
-    description: '提供舒适的寄养环境，专业人员照顾',
-    price: 150,
-    duration: 1440,
-    merchantId: 1,
-    merchantName: '爱心宠物会所',
-    category: 'boarding',
-    rating: 4.7
-  },
-  {
-    id: 4,
-    name: '宠物营养套餐',
-    description: '根据宠物年龄和健康状况定制的营养套餐',
-    price: 120,
-    duration: 30,
-    merchantId: 3,
-    merchantName: '宠物营养中心',
-    category: 'food',
-    rating: 4.6
-  },
-  {
-    id: 5,
-    name: '宠物基础训练',
-    description: '教授基本的服从命令，如坐、卧、握手等',
-    price: 200,
-    duration: 120,
-    merchantId: 2,
-    merchantName: '宠物健康中心',
-    category: 'training',
-    rating: 4.8
-  },
-  {
-    id: 6,
-    name: '宠物spa护理',
-    description: '深层清洁、精油按摩、毛发护理等高端服务',
-    price: 288,
-    duration: 120,
-    merchantId: 1,
-    merchantName: '爱心宠物会所',
-    category: 'beauty',
-    rating: 4.9
-  },
-  {
-    id: 7,
-    name: '宠物疫苗接种',
-    description: '提供各类宠物疫苗接种服务',
-    price: 120,
-    duration: 30,
-    merchantId: 2,
-    merchantName: '宠物健康中心',
-    category: 'health',
-    rating: 4.7
-  },
-  {
-    id: 8,
-    name: '宠物行为纠正',
-    description: '针对宠物不良行为进行专业纠正训练',
-    price: 300,
-    duration: 180,
-    merchantId: 3,
-    merchantName: '宠物营养中心',
-    category: 'training',
-    rating: 4.6
-  }
-]
+
 
 const router = useRouter()
 
@@ -201,43 +111,18 @@ const paginatedList = computed(() => {
 const fetchServices = async () => {
   loading.value = true
   try {
-    // 在开发环境下使用硬编码测试数据
-    if (import.meta.env.DEV) {
-      // 模拟API延迟
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      let filteredServices = [...mockServices]
-      
-      // 根据类别筛选
-      if (selectedCategory.value !== 'all') {
-        filteredServices = filteredServices.filter(s => s.category === selectedCategory.value)
-      }
-      
-      // 根据关键词搜索
-      if (searchKeyword.value) {
-        const keyword = searchKeyword.value.toLowerCase()
-        filteredServices = filteredServices.filter(s =>
-          s.name.toLowerCase().includes(keyword) ||
-          (s.description && s.description.toLowerCase().includes(keyword)) ||
-          (s.merchantName && s.merchantName.toLowerCase().includes(keyword))
-        )
-      }
-      
-      serviceList.value = filteredServices
+    // 使用真实API
+    let res
+    if (searchKeyword.value) {
+      res = await getServicesByKeyword(searchKeyword.value)
     } else {
-      // 在生产环境下使用真实API
-      let res
-      if (searchKeyword.value) {
-        res = await getServicesByKeyword(searchKeyword.value)
-      } else {
-        const type = selectedCategory.value === 'all' ? undefined : selectedCategory.value
-        res = await getServices({ type })
-      }
-      serviceList.value = (res.data || res || []).map((s: Service) => ({
-        ...s,
-        rating: (s as Service & { rating?: number }).rating || 4.5 + Math.random() * 0.5
-      }))
+      const type = selectedCategory.value === 'all' ? undefined : selectedCategory.value
+      res = await getServices({ type })
     }
+    serviceList.value = (res.data || res || []).map((s: Service) => ({
+      ...s,
+      rating: (s as Service & { rating?: number }).rating || 4.5 + Math.random() * 0.5
+    }))
   } catch {
     ElMessage.error('获取服务列表失败')
   } finally {

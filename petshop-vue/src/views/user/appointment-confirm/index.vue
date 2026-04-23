@@ -6,45 +6,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { Clock, Money, User, Phone, Location, Calendar } from '@element-plus/icons-vue'
 import { getUserPets, createAppointment, getMerchantInfo, type Pet as PetType, type Service, type MerchantInfo } from '@/api/user'
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockService: Service = {
-  id: 1,
-  name: '宠物洗澡美容套餐',
-  description: '包含洗澡、剪毛、修指甲等全套美容服务',
-  price: 88,
-  duration: 90,
-  merchantId: 1,
-  merchantName: '爱心宠物会所',
-  category: 'beauty'
-}
 
-const mockMerchant: MerchantInfo = {
-  id: 1,
-  name: '爱心宠物会所',
-  logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20shop%20logo%2C%20professional%20design&image_size=square',
-  phone: '13800138000',
-  address: '北京市朝阳区建国路88号',
-  rating: 4.8
-}
-
-const mockPets: PetType[] = [
-  {
-    id: 1,
-    name: '小黑',
-    type: '狗',
-    breed: '拉布拉多',
-    age: 3,
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=black%20labrador%20retriever%20portrait%2C%20professional%20pet%20photography&image_size=square'
-  },
-  {
-    id: 2,
-    name: '咪咪',
-    type: '猫',
-    breed: '英短',
-    age: 2,
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=blue%20british%20shorthair%20cat%20portrait%2C%20professional%20pet%20photography&image_size=square'
-  }
-]
 
 const route = useRoute()
 const router = useRouter()
@@ -91,69 +53,44 @@ const disabledHours = () => {
 }
 
 const fetchServiceInfo = async () => {
-  // 在开发环境下使用硬编码测试数据
-  if (import.meta.env.DEV) {
-    // 模拟API延迟
-    await new Promise(resolve => setTimeout(resolve, 300))
-    service.value = mockService
-    await fetchMerchantInfo(mockService.merchantId)
-  } else {
-    // 在生产环境下使用真实API
-    const serviceData = route.query.service
-    if (serviceData) {
-      try {
-        service.value = JSON.parse(serviceData as string)
-        if (service.value?.merchantId) {
-          await fetchMerchantInfo(service.value.merchantId)
-        }
-      } catch {
-        ElMessage.error('服务信息解析失败')
-        router.push('/user/services')
+  // 使用真实API
+  const serviceData = route.query.service
+  if (serviceData) {
+    try {
+      service.value = JSON.parse(serviceData as string)
+      if (service.value?.merchantId) {
+        await fetchMerchantInfo(service.value.merchantId)
       }
-    } else {
-      ElMessage.error('缺少服务参数')
+    } catch {
+      ElMessage.error('服务信息解析失败')
       router.push('/user/services')
     }
+  } else {
+    ElMessage.error('缺少服务参数')
+    router.push('/user/services')
   }
 }
 
 const fetchMerchantInfo = async (merchantId: number) => {
-  // 在开发环境下使用硬编码测试数据
-  if (import.meta.env.DEV) {
-    // 模拟API延迟
-    await new Promise(resolve => setTimeout(resolve, 200))
-    merchant.value = mockMerchant
-  } else {
-    // 在生产环境下使用真实API
-    try {
-      const res = await getMerchantInfo(merchantId)
-      merchant.value = res.data || null
-    } catch {
-      ElMessage.error('获取商家信息失败')
-    }
+  // 使用真实API
+  try {
+    const res = await getMerchantInfo(merchantId)
+    merchant.value = res.data || null
+  } catch {
+    ElMessage.error('获取商家信息失败')
   }
 }
 
 const fetchPets = async () => {
-  // 在开发环境下使用硬编码测试数据
-  if (import.meta.env.DEV) {
-    // 模拟API延迟
-    await new Promise(resolve => setTimeout(resolve, 200))
-    pets.value = mockPets
+  // 使用真实API
+  try {
+    const res = await getUserPets()
+    pets.value = res.data || []
     if (pets.value.length > 0) {
       selectedPetId.value = pets.value[0].id
     }
-  } else {
-    // 在生产环境下使用真实API
-    try {
-      const res = await getUserPets()
-      pets.value = res.data || []
-      if (pets.value.length > 0) {
-        selectedPetId.value = pets.value[0].id
-      }
-    } catch {
-      ElMessage.error('获取宠物列表失败')
-    }
+  } catch {
+    ElMessage.error('获取宠物列表失败')
   }
 }
 

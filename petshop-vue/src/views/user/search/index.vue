@@ -27,131 +27,7 @@ const priceRange = ref<[number, number] | null>(null)
 const minPrice = ref<number | undefined>()
 const maxPrice = ref<number | undefined>()
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockProducts: Product[] = [
-  {
-    id: 1,
-    name: '宠物粮食 成犬专用',
-    description: '营养均衡，适合成年狗狗的专业狗粮',
-    price: 129.9,
-    stock: 100,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20bag%20for%20adult%20dogs&image_size=landscape_4_3'
-  },
-  {
-    id: 2,
-    name: '宠物玩具 发声球',
-    description: '狗狗喜欢的发声玩具，增加互动乐趣',
-    price: 39.5,
-    stock: 50,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toy%20squeaky%20ball&image_size=landscape_4_3'
-  },
-  {
-    id: 3,
-    name: '宠物牵引绳',
-    description: '舒适耐用的宠物牵引绳，遛狗必备',
-    price: 49.9,
-    stock: 30,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20leash%20for%20dogs&image_size=landscape_4_3'
-  },
-  {
-    id: 4,
-    name: '宠物粮食 幼犬专用',
-    description: '针对幼犬发育需求的营养狗粮',
-    price: 149.9,
-    stock: 80,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20for%20puppies&image_size=landscape_4_3'
-  },
-  {
-    id: 5,
-    name: '宠物玩具 啃咬骨',
-    description: '耐咬耐磨，帮助清洁牙齿',
-    price: 29.9,
-    stock: 60,
-    image: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20chew%20toy%20bone&image_size=landscape_4_3'
-  }
-]
 
-const mockServices: Service[] = [
-  {
-    id: 1,
-    name: '宠物洗澡美容套餐',
-    description: '包含洗澡、剪毛、修指甲等全套美容服务',
-    price: 88,
-    duration: 90,
-    merchantId: 1,
-    merchantName: '爱心宠物美容会所'
-  },
-  {
-    id: 2,
-    name: '宠物健康体检',
-    description: '全面的宠物健康检查，包括血常规、生化等',
-    price: 150,
-    duration: 60,
-    merchantId: 2,
-    merchantName: '宠物健康医院'
-  },
-  {
-    id: 3,
-    name: '宠物寄养服务',
-    description: '专业的宠物寄养服务，24小时专人看护',
-    price: 50,
-    duration: 1440,
-    merchantId: 3,
-    merchantName: '快乐宠物寄养中心'
-  },
-  {
-    id: 4,
-    name: '宠物训练课程',
-    description: '基础服从训练，让宠物更听话',
-    price: 200,
-    duration: 120,
-    merchantId: 5,
-    merchantName: '宠物训练学校'
-  }
-]
-
-const mockMerchants: MerchantInfo[] = [
-  {
-    id: 1,
-    name: '爱心宠物美容会所',
-    address: '北京市朝阳区建国路88号',
-    phone: '13800138001',
-    logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20grooming%20salon%20logo&image_size=square',
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: '宠物健康医院',
-    address: '北京市海淀区中关村大街1号',
-    phone: '13900139002',
-    logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20hospital%20logo&image_size=square',
-    rating: 4.9
-  },
-  {
-    id: 3,
-    name: '快乐宠物寄养中心',
-    address: '北京市丰台区丰台路100号',
-    phone: '13700137003',
-    logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20boarding%20center%20logo&image_size=square',
-    rating: 4.7
-  },
-  {
-    id: 4,
-    name: '宠物用品专卖店',
-    address: '北京市西城区西单大街120号',
-    phone: '13600136004',
-    logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20store%20logo&image_size=square',
-    rating: 4.6
-  },
-  {
-    id: 5,
-    name: '宠物训练学校',
-    address: '北京市东城区东直门外大街42号',
-    phone: '13500135005',
-    logo: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20training%20school%20logo&image_size=square',
-    rating: 4.5
-  }
-]
 
 const loadSearchHistory = () => {
   const history = localStorage.getItem('searchHistory')
@@ -203,11 +79,6 @@ const handleSearch = async () => {
 const fetchProducts = async () => {
   loadingProducts.value = true
   try {
-    // 开发环境使用模拟数据
-    if (import.meta.env.DEV) {
-      products.value = mockProducts
-      return
-    }
     const res = await searchProducts(keyword.value)
     products.value = res.data || []
   } catch (error) {
@@ -221,11 +92,6 @@ const fetchProducts = async () => {
 const fetchServices = async () => {
   loadingServices.value = true
   try {
-    // 开发环境使用模拟数据
-    if (import.meta.env.DEV) {
-      services.value = mockServices
-      return
-    }
     const res = await searchServices(keyword.value)
     services.value = res.data || []
   } catch (error) {
@@ -239,11 +105,6 @@ const fetchServices = async () => {
 const fetchMerchants = async () => {
   loadingMerchants.value = true
   try {
-    // 开发环境使用模拟数据
-    if (import.meta.env.DEV) {
-      merchants.value = mockMerchants
-      return
-    }
     const res = await searchMerchants(keyword.value)
     merchants.value = res.data || []
   } catch (error) {

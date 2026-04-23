@@ -50,9 +50,7 @@ const stats = computed(() => {
 const loadReviews = async () => {
   loading.value = true
   try {
-    const response = await fetch('/api/admin/reviews')
-    if (!response.ok) throw new Error('加载评价列表失败')
-    const data = await response.json()
+    const data = await getAllReviews()
     reviewList.value = data.map((review: any) => ({
       id: review.id,
       serviceName: review.service?.name || '',
@@ -107,10 +105,7 @@ const handleDelete = (row: Review) => {
     }
   ).then(async () => {
     try {
-      const response = await fetch(`/api/admin/reviews/${row.id}`, {
-        method: 'DELETE'
-      })
-      if (!response.ok) throw new Error('删除失败')
+      await deleteReview(row.id)
       ElMessage.success('删除成功')
       loadReviews()
     } catch (error) {

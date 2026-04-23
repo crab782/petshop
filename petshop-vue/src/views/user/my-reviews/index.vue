@@ -37,95 +37,7 @@ const editForm = ref({
   comment: ''
 })
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockReviews: Review[] = [
-  {
-    id: 1,
-    appointmentId: 1,
-    merchantId: 1,
-    merchantName: '爱心宠物美容会所',
-    serviceId: 1,
-    serviceName: '宠物洗澡美容套餐',
-    type: 'service',
-    rating: 5,
-    comment: '服务非常好，狗狗洗得很干净，美容师很专业，态度也很好，下次还会再来！',
-    createTime: '2024-01-10 16:30:00',
-    replyStatus: '已回复',
-    reply: '感谢您的好评，我们会继续努力提供更好的服务！'
-  },
-  {
-    id: 2,
-    appointmentId: 2,
-    merchantId: 2,
-    merchantName: '宠物健康医院',
-    serviceId: 2,
-    serviceName: '宠物健康体检',
-    type: 'service',
-    rating: 4,
-    comment: '医生很专业，检查很仔细，就是等待时间有点长，总体来说很满意。',
-    createTime: '2024-01-05 11:20:00',
-    replyStatus: '已回复',
-    reply: '感谢您的反馈，我们会优化流程减少等待时间，期待再次为您服务！'
-  },
-  {
-    id: 3,
-    appointmentId: 3,
-    merchantId: 3,
-    merchantName: '快乐宠物寄养中心',
-    serviceId: 3,
-    serviceName: '宠物寄养服务',
-    type: 'service',
-    rating: 5,
-    comment: '寄养环境很好，工作人员很负责，每天都会发照片和视频，非常放心。',
-    createTime: '2023-12-30 14:45:00',
-    replyStatus: '待回复'
-  },
-  {
-    id: 4,
-    appointmentId: 4,
-    merchantId: 4,
-    merchantName: '宠物用品专卖店',
-    productId: 1,
-    productName: '宠物粮食',
-    serviceId: 0,
-    serviceName: '',
-    type: 'product',
-    rating: 5,
-    comment: '商品质量很好，包装严实，物流速度快，狗狗很喜欢吃，下次还会购买。',
-    createTime: '2024-01-08 10:15:00',
-    replyStatus: '已回复',
-    reply: '感谢您的支持，我们会继续提供优质的宠物用品！'
-  },
-  {
-    id: 5,
-    appointmentId: 5,
-    merchantId: 4,
-    merchantName: '宠物用品专卖店',
-    productId: 2,
-    productName: '宠物玩具',
-    serviceId: 0,
-    serviceName: '',
-    type: 'product',
-    rating: 3,
-    comment: '玩具质量一般，狗狗玩了几天就坏了，价格有点贵，不太推荐。',
-    createTime: '2023-12-25 16:00:00',
-    replyStatus: '待回复'
-  },
-  {
-    id: 6,
-    appointmentId: 6,
-    merchantId: 1,
-    merchantName: '爱心宠物美容会所',
-    serviceId: 1,
-    serviceName: '宠物洗澡美容套餐',
-    type: 'service',
-    rating: 3,
-    comment: '服务一般，洗得不是很干净，价格有点贵，可能不会再来了。',
-    createTime: '2023-12-20 14:30:00',
-    replyStatus: '已回复',
-    reply: '非常抱歉让您失望了，我们会加强培训，提高服务质量，期待您再次体验！'
-  }
-]
+
 
 const paginatedReviews = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
@@ -149,30 +61,6 @@ const replyTagType = (status: string) => {
 const fetchReviews = async () => {
   loading.value = true
   try {
-    // 开发环境使用模拟数据
-    if (import.meta.env.DEV) {
-      let filteredReviews = [...mockReviews]
-      
-      if (filterType.value) {
-        filteredReviews = filteredReviews.filter(item => item.type === filterType.value)
-      }
-      
-      if (dateRange.value && dateRange.value.length === 2) {
-        const startDate = new Date(dateRange.value[0])
-        const endDate = new Date(dateRange.value[1])
-        endDate.setHours(23, 59, 59, 999)
-        
-        filteredReviews = filteredReviews.filter(item => {
-          const reviewDate = new Date(item.createTime)
-          return reviewDate >= startDate && reviewDate <= endDate
-        })
-      }
-      
-      reviews.value = filteredReviews
-      total.value = reviews.value.length
-      return
-    }
-    
     const params: any = {}
     if (filterType.value) {
       params.type = filterType.value

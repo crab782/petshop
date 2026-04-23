@@ -21,61 +21,7 @@ const refundDialogVisible = ref(false)
 const confirmDialogVisible = ref(false)
 const refundReason = ref('')
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockOrderDetail: OrderDetail = {
-  id: 1,
-  orderNo: 'ORD20240115001',
-  status: 'shipped',
-  totalPrice: 288.5,
-  freight: 10,
-  payMethod: '微信支付',
-  remark: '请尽快发货',
-  createTime: '2024-01-15T10:30:00',
-  payTime: '2024-01-15T10:35:00',
-  shipTime: '2024-01-16T14:20:00',
-  items: [
-    {
-      id: 1,
-      productId: 1,
-      productName: '宠物粮食 成犬专用',
-      productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20food%20bag%20for%20adult%20dogs&image_size=landscape_4_3',
-      price: 129.9,
-      quantity: 1,
-      subtotal: 129.9
-    },
-    {
-      id: 2,
-      productId: 2,
-      productName: '宠物玩具 发声球',
-      productImage: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pet%20toy%20squeaky%20ball&image_size=landscape_4_3',
-      price: 39.8,
-      quantity: 2,
-      subtotal: 79.6
-    }
-  ],
-  address: {
-    name: '张三',
-    phone: '13800138001',
-    address: '北京市朝阳区建国路88号SOHO现代城A座2301室'
-  },
-  timeline: [
-    {
-      time: '2024-01-16T14:20:00',
-      status: '已发货',
-      description: '您的订单已发货，请注意查收'
-    },
-    {
-      time: '2024-01-15T10:35:00',
-      status: '已支付',
-      description: '您的订单已支付成功'
-    },
-    {
-      time: '2024-01-15T10:30:00',
-      status: '订单创建',
-      description: '您的订单已创建成功'
-    }
-  ]
-}
+
 
 const orderId = computed(() => Number(route.params.id))
 
@@ -137,27 +83,6 @@ const canPay = computed(() => {
 const fetchOrderDetail = async () => {
   loading.value = true
   try {
-    // 强制使用模拟数据，确保页面能正常显示
-    console.log('Using mock order detail data')
-    console.log('Mock order detail:', mockOrderDetail)
-    // 模拟加载延迟
-    await new Promise(resolve => setTimeout(resolve, 300))
-    // 使用类型断言确保数据能正确设置
-    orderDetail.value = mockOrderDetail as OrderDetail
-    console.log('Order detail value after setting:', orderDetail.value)
-    loading.value = false
-    return
-    
-    // 以下代码暂时注释，使用模拟数据
-    /*
-    if (import.meta.env.DEV) {
-      // 模拟加载延迟
-      await new Promise(resolve => setTimeout(resolve, 300))
-      orderDetail.value = mockOrderDetail
-      loading.value = false
-      return
-    }
-    
     if (!orderId.value) {
       ElMessage.error('订单ID不存在')
       loading.value = false
@@ -165,9 +90,7 @@ const fetchOrderDetail = async () => {
     }
     
     const res = await getOrderById(orderId.value)
-    console.log('Order detail response:', res)
-    orderDetail.value = res
-    */
+    orderDetail.value = res.data || res
   } catch (error) {
     console.error('Error fetching order detail:', error)
     ElMessage.error('获取订单详情失败')
@@ -243,12 +166,7 @@ const formatDate = (dateStr: string) => {
 }
 
 onMounted(() => {
-  console.log('onMounted called')
-  console.log('Mock order detail:', mockOrderDetail)
-  // 直接设置 orderDetail.value
-  orderDetail.value = mockOrderDetail
-  console.log('Order detail value after setting in onMounted:', orderDetail.value)
-  loading.value = false
+  fetchOrderDetail()
 })
 </script>
 
