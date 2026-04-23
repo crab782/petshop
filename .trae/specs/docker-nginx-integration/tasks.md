@@ -26,7 +26,7 @@
   - `programmatic` TR-2.2: 构建产物包含必要文件
 - **Notes**: 构建过程可能需要较长时间
 
-## [ ] Task 3: 启动所有服务
+## [x] Task 3: 启动所有服务
 - **Priority**: P0
 - **Depends On**: Task 2
 - **Description**:
@@ -38,7 +38,7 @@
   - `programmatic` TR-3.2: 服务间网络通信正常
 - **Notes**: 首次启动可能需要初始化数据库
 
-## [ ] Task 4: 验证前端访问
+## [x] Task 4: 验证前端访问
 - **Priority**: P1
 - **Depends On**: Task 3
 - **Description**:
@@ -50,7 +50,7 @@
   - `programmatic` TR-4.2: 页面返回200状态码
 - **Notes**: 可能需要等待服务完全启动
 
-## [ ] Task 5: 验证API代理
+## [x] Task 5: 验证API代理
 - **Priority**: P1
 - **Depends On**: Task 4
 - **Description**:
@@ -62,7 +62,7 @@
   - `programmatic` TR-5.2: API返回正确数据
 - **Notes**: 可能需要检查浏览器开发者工具中的网络请求
 
-## [ ] Task 6: 验证服务稳定性
+## [x] Task 6: 验证服务稳定性
 - **Priority**: P2
 - **Depends On**: Task 5
 - **Description**:
