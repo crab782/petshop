@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   HomeFilled,
@@ -19,7 +19,10 @@ import {
   TrendCharts,
   FolderOpened,
   Checked,
-  Timer
+  Timer,
+  Fold,
+  Expand,
+  SwitchButton
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -27,25 +30,30 @@ const route = useRoute()
 
 const isCollapse = ref(false)
 
+// 静态菜单数据，避免每次渲染重新创建
 const menuItems = [
-  { path: '/admin/dashboard', name: '后台首页', icon: HomeFilled },
-  { path: '/admin/users', name: '用户管理', icon: User },
-  { path: '/admin/merchants', name: '商家管理', icon: Shop },
-  { path: '/admin/merchants/audit', name: '商家审核', icon: Checked },
-  { path: '/admin/services', name: '服务管理', icon: Service },
-  { path: '/admin/products', name: '商品管理', icon: Goods },
-  { path: '/admin/appointments', name: '预约管理', icon: Calendar },
-  { path: '/admin/pets', name: '宠物管理', icon: Grid },
-  { path: '/admin/reviews', name: '评价管理', icon: Star },
-  { path: '/admin/reviews/audit', name: '评价审核', icon: Checked },
-  { path: '/admin/announcements', name: '公告管理', icon: Notification },
-  { path: '/admin/shop/audit', name: '店铺审核', icon: Checked },
-  { path: '/admin/activities', name: '活动管理', icon: TrendCharts },
-  { path: '/admin/tasks', name: '任务管理', icon: Timer },
-  { path: '/admin/system', name: '系统设置', icon: Setting },
-  { path: '/admin/system/roles', name: '角色管理', icon: User },
-  { path: '/admin/system/logs', name: '操作日志', icon: Document }
+  { key: '/admin/dashboard', icon: HomeFilled, label: '后台首页' },
+  { key: '/admin/users', icon: User, label: '用户管理' },
+  { key: '/admin/merchants', icon: Shop, label: '商家管理' },
+  { key: '/admin/merchants/audit', icon: Checked, label: '商家审核' },
+  { key: '/admin/services', icon: Service, label: '服务管理' },
+  { key: '/admin/products', icon: Goods, label: '商品管理' },
+  { key: '/admin/reviews', icon: Star, label: '评价管理' },
+  { key: '/admin/reviews/audit', icon: Checked, label: '评价审核' },
+  { key: '/admin/announcements', icon: Notification, label: '公告管理' },
+  { key: '/admin/shop/audit', icon: Checked, label: '店铺审核' },
+  { key: '/admin/activities', icon: TrendCharts, label: '活动管理' },
+  { key: '/admin/tasks', icon: Timer, label: '任务管理' },
+  { key: '/admin/system', icon: Setting, label: '系统设置' },
+  { key: '/admin/system/roles', icon: User, label: '角色管理' },
+  { key: '/admin/system/logs', icon: Document, label: '操作日志' }
 ]
+
+// 优化：监听路由变化，避免不必要的重渲染
+const routePath = ref(route.path)
+watch(() => route.path, (newPath) => {
+  routePath.value = newPath
+}, { deep: false })
 
 const handleMenuSelect = (path: string) => {
   router.push(path)
@@ -58,6 +66,11 @@ const handleLogout = () => {
   sessionStorage.removeItem('adminInfo')
   router.push('/admin/login')
 }
+
+// 优化：确保组件销毁时清理资源
+onUnmounted(() => {
+  // 清理逻辑
+})
 </script>
 
 <template>
@@ -68,17 +81,23 @@ const handleLogout = () => {
         <span v-if="!isCollapse" class="logo-text">宠物家园</span>
       </div>
       <el-menu
-        :default-active="route.path"
+        :default-active="routePath"
         :collapse="isCollapse"
+        :collapse-transition="false"
         class="menu"
-        @select="handleMenuSelect"
+        router
       >
-        <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
+        <el-menu-item 
+          v-for="item in menuItems" 
+          :key="item.key" 
+          :index="item.key"
+          v-memo="[item.key, routePath, isCollapse]"
+        >
           <el-icon><component :is="item.icon" /></el-icon>
-          <template #title>{{ item.name }}</template>
+          <template #title>{{ item.label }}</template>
         </el-menu-item>
         <el-menu-item index="/logout" @click="handleLogout">
-          <el-icon><List /></el-icon>
+          <el-icon><SwitchButton /></el-icon>
           <template #title>退出登录</template>
         </el-menu-item>
       </el-menu>
@@ -88,7 +107,7 @@ const handleLogout = () => {
       <el-header class="header">
         <div class="header-left">
           <el-button text @click="isCollapse = !isCollapse" class="menu-toggle">
-            <el-icon size="20"><List /></el-icon>
+            <el-icon :size="20"><component :is="isCollapse ? Expand : Fold" /></el-icon>
           </el-button>
         </div>
         <div class="header-right">

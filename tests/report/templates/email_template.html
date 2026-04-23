@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试结果通知</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .email-header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+        .email-body {
+            padding: 30px;
+        }
+        .status-banner {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .status-banner.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-banner.failure {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .stats-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .stats-table td:first-child {
+            font-weight: bold;
+            color: #666;
+        }
+        .stats-table td:last-child {
+            text-align: right;
+            font-weight: bold;
+        }
+        .passed {
+            color: #28a745;
+        }
+        .failed {
+            color: #dc3545;
+        }
+        .skipped {
+            color: #ffc107;
+        }
+        .report-link {
+            display: block;
+            text-align: center;
+            background-color: #667eea;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .report-link:hover {
+            background-color: #5568d3;
+        }
+        .email-footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>🧪 测试执行报告</h1>
+            <p>{{ project_name }} - {{ test_date }}</p>
+        </div>
+        
+        <div class="email-body">
+            <div class="status-banner {{ status_class }}">
+                <div class="status-icon">{{ status_icon }}</div>
+                <h2>{{ status_message }}</h2>
+                <p>通过率: <strong>{{ pass_rate }}%</strong></p>
+            </div>
+
+            <table class="stats-table">
+                <tr>
+                    <td>总测试数</td>
+                    <td>{{ total_tests }}</td>
+                </tr>
+                <tr>
+                    <td>通过</td>
+                    <td class="passed">{{ passed_tests }}</td>
+                </tr>
+                <tr>
+                    <td>失败</td>
+                    <td class="failed">{{ failed_tests }}</td>
+                </tr>
+                <tr>
+                    <td>跳过</td>
+                    <td class="skipped">{{ skipped_tests }}</td>
+                </tr>
+                <tr>
+                    <td>执行时间</td>
+                    <td>{{ total_duration }}</td>
+                </tr>
+            </table>
+
+            {% if failed_tests > 0 %}
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #856404;">⚠️ 失败测试摘要</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                    {% for test in failed_test_list[:5] %}
+                    <li>{{ test.name }}</li>
+                    {% endfor %}
+                    {% if failed_tests > 5 %}
+                    <li>... 还有 {{ failed_tests - 5 }} 个失败测试</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <a href="{{ report_url }}" class="report-link">查看完整测试报告</a>
+
+            <p style="color: #666; font-size: 14px;">
+                此邮件由自动化测试系统自动发送，请勿直接回复。
+            </p>
+        </div>
+
+        <div class="email-footer">
+            <p>© {{ year }} 宠物服务平台测试团队</p>
+            <p>如有疑问，请联系测试团队</p>
+        </div>
+    </div>
+</body>
+</html>

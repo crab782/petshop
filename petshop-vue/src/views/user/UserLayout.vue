@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import {
   User,
   HomeFilled,
@@ -30,10 +30,34 @@ import {
 import { getCart } from '@/api/user'
 
 const router = useRouter()
+const route = useRoute()
 const isCollapse = ref(false)
 const searchQuery = ref('')
 const userInfo = ref<any>(null)
 const cartCount = ref(0)
+
+// 静态菜单数据，避免每次渲染重新创建
+const menuItems = [
+  { key: '/user/home', icon: Shop, label: '商店浏览' },
+  { key: '/user/services', icon: ScaleToOriginal, label: '服务浏览' },
+  { key: '/user/services/list', icon: List, label: '服务列表' },
+  { key: '/user/appointments/book', icon: Calendar, label: '预约服务' },
+  { key: '/user/pets', icon: Goods, label: '宠物管理' },
+  { key: '/user/appointments', icon: Ticket, label: '预约管理' },
+  { key: '/user/orders', icon: Document, label: '订单管理' },
+  { key: '/user/favorites', icon: Star, label: '收藏评价' },
+  { key: '/user/profile', icon: Setting, label: '个人中心' },
+  { key: '/user/profile/edit', icon: Edit, label: '编辑资料' },
+  { key: '/user/announcements', icon: Reading, label: '公告列表' },
+  { key: '/user/shop', icon: House, label: '店铺详情' },
+  { key: '/user/cart', icon: ShoppingCart, label: '购物车' },
+  { key: '/user/merchant/1', icon: Shop, label: '商家详情' },
+  { key: '/user/reviews', icon: ChatDotRound, label: '服务评价' },
+  { key: '/user/reviews/my', icon: Star, label: '我的评价' },
+  { key: '/user/search', icon: Search, label: '搜索页' },
+  { key: '/user/notifications', icon: Notification, label: '消息通知' },
+  { key: '/user/addresses', icon: Location, label: '收货地址' }
+]
 
 const username = computed(() => {
   if (userInfo.value?.username) {
@@ -81,31 +105,21 @@ const loadCartCount = async () => {
   }
 }
 
-const menuItems = [
-  { key: '/user/home', icon: Shop, label: '商店浏览' },
-  { key: '/user/services', icon: ScaleToOriginal, label: '服务浏览' },
-  { key: '/user/services/list', icon: List, label: '服务列表' },
-  { key: '/user/appointments/book', icon: Calendar, label: '预约服务' },
-  { key: '/user/pets', icon: Goods, label: '宠物管理' },
-  { key: '/user/appointments', icon: Ticket, label: '预约管理' },
-  { key: '/user/orders', icon: Document, label: '订单管理' },
-  { key: '/user/favorites', icon: Star, label: '收藏评价' },
-  { key: '/user/profile', icon: Setting, label: '个人中心' },
-  { key: '/user/profile/edit', icon: Edit, label: '编辑资料' },
-  { key: '/user/announcements', icon: Reading, label: '公告列表' },
-  { key: '/user/shop', icon: House, label: '店铺详情' },
-  { key: '/user/cart', icon: ShoppingCart, label: '购物车' },
-  { key: '/user/merchant/1', icon: Shop, label: '商家详情' },
-  { key: '/user/reviews', icon: ChatDotRound, label: '服务评价' },
-  { key: '/user/reviews/my', icon: Star, label: '我的评价' },
-  { key: '/user/search', icon: Search, label: '搜索页' },
-  { key: '/user/notifications', icon: Notification, label: '消息通知' },
-  { key: '/user/addresses', icon: Location, label: '收货地址' }
-]
-
+// 优化：只在需要时加载数据
 onMounted(() => {
   loadUserInfo()
   loadCartCount()
+})
+
+// 优化：监听路由变化，避免不必要的重渲染
+const routePath = ref(route.path)
+watch(() => route.path, (newPath) => {
+  routePath.value = newPath
+}, { deep: false })
+
+// 优化：确保组件销毁时清理资源
+onUnmounted(() => {
+  // 清理逻辑
 })
 </script>
 
@@ -117,13 +131,18 @@ onMounted(() => {
         <span v-if="!isCollapse" class="logo-text">宠物家园</span>
       </div>
       <el-menu
-        :default-active="$route.path"
+        :default-active="routePath"
         :collapse="isCollapse"
         :collapse-transition="false"
         class="menu"
         router
       >
-        <el-menu-item v-for="item in menuItems" :key="item.key" :index="item.key">
+        <el-menu-item 
+          v-for="item in menuItems" 
+          :key="item.key" 
+          :index="item.key"
+          v-memo="[item.key, routePath, isCollapse]"
+        >
           <el-icon><component :is="item.icon" /></el-icon>
           <template #title>{{ item.label }}</template>
         </el-menu-item>

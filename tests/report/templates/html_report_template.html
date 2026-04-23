@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - 测试报告</title>
+    <style>
+        {{ styles }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>{{ title }}</h1>
+            <div class="report-info">
+                <span>生成时间: {{ generated_at }}</span>
+                <span>总耗时: {{ total_duration }}</span>
+            </div>
+        </header>
+
+        <section class="summary">
+            <h2>测试概览</h2>
+            <div class="stats-grid">
+                <div class="stat-card total">
+                    <div class="stat-number">{{ total_tests }}</div>
+                    <div class="stat-label">总测试数</div>
+                </div>
+                <div class="stat-card passed">
+                    <div class="stat-number">{{ passed_tests }}</div>
+                    <div class="stat-label">通过</div>
+                </div>
+                <div class="stat-card failed">
+                    <div class="stat-number">{{ failed_tests }}</div>
+                    <div class="stat-label">失败</div>
+                </div>
+                <div class="stat-card skipped">
+                    <div class="stat-number">{{ skipped_tests }}</div>
+                    <div class="stat-label">跳过</div>
+                </div>
+            </div>
+            <div class="pass-rate">
+                <div class="pass-rate-label">通过率</div>
+                <div class="pass-rate-bar">
+                    <div class="pass-rate-fill" style="width: {{ pass_rate }}%"></div>
+                </div>
+                <div class="pass-rate-text">{{ pass_rate }}%</div>
+            </div>
+        </section>
+
+        {% if failed_tests > 0 %}
+        <section class="failures">
+            <h2>失败测试详情</h2>
+            {% for test in failed_test_list %}
+            <div class="failure-item">
+                <div class="failure-header">
+                    <span class="failure-name">{{ test.name }}</span>
+                    <span class="failure-duration">{{ test.duration }}s</span>
+                </div>
+                <div class="failure-error">
+                    <pre>{{ test.error }}</pre>
+                </div>
+                {% if test.traceback %}
+                <div class="failure-traceback">
+                    <details>
+                        <summary>查看堆栈跟踪</summary>
+                        <pre>{{ test.traceback }}</pre>
+                    </details>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        <section class="test-details">
+            <h2>测试详情列表</h2>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="passed">通过</button>
+                <button class="filter-btn" data-filter="failed">失败</button>
+                <button class="filter-btn" data-filter="skipped">跳过</button>
+            </div>
+            <table class="test-table">
+                <thead>
+                    <tr>
+                        <th>测试名称</th>
+                        <th>状态</th>
+                        <th>耗时</th>
+                        <th>详情</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for test in all_tests %}
+                    <tr class="test-row {{ test.status }}">
+                        <td class="test-name">{{ test.name }}</td>
+                        <td class="test-status">
+                            <span class="status-badge {{ test.status }}">{{ test.status_text }}</span>
+                        </td>
+                        <td class="test-duration">{{ test.duration }}s</td>
+                        <td class="test-details">
+                            {% if test.error %}
+                            <button class="detail-btn" onclick="toggleDetails(this)">查看错误</button>
+                            <div class="error-details" style="display: none;">
+                                <pre>{{ test.error }}</pre>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="timing">
+            <h2>执行时间统计</h2>
+            <div class="timing-grid">
+                <div class="timing-item">
+                    <span class="timing-label">最慢测试</span>
+                    <span class="timing-value">{{ slowest_test.name }} ({{ slowest_test.duration }}s)</span>
+                </div>
+                <div class="timing-item">
+                    <span class="timing-label">平均耗时</span>
+                    <span class="timing-value">{{ avg_duration }}s</span>
+                </div>
+                <div class="timing-item">
+                    <span class="timing-label">总耗时</span>
+                    <span class="timing-value">{{ total_duration }}</span>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>测试报告由自动化测试系统生成</p>
+            <p>© {{ year }} 宠物服务平台测试团队</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleDetails(btn) {
+            const details = btn.nextElementSibling;
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                btn.textContent = '隐藏错误';
+            } else {
+                details.style.display = 'none';
+                btn.textContent = '查看错误';
+            }
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                document.querySelectorAll('.test-row').forEach(row => {
+                    if (filter === 'all' || row.classList.contains(filter)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

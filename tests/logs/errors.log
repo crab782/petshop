@@ -1,0 +1,28 @@
+2026-04-24 01:27:01 - error_logger - ERROR - Test: test_api_endpoint
+Error Type: network_error
+Message: Connection refused
+Traceback: ConnectionError at line 15
+Request: {
+  "method": "GET",
+  "url": "/api/users"
+}
+Response: {
+  "status_code": null,
+  "error": "Connection refused"
+}
+================================================================================
+2026-04-24 01:33:21 - error_logger - ERROR - Test: tests/test_api.py::test_api_endpoint
+Error Type: database_error
+Message: AssertionError: Expected 200 but got 500
+Traceback: tests/test_api.py::test_api_endpoint - AssertionError: Expected 200 but got 500
+Request: N/A
+Response: N/A
+================================================================================
+2026-04-24 01:33:21 - error_logger - ERROR - Test: tests/test_auth.py::test_user_authentication
+Error Type: auth_error
+Message: AssertionError: Expected 200 but got 401
+Traceback: tests/test_auth.py::test_user_authentication - AssertionError: Expected 200 but got 401
+Request: N/A
+Response: N/A
+================================================================================
+2026-04-24 01:33:21 - error_logger - INFO - Error report saved to tests\logs\auto_fix_report.json

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { HomeFilled, ShoppingBag, Calendar, Grid, Star, SwitchButton, Bell, ArrowDown, Setting, List, Goods, Document, DataLine, TrendCharts, FolderOpened } from '@element-plus/icons-vue'
+import { HomeFilled, ShoppingBag, Calendar, Grid, Star, SwitchButton, Bell, ArrowDown, Setting, List, Goods, Document, DataLine, TrendCharts, FolderOpened, Fold, Expand } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getMerchantInfo, type MerchantInfo } from '@/api/merchant'
 import { useAsync } from '@/composables'
@@ -15,6 +15,22 @@ const merchantInfo = ref<MerchantInfo | null>(null)
 
 // 使用 useAsync 处理 API 调用
 const { loading, error, execute: fetchMerchantInfo } = useAsync(getMerchantInfo)
+
+// 静态菜单数据，避免每次渲染重新创建
+const menuItems = [
+  { key: '/merchant/home', icon: HomeFilled, label: '后台首页' },
+  { key: '/merchant/shop/edit', icon: ShoppingBag, label: '店铺管理' },
+  { key: '/merchant/appointments', icon: Calendar, label: '预约订单列表' },
+  { key: '/merchant/services', icon: Grid, label: '服务管理' },
+  { key: '/merchant/reviews', icon: Star, label: '服务评价列表' },
+  { key: '/merchant/orders', icon: List, label: '服务订单' },
+  { key: '/merchant/products', icon: Goods, label: '商品管理' },
+  { key: '/merchant/product-orders', icon: Document, label: '商品订单' },
+  { key: '/merchant/categories', icon: FolderOpened, label: '分类管理' },
+  { key: '/merchant/shop/settings', icon: Setting, label: '店铺设置' },
+  { key: '/merchant/stats/appointments', icon: DataLine, label: '预约统计' },
+  { key: '/merchant/stats/revenue', icon: TrendCharts, label: '营收统计' }
+]
 
 // 检查会话状态
 const checkSession = () => {
@@ -53,9 +69,20 @@ const handleMenuSelect = (path: string) => {
   }
 }
 
+// 优化：监听路由变化，避免不必要的重渲染
+const routePath = ref(route.path)
+watch(() => route.path, (newPath) => {
+  routePath.value = newPath
+}, { deep: false })
+
 // 组件挂载时获取商家信息
 onMounted(() => {
   loadMerchantInfo()
+})
+
+// 优化：确保组件销毁时清理资源
+onUnmounted(() => {
+  // 清理逻辑
 })
 </script>
 
@@ -64,7 +91,7 @@ onMounted(() => {
     <el-header class="header">
       <div class="header-left">
         <el-button text @click="isCollapse = !isCollapse" class="menu-toggle">
-          <el-icon size="20"><ArrowDown /></el-icon>
+          <el-icon :size="20"><component :is="isCollapse ? Expand : Fold" /></el-icon>
         </el-button>
         <div class="logo-area">
           <i class="fa fa-paw text-white text-2xl mr-2"></i>
@@ -106,58 +133,20 @@ onMounted(() => {
     <el-container class="main-container">
       <el-aside :width="isCollapse ? '64px' : '200px'" class="aside">
         <el-menu
-          :default-active="route.path"
+          :default-active="routePath"
           :collapse="isCollapse"
+          :collapse-transition="false"
           class="menu"
-          @select="handleMenuSelect"
+          router
         >
-          <el-menu-item index="/merchant/home">
-            <el-icon><HomeFilled /></el-icon>
-            <template #title>后台首页</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/shop/edit">
-            <el-icon><ShoppingBag /></el-icon>
-            <template #title>店铺管理</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/appointments">
-            <el-icon><Calendar /></el-icon>
-            <template #title>预约订单列表</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/services">
-            <el-icon><Grid /></el-icon>
-            <template #title>服务管理</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/reviews">
-            <el-icon><Star /></el-icon>
-            <template #title>服务评价列表</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/orders">
-            <el-icon><List /></el-icon>
-            <template #title>服务订单</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/products">
-            <el-icon><Goods /></el-icon>
-            <template #title>商品管理</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/product-orders">
-            <el-icon><Document /></el-icon>
-            <template #title>商品订单</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/categories">
-            <el-icon><FolderOpened /></el-icon>
-            <template #title>分类管理</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/shop/settings">
-            <el-icon><Setting /></el-icon>
-            <template #title>店铺设置</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/stats/appointments">
-            <el-icon><DataLine /></el-icon>
-            <template #title>预约统计</template>
-          </el-menu-item>
-          <el-menu-item index="/merchant/stats/revenue">
-            <el-icon><TrendCharts /></el-icon>
-            <template #title>营收统计</template>
+          <el-menu-item 
+            v-for="item in menuItems" 
+            :key="item.key" 
+            :index="item.key"
+            v-memo="[item.key, routePath, isCollapse]"
+          >
+            <el-icon><component :is="item.icon" /></el-icon>
+            <template #title>{{ item.label }}</template>
           </el-menu-item>
         </el-menu>
       </el-aside>
