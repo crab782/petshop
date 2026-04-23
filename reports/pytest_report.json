@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "test_api_user_login",
+      "outcome": "passed",
+      "duration": 0.56
+    },
+    {
+      "name": "test_api_user_register",
+      "outcome": "failed",
+      "duration": 1.23,
+      "call": {
+        "crash": {
+          "message": "AssertionError: Email validation failed",
+          "traceback": "Traceback (most recent call last):\n  File..."
+        }
+      }
+    },
+    {
+      "name": "test_api_create_order",
+      "outcome": "passed",
+      "duration": 0.78
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-04-24T01:33:21.839158",
+  "total_failures": 5,
+  "summary": {
+    "error_types": {
+      "database_error": 1,
+      "auth_error": 1,
+      "network_error": 1,
+      "timeout_error": 1,
+      "validation_error": 1
+    },
+    "fixed_count": 0,
+    "unfixed_count": 5
+  },
+  "failures": [
+    {
+      "test_name": "tests/test_api.py::test_api_endpoint",
+      "error_message": "AssertionError: Expected 200 but got 500",
+      "error_type": "database_error",
+      "traceback": "tests/test_api.py::test_api_endpoint - AssertionError: Expected 200 but got 500",
+      "timestamp": "2026-04-24T01:33:21.827087",
+      "request_data": null,
+      "response_data": null,
+      "fix_suggestions": [
+        "1. 检查数据库连接配置:",
+        "   - 主机: localhost",
+        "   - 端口: 3306",
+        "   - 数据库: cg",
+        "2. 验证数据库服务是否运行",
+        "3. 检查数据库用户权限",
+        "4. 查看数据库错误日志"
+      ],
+      "retry_count": 0,
+      "fixed": false
+    },
+    {
+      "test_name": "tests/test_auth.py::test_user_authentication",
+      "error_message": "AssertionError: Expected 200 but got 401",
+      "error_type": "auth_error",
+      "traceback": "tests/test_auth.py::test_user_authentication - AssertionError: Expected 200 but got 401",
+      "timestamp": "2026-04-24T01:33:21.827352",
+      "request_data": null,
+      "response_data": null,
+      "fix_suggestions": [
+        "1. 检查测试用户配置:",
+        "   - 用户名: testuser",
+        "   - 密码: testpass123",
+        "2. 验证用户是否存在于数据库",
+        "3. 检查JWT配置",
+        "4. 尝试手动登录验证"
+      ],
+      "retry_count": 0,
+      "fixed": false
+    },
+    {
+      "test_name": "tests/test_database.py::test_database_connection",
+      "error_message": "DatabaseError: Connection refused",
+      "error_type": "network_error",
+      "traceback": "tests/test_database.py::test_database_connection - DatabaseError: Connection refused",
+      "timestamp": "2026-04-24T01:33:21.827587",
+      "request_data": null,
+      "response_data": null,
+      "fix_suggestions": [
+        "1. 检查后端服务是否正在运行",
+        "2. 验证API_BASE_URL配置: http://localhost:8080",
+        "3. 检查防火墙设置",
+        "4. 尝试ping服务器地址"
+      ],
+      "retry_count": 0,
+      "fixed": false
+    },
+    {
+      "test_name": "tests/test_network.py::test_network_timeout",
+      "error_message": "TimeoutError: Request timed out",
+      "error_type": "timeout_error",
+      "traceback": "tests/test_network.py::test_network_timeout - TimeoutError: Request timed out",
+      "timestamp": "2026-04-24T01:33:21.827803",
+      "request_data": null,
+      "response_data": null,
+      "fix_suggestions": [],
+      "retry_count": 0,
+      "fixed": false
+    },
+    {
+      "test_name": "tests/test_validation.py::test_data_validation",
+      "error_message": "AssertionError: Expected 201 but got 400",
+      "error_type": "validation_error",
+      "traceback": "tests/test_validation.py::test_data_validation - AssertionError: Expected 201 but got 400\n========================= 5 failed in 2.35s",
+      "timestamp": "2026-04-24T01:33:21.828031",
+      "request_data": null,
+      "response_data": null,
+      "fix_suggestions": [],
+      "retry_count": 0,
+      "fixed": false
+    }
+  ]
+}

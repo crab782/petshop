@@ -1,0 +1,120 @@
+name: Auto Fix Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * *'
+
+env:
+  MAX_RETRIES: 3
+  RETRY_DELAY: 5
+  MAX_DELAY: 60
+  TEST_PATH: tests/
+  API_BASE_URL: http://localhost:8080
+
+jobs:
+  auto-fix-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+          MYSQL_DATABASE: cg
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-html allure-pytest requests
+    
+    - name: Wait for MySQL
+      run: |
+        sleep 10
+        mysql -h 127.0.0.1 -u root -p123456 -e "SELECT 1"
+    
+    - name: Start backend service
+      run: |
+        ./mvnw spring-boot:run &
+        sleep 30
+      continue-on-error: true
+    
+    - name: Run auto fix tests
+      id: auto_fix
+      run: |
+        python tests/ci_integration.py
+      continue-on-error: true
+    
+    - name: Upload test reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-reports
+        path: |
+          tests/report/
+          tests/logs/
+    
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: tests/report/*.xml
+    
+    - name: Send notification on failure
+      if: failure()
+      run: |
+        curl -X POST ${{ secrets.NOTIFICATION_WEBHOOK }} \
+          -H 'Content-type: application/json' \
+          -d '{
+            "text": "❌ 测试自动修复失败",
+            "attachments": [{
+              "title": "测试失败详情",
+              "text": "请查看测试报告了解详情",
+              "color": "danger"
+            }]
+          }'
+    
+    - name: Check test results
+      if: always()
+      run: |
+        if [ -f tests/report/ci_report.json ]; then
+          cat tests/report/ci_report.json
+          exit_code=$(python -c "import json; data=json.load(open('tests/report/ci_report.json')); print(0 if data['status']=='success' else 1)")
+          exit $exit_code
+        else
+          echo "No test report found"
+          exit 1
+        fi
+
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: auto-fix-tests
+    if: always()
+    
+    steps:
+    - name: Clean up old reports
+      run: |
+        echo "Cleaning up old test reports..."
+        find tests/report -name "*.json" -mtime +7 -delete
+        find tests/logs -name "*.log" -mtime +7 -delete
