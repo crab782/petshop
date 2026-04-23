@@ -19,20 +19,11 @@ const currentDate = computed(() => {
 })
 
 const loading = ref(false)
-const stats = ref([
-  { title: '我的宠物', value: '0', icon: Goods, color: '#409eff', route: '/user/pets' },
-  { title: '待处理预约', value: '0', icon: Calendar, color: '#e6a23c', route: '/user/appointments' },
-  { title: '服务评价', value: '0', icon: StarFilled, color: '#67c23a', route: '/user/reviews' }
-])
+const stats = ref<Array<{ title: string; value: string; icon: any; color: string; route: string }>>([])
 
 const recentActivities = ref<Activity[]>([])
 
-const quickActions = [
-  { title: '我的宠物', icon: Goods, color: '#409eff', route: '/user/pets' },
-  { title: '我的预约', icon: Calendar, color: '#67c23a', route: '/user/appointments' },
-  { title: '浏览服务', icon: Location, color: '#e6a23c', route: '/user/services' },
-  { title: '我的订单', icon: List, color: '#f56c6c', route: '/user/orders' }
-]
+const quickActions = ref<Array<{ title: string; icon: any; color: string; route: string }>>([])
 
 const recommendedServices = ref<Service[]>([])
 
@@ -54,9 +45,11 @@ const loadHomeData = async () => {
     const statsResponse = await getHomeStats()
     const statsData = statsResponse.data || statsResponse
     if (statsData) {
-      stats.value[0].value = (statsData.petCount || 0).toString()
-      stats.value[1].value = (statsData.pendingAppointments || 0).toString()
-      stats.value[2].value = (statsData.reviewCount || 0).toString()
+      stats.value = [
+        { title: '我的宠物', value: (statsData.petCount || 0).toString(), icon: Goods, color: '#409eff', route: '/user/pets' },
+        { title: '待处理预约', value: (statsData.pendingAppointments || 0).toString(), icon: Calendar, color: '#e6a23c', route: '/user/appointments' },
+        { title: '服务评价', value: (statsData.reviewCount || 0).toString(), icon: StarFilled, color: '#67c23a', route: '/user/reviews' }
+      ]
     }
 
     const activitiesResponse = await getRecentActivities(5)
@@ -70,6 +63,14 @@ const loadHomeData = async () => {
     if (servicesData) {
       recommendedServices.value = servicesData
     }
+
+    // 设置快捷操作
+    quickActions.value = [
+      { title: '我的宠物', icon: Goods, color: '#409eff', route: '/user/pets' },
+      { title: '我的预约', icon: Calendar, color: '#67c23a', route: '/user/appointments' },
+      { title: '浏览服务', icon: Location, color: '#e6a23c', route: '/user/services' },
+      { title: '我的订单', icon: List, color: '#f56c6c', route: '/user/orders' }
+    ]
   } catch (error) {
     console.error('加载首页数据失败:', error)
   } finally {

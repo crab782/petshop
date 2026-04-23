@@ -113,19 +113,6 @@ const handleRemoveServiceFavorite = async (service: FavoriteService) => {
 }
 
 const getDefaultLogo = (name: string) => {
-  const emojis: Record<string, string> = {
-    '美容': '💇',
-    '宠物': '🐾',
-    '医院': '🏥',
-    '商店': '🏪',
-    '训练': '🎓',
-    '寄养': '🏠'
-  }
-  for (const key of Object.keys(emojis)) {
-    if (name.includes(key)) {
-      return emojis[key]
-    }
-  }
   return '🏪'
 }
 

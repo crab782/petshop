@@ -23,23 +23,9 @@ const total = ref(0)
 
 const showFilterPanel = ref(false)
 
-const categories = [
-  { label: '全部', value: 'all' },
-  { label: '宠物美容', value: 'beauty' },
-  { label: '宠物寄养', value: 'boarding' },
-  { label: '健康体检', value: 'health' },
-  { label: '宠物饮食', value: 'food' },
-  { label: '宠物训练', value: 'training' }
-]
+const categories = ref<Array<{ label: string; value: string }>>([])
 
-const sortOptions = [
-  { label: '默认排序', value: 'default' },
-  { label: '价格从低到高', value: 'price_asc' },
-  { label: '价格从高到低', value: 'price_desc' },
-  { label: '评分从高到低', value: 'rating_desc' },
-  { label: '时长从短到长', value: 'duration_asc' },
-  { label: '时长从长到短', value: 'duration_desc' }
-]
+const sortOptions = ref<Array<{ label: string; value: string }>>([])
 
 const filteredAndSortedList = computed(() => {
   let list = [...serviceList.value]
@@ -119,10 +105,26 @@ const fetchServices = async () => {
       const type = selectedCategory.value === 'all' ? undefined : selectedCategory.value
       res = await getServices({ type })
     }
-    serviceList.value = (res.data || res || []).map((s: Service) => ({
-      ...s,
-      rating: (s as Service & { rating?: number }).rating || 4.5 + Math.random() * 0.5
-    }))
+    serviceList.value = (res.data || res || [])
+
+    // 设置默认分类和排序选项
+    categories.value = [
+      { label: '全部', value: 'all' },
+      { label: '宠物美容', value: 'beauty' },
+      { label: '宠物寄养', value: 'boarding' },
+      { label: '健康体检', value: 'health' },
+      { label: '宠物饮食', value: 'food' },
+      { label: '宠物训练', value: 'training' }
+    ]
+
+    sortOptions.value = [
+      { label: '默认排序', value: 'default' },
+      { label: '价格从低到高', value: 'price_asc' },
+      { label: '价格从高到低', value: 'price_desc' },
+      { label: '评分从高到低', value: 'rating_desc' },
+      { label: '时长从短到长', value: 'duration_asc' },
+      { label: '时长从长到短', value: 'duration_desc' }
+    ]
   } catch {
     ElMessage.error('获取服务列表失败')
   } finally {
@@ -163,14 +165,7 @@ const resetFilters = () => {
 }
 
 const getServiceImage = (service: Service) => {
-  const images: Record<string, string> = {
-    beauty: '🛁',
-    health: '🏥',
-    boarding: '🏠',
-    food: '🍖',
-    training: '🎓'
-  }
-  return images[service.category || ''] || '🐾'
+  return '🐾'
 }
 
 const formatDuration = (minutes: number) => {

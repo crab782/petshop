@@ -171,14 +171,7 @@ const getPetImage = (pet: Pet) => {
   if (pet.avatar) {
     return pet.avatar
   }
-  // 默认宠物图片
-  const defaultImages: Record<string, string> = {
-    '狗': 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20dog%20portrait%2C%20professional%20pet%20photography&image_size=square',
-    '猫': 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20cat%20portrait%2C%20professional%20pet%20photography&image_size=square',
-    '鸟类': 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=colorful%20bird%20portrait%2C%20professional%20pet%20photography&image_size=square',
-    '小宠物': 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20small%20pet%20portrait%2C%20professional%20pet%20photography&image_size=square'
-  }
-  return defaultImages[pet.type] || 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20pet%20portrait%2C%20professional%20pet%20photography&image_size=square'
+  return 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20pet%20portrait%2C%20professional%20pet%20photography&image_size=square'
 }
 
 onMounted(() => {

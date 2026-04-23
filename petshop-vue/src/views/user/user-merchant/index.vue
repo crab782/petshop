@@ -40,7 +40,7 @@ const ratingOptions = [
 ]
 
 const filteredMerchants = computed(() => {
-  let list = [...merchantList.value]
+  const list = [...merchantList.value]
 
   if (searchForm.sortBy === 'rating_desc') {
     list.sort((a, b) => (b.rating || 0) - (a.rating || 0))

@@ -14,7 +14,7 @@
   - `programmatic` TR-1.2: 确认package.json中无测试相关依赖
 - **Notes**: 确保不影响项目的正常功能
 
-## [ ] Task 2: 移除mock模拟后端的配置
+## [x] Task 2: 移除mock模拟后端的配置
 - **Priority**: P0
 - **Depends On**: Task 1
 - **Description**:
@@ -28,7 +28,7 @@
   - `programmatic` TR-2.2: 确认使用真实后端API
 - **Notes**: 确保后端API可访问
 
-## [ ] Task 3: 移除硬编码的数据
+## [x] Task 3: 移除硬编码的数据
 - **Priority**: P0
 - **Depends On**: Task 2
 - **Description**:
@@ -41,7 +41,7 @@
   - `programmatic` TR-3.2: 确认数据从API获取
 - **Notes**: 确保不影响项目的正常功能
 
-## [ ] Task 4: 检查build和dev命令
+## [x] Task 4: 检查build和dev命令
 - **Priority**: P0
 - **Depends On**: Task 3
 - **Description**:

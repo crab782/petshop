@@ -13,49 +13,7 @@ const formRef = ref<FormInstance>()
 const editingId = ref<number | null>(null)
 const searchKeyword = ref('')
 
-// 硬编码测试数据 - 仅在开发环境使用
-const mockAddresses: Address[] = [
-  {
-    id: 1,
-    contactName: '张三',
-    phone: '13800138001',
-    province: '北京市',
-    city: '北京市',
-    district: '朝阳区',
-    detailAddress: '建国路88号SOHO现代城A座2301室',
-    isDefault: true
-  },
-  {
-    id: 2,
-    contactName: '李四',
-    phone: '13900139002',
-    province: '上海市',
-    city: '上海市',
-    district: '浦东新区',
-    detailAddress: '世纪大道100号环球金融中心28楼',
-    isDefault: false
-  },
-  {
-    id: 3,
-    contactName: '王五',
-    phone: '13700137003',
-    province: '广东省',
-    city: '广州市',
-    district: '天河区',
-    detailAddress: '天河路385号太古汇商场4楼',
-    isDefault: false
-  },
-  {
-    id: 4,
-    contactName: '赵六',
-    phone: '13600136004',
-    province: '浙江省',
-    city: '杭州市',
-    district: '西湖区',
-    detailAddress: '西湖大道128号西湖文化广场',
-    isDefault: false
-  }
-]
+
 
 const addressForm = reactive({
   contactName: '',
