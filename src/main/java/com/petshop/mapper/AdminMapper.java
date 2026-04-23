@@ -9,6 +9,6 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface AdminMapper extends BaseMapper<Admin> {
     
-    @Select("SELECT * FROM admin WHERE username = #{username}")
+    @Select("SELECT * FROM `admin` WHERE username = #{username}")
     Admin selectByUsername(@Param("username") String username);
 }

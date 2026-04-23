@@ -4,6 +4,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { ElLoading } from 'element-plus'
 
+vi.stubEnv('VITE_API_BASE_URL', '/api')
+
 config.global.plugins = []
 
 const vLoading = {
@@ -145,6 +147,80 @@ vi.mock('element-plus', async () => {
       })),
     },
   }
+})
+
+vi.mock('@element-plus/icons-vue', () => {
+  const icons = [
+    'Promotion', 'User', 'Goods', 'ShoppingCart', 'Document', 'Setting',
+    'House', 'Calendar', 'ChatDotRound', 'Star', 'Location', 'Phone',
+    'Message', 'Bell', 'Search', 'Plus', 'Edit', 'Delete', 'View',
+    'ArrowLeft', 'ArrowRight', 'Check', 'Close', 'Warning', 'InfoFilled',
+    'SuccessFilled', 'CircleCheck', 'CircleClose', 'More', 'Refresh',
+    'Download', 'Upload', 'Filter', 'Sort', 'Grid', 'List', 'Picture',
+    'VideoPlay', 'Microphone', 'Headset', 'Monitor', 'Cellphone',
+    'LocationInformation', 'Timer', 'AlarmClock', 'Watch', 'Lock',
+    'Unlock', 'Key', 'Fingerprint', 'IdCard', 'Postcard', 'Message',
+    'ChatLineRound', 'ChatRound', 'ChatSquare', 'Service', 'PhoneFilled',
+    'PhoneOutline', 'Link', 'Paperclip', 'Connection', 'Opportunity',
+    'Coin', 'Wallet', 'CreditCard', 'Money', 'ShoppingBag', 'ShoppingCartFull',
+    'Box', 'Files', 'DocumentCopy', 'Folder', 'FolderOpened', 'FolderAdd',
+    'FolderRemove', 'FolderChecked', 'FolderDelete', 'DataLine', 'DataBoard',
+    'PieChart', 'Histogram', 'TrendCharts', 'DataAnalysis', 'CirclePieChart',
+    'Compass', 'Position', 'MapLocation', 'Aim', 'Guide', 'LocationFilled',
+    'AddLocation', 'DeleteLocation', 'Place', 'School', 'OfficeBuilding',
+    'ToiletPaper', 'CaretRight', 'CaretLeft', 'CaretTop', 'CaretBottom',
+    'DCaret', 'SortDown', 'SortUp', 'Rank', 'Expand', 'Fold', 'Operation',
+    'Menu', 'FullScreen', 'ExitFullScreen', 'ZoomIn', 'ZoomOut', 'FullScreenExpand',
+    'FullScreenShrink', 'SwitchButton', 'TurnOff', 'Open', 'Setup',
+    'Tools', 'Hide', 'Show', 'ViewHidden', 'Visible', 'Invisible',
+    'Loading', 'LoadingFilled', 'CircleCheckFilled', 'CircleCloseFilled',
+    'WarningFilled', 'QuestionFilled', 'InfoFilled', 'RemoveFilled',
+    'AddFilled', 'PositionFilled', 'StarFilled', 'GoodsFilled', 'MessageFilled',
+    'BellFilled', 'CalendarFilled', 'CameraFilled', 'CollectionFilled',
+    'EditFilled', 'FlagFilled', 'HomeFilled', 'MenuFilled', 'MicFilled',
+    'PictureFilled', 'PromotionFilled', 'SettingFilled', 'ShopFilled',
+    'SuitcaseFilled', 'TicketFilled', 'TrendChartsFilled', 'UserFilled',
+    'VideoCameraFilled', 'WalletFilled', 'WarnTriangleFilled', 'WindPower',
+    'Sunny', 'Sunrise', 'Sunset', 'Moon', 'Cloudy', 'CloudyAndSun',
+    'PartlyCloudy', 'SunrisePng', 'Drizzling', 'HeavyRain', 'Lightning',
+    'LightningFilled', 'Mist', 'Snowflake', 'Sleet', 'Hail', 'Smog',
+    'Goblet', 'GobletFull', 'GobletSquare', 'GobletSquareFull', 'Refrigerator',
+    'Grape', 'Watermelon', 'Cherry', 'Apple', 'Pear', 'Orange', 'Coffee',
+    'IceCream', 'IceCreamRound', 'IceCreamSquare', 'Lollipop', 'PotatoStrips',
+    'Chicken', 'Drumstick', 'Burger', 'KnifeFork', 'Sugar', 'Dessert',
+    'IceDrink', 'HotDrink', 'CoffeeCup', 'TakeawayBox', 'Dish', 'DishDot',
+    'Food', 'FoodFilled', 'NoSmoking', 'Smoking', 'Trophy', 'Medal',
+    'MedalFilled', 'FirstAidKit', 'Basketball', 'Football', 'Volleyball',
+    'Tennis', 'Baseball', 'TableTennis', 'Badminton', 'Bowling', 'Bicycle',
+    'Van', 'Truck', 'CarFilled', 'Car', 'Ship', 'ShipFilled', 'Plane',
+    'PlaneFilled', 'Rocket', 'RocketFilled', 'RocketLaunch', 'RocketLaunchFilled',
+    'BicycleFilled', 'Train', 'TrainFilled', 'Bus', 'BusFilled', 'Taxi',
+    'TaxiFilled', 'Motorcycle', 'MotorcycleFilled', 'Cruiser', 'CruiserFilled',
+    'Sailboat', 'SailboatFilled', 'Helicopter', 'HelicopterFilled', 'Scooter',
+    'ScooterFilled', 'Ebike', 'EbikeFilled', 'ShipLine', 'ShipLineFilled',
+    'TrainLine', 'TrainLineFilled', 'BusLine', 'BusLineFilled', 'TaxiLine',
+    'TaxiLineFilled', 'CarLine', 'CarLineFilled', 'VanLine', 'VanLineFilled',
+    'TruckLine', 'TruckLineFilled', 'BicycleLine', 'BicycleLineFilled',
+    'MotorcycleLine', 'MotorcycleLineFilled', 'ShipFilledLine', 'ShipFilledLineFilled',
+    'PlaneFilledLine', 'PlaneFilledLineFilled', 'RocketFilledLine', 'RocketFilledLineFilled',
+    'RocketLaunchFilledLine', 'RocketLaunchFilledLineFilled', 'BicycleFilledLine',
+    'BicycleFilledLineFilled', 'TrainFilledLine', 'TrainFilledLineFilled',
+    'BusFilledLine', 'BusFilledLineFilled', 'TaxiFilledLine', 'TaxiFilledLineFilled',
+    'MotorcycleFilledLine', 'MotorcycleFilledLineFilled', 'CruiserFilledLine',
+    'CruiserFilledLineFilled', 'SailboatFilledLine', 'SailboatFilledLineFilled',
+    'HelicopterFilledLine', 'HelicopterFilledLineFilled', 'ScooterFilledLine',
+    'ScooterFilledLineFilled', 'EbikeFilledLine', 'EbikeFilledLineFilled',
+  ]
+
+  const mockComponents: any = {}
+  icons.forEach(icon => {
+    mockComponents[icon] = {
+      name: icon,
+      template: `<svg class="icon-${icon.toLowerCase()}" />`,
+    }
+  })
+
+  return mockComponents
 })
 
 vi.mock('vue-router', async () => {

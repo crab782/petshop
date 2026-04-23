@@ -61,6 +61,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -113,6 +115,15 @@ public class AdminApiController {
     @Autowired
     private OperationLogService operationLogService;
 
+    private boolean isAdminAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            return authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_admin"));
+        }
+        return false;
+    }
+
     @Operation(summary = "获取用户列表", description = "获取系统中所有用户的列表")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "成功获取用户列表"),
@@ -120,7 +131,7 @@ public class AdminApiController {
     })
     @GetMapping("/users")
     public ResponseEntity<List<User>> getUsers(HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         List<User> users = userService.findAll();
@@ -136,7 +147,7 @@ public class AdminApiController {
     public ResponseEntity<Void> deleteUser(
             @Parameter(description = "用户ID", required = true) @PathVariable Integer id, 
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         userService.delete(id);
@@ -153,7 +164,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getUserDetail(
             @Parameter(description = "用户ID", required = true) @PathVariable Integer id,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.<Map<String, Object>>error(401, "Unauthorized"));
         }
@@ -216,7 +227,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -256,7 +267,7 @@ public class AdminApiController {
                     content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3], \"status\": \"active\"}"))
             )
             @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -312,7 +323,7 @@ public class AdminApiController {
                     content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
             )
             @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -349,7 +360,7 @@ public class AdminApiController {
     })
     @GetMapping("/merchants")
     public ResponseEntity<List<Merchant>> getMerchants(HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         List<Merchant> merchants = merchantService.findAll();
@@ -372,7 +383,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -402,7 +413,7 @@ public class AdminApiController {
     public ResponseEntity<Void> deleteMerchant(
             @Parameter(description = "商家ID", required = true) @PathVariable Integer id, 
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         merchantService.delete(id);
@@ -419,7 +430,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<MerchantDetailDTO>> getMerchantDetail(
             @Parameter(description = "商家ID", required = true) @PathVariable Integer id, 
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -446,7 +457,7 @@ public class AdminApiController {
                     content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3], \"status\": \"approved\"}"))
             )
             @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -489,7 +500,7 @@ public class AdminApiController {
                     content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
             )
             @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -524,7 +535,7 @@ public class AdminApiController {
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "搜索关键字（商家名称或联系人）") @RequestParam(required = false) String keyword,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -558,7 +569,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -587,7 +598,7 @@ public class AdminApiController {
     })
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<DashboardStatsDTO>> getDashboardStats(HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -617,7 +628,7 @@ public class AdminApiController {
             @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -647,7 +658,7 @@ public class AdminApiController {
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "状态筛选") @RequestParam(required = false) String status,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -682,7 +693,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "公告信息", required = true)
             @RequestBody Announcement announcement,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -703,7 +714,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "公告信息", required = true)
             @RequestBody Announcement announcement,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -727,7 +738,7 @@ public class AdminApiController {
     public ResponseEntity<Void> deleteAnnouncement(
             @Parameter(description = "公告ID", required = true) @PathVariable Integer id,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
@@ -749,7 +760,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<Announcement>> publishAnnouncement(
             @Parameter(description = "公告ID", required = true) @PathVariable Integer id,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -773,7 +784,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<Announcement>> unpublishAnnouncement(
             @Parameter(description = "公告ID", required = true) @PathVariable Integer id,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -801,7 +812,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, Object> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -839,7 +850,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, Object> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -877,7 +888,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, Object> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -909,7 +920,7 @@ public class AdminApiController {
     @GetMapping("/system/settings")
     public ResponseEntity<ApiResponse<SystemSettings>> getSystemSettings(
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -928,7 +939,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "系统设置信息", required = true)
             @RequestBody SystemSettings settings,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -945,7 +956,7 @@ public class AdminApiController {
     @GetMapping("/system/settings/email")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getEmailSettings(
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -968,7 +979,7 @@ public class AdminApiController {
     @GetMapping("/system/settings/sms")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSmsSettings(
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -990,7 +1001,7 @@ public class AdminApiController {
     @GetMapping("/system/settings/payment")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPaymentSettings(
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -1020,7 +1031,7 @@ public class AdminApiController {
     @GetMapping("/system/settings/upload")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getUploadSettings(
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -1044,7 +1055,7 @@ public class AdminApiController {
             @Parameter(description = "页码，从0开始") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "未授权访问"));
         }
@@ -1077,7 +1088,7 @@ public class AdminApiController {
             @Parameter(description = "商家ID") @RequestParam(required = false) Integer merchantId,
             @Parameter(description = "商品分类") @RequestParam(required = false) String category,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1111,7 +1122,7 @@ public class AdminApiController {
     @GetMapping("/products/{id}")
     public ResponseEntity<ApiResponse<Product>> getProductDetail(
             @Parameter(description = "商品ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1137,7 +1148,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "商品信息", required = true)
             @RequestBody Product product,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1172,7 +1183,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1208,7 +1219,7 @@ public class AdminApiController {
     @DeleteMapping("/products/{id}")
     public ResponseEntity<Void> deleteProduct(
             @Parameter(description = "商品ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
@@ -1235,7 +1246,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, Object> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1284,7 +1295,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, Object> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1321,7 +1332,7 @@ public class AdminApiController {
             @Parameter(description = "服务状态（enabled/disabled）") @RequestParam(required = false) String status,
             @Parameter(description = "商家ID") @RequestParam(required = false) Integer merchantId,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1360,7 +1371,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1396,7 +1407,7 @@ public class AdminApiController {
     @DeleteMapping("/services/{id}")
     public ResponseEntity<Void> deleteService(
             @Parameter(description = "服务ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
@@ -1423,7 +1434,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, Object> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1480,7 +1491,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, Object> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1524,7 +1535,7 @@ public class AdminApiController {
             @Parameter(description = "商家ID") @RequestParam(required = false) Integer merchantId,
             @Parameter(description = "评价状态（approved/rejected/pending）") @RequestParam(required = false) String status,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1562,7 +1573,7 @@ public class AdminApiController {
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "搜索关键字") @RequestParam(required = false) String keyword,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1596,7 +1607,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1627,7 +1638,7 @@ public class AdminApiController {
     @DeleteMapping("/reviews/{id}")
     public ResponseEntity<Void> deleteReview(
             @Parameter(description = "评价ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
@@ -1649,7 +1660,7 @@ public class AdminApiController {
     @PutMapping("/reviews/{id}/approve")
     public ResponseEntity<ApiResponse<Review>> approveReview(
             @Parameter(description = "评价ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1674,7 +1685,7 @@ public class AdminApiController {
     @PutMapping("/reviews/{id}/violation")
     public ResponseEntity<ApiResponse<Review>> markReviewViolation(
             @Parameter(description = "评价ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1703,7 +1714,7 @@ public class AdminApiController {
                     content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3], \"status\": \"approved\"}"))
             )
             @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1746,7 +1757,7 @@ public class AdminApiController {
                     content = @Content(schema = @Schema(example = "{\"ids\": [1, 2, 3]}"))
             )
             @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1777,7 +1788,7 @@ public class AdminApiController {
     })
     @GetMapping("/system/config")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSystemConfig(HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1820,7 +1831,7 @@ public class AdminApiController {
                     content = @Content(schema = @Schema(example = "{\"siteName\": \"宠物家园\", \"contactEmail\": \"support@petshop.com\"}"))
             )
             @RequestBody Map<String, Object> request, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1900,7 +1911,7 @@ public class AdminApiController {
             @Parameter(description = "开始日期（格式：yyyy-MM-dd）") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期（格式：yyyy-MM-dd）") @RequestParam(required = false) String endDate,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1951,7 +1962,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "活动信息", required = true)
             @RequestBody Activity activity,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -1978,7 +1989,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "活动信息", required = true)
             @RequestBody Activity activity,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2007,7 +2018,7 @@ public class AdminApiController {
     @DeleteMapping("/activities/{id}")
     public ResponseEntity<Void> deleteActivity(
             @Parameter(description = "活动ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
@@ -2036,7 +2047,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2078,7 +2089,7 @@ public class AdminApiController {
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "搜索关键字") @RequestParam(required = false) String keyword,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2112,7 +2123,7 @@ public class AdminApiController {
             )
             @RequestBody Map<String, String> request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2147,7 +2158,7 @@ public class AdminApiController {
             @Parameter(description = "任务类型") @RequestParam(required = false) String type,
             @Parameter(description = "任务状态") @RequestParam(required = false) String status,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2176,7 +2187,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "任务信息", required = true)
             @RequestBody ScheduledTask task,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2208,7 +2219,7 @@ public class AdminApiController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "任务信息", required = true)
             @RequestBody ScheduledTask task,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2237,7 +2248,7 @@ public class AdminApiController {
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Void> deleteTask(
             @Parameter(description = "任务ID", required = true) @PathVariable Integer id, HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
@@ -2261,7 +2272,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> executeTask(
             @Parameter(description = "任务ID", required = true) @PathVariable Integer id,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2294,7 +2305,7 @@ public class AdminApiController {
             @Parameter(description = "页码，从1开始") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2322,7 +2333,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<Role>> addRole(
             @RequestBody RoleRequest request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2348,7 +2359,7 @@ public class AdminApiController {
             @Parameter(description = "角色ID", required = true) @PathVariable Integer id,
             @RequestBody RoleRequest request,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2378,7 +2389,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<Void>> deleteRole(
             @Parameter(description = "角色ID", required = true) @PathVariable Integer id,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2400,7 +2411,7 @@ public class AdminApiController {
     })
     @GetMapping("/permissions")
     public ResponseEntity<ApiResponse<List<Permission>>> getPermissions(HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2423,7 +2434,7 @@ public class AdminApiController {
             @Parameter(description = "开始日期(yyyy-MM-dd)") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期(yyyy-MM-dd)") @RequestParam(required = false) String endDate,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2466,7 +2477,7 @@ public class AdminApiController {
     public ResponseEntity<ApiResponse<Void>> deleteOperationLog(
             @Parameter(description = "日志ID", required = true) @PathVariable Integer id,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2488,7 +2499,7 @@ public class AdminApiController {
     })
     @DeleteMapping("/operation-logs")
     public ResponseEntity<ApiResponse<Map<String, Object>>> clearOperationLogs(HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }
@@ -2510,7 +2521,7 @@ public class AdminApiController {
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize,
             @Parameter(description = "搜索关键字") @RequestParam(required = false) String keyword,
             HttpSession session) {
-        if (session.getAttribute("admin") == null) {
+        if (!isAdminAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Unauthorized"));
         }

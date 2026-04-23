@@ -115,9 +115,10 @@ class AuthServiceTest {
                     .password(testPassword)
                     .build();
 
-            when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testUser);
-            when(passwordEncoder.matches(testPassword, testEncodedPassword)).thenReturn(true);
+            when(userMapper.selectByPhone(testPhone)).thenReturn(testUser);
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn(testPhone);
             when(jwtUtils.generateJwtToken(authentication)).thenReturn(testJwtToken);
 
             LoginResponse response = authService.login(request);
@@ -129,8 +130,7 @@ class AuthServiceTest {
             assertEquals(testUser.getUsername(), response.getUser().getUsername());
             assertEquals("user", response.getUser().getRole());
 
-            verify(userMapper).selectOne(any(LambdaQueryWrapper.class));
-            verify(passwordEncoder).matches(testPassword, testEncodedPassword);
+            verify(userMapper).selectByPhone(testPhone);
             verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
             verify(jwtUtils).generateJwtToken(authentication);
         }
@@ -143,7 +143,11 @@ class AuthServiceTest {
                     .password(testPassword)
                     .build();
 
-            when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn("99999999999");
+            when(userMapper.selectByPhone("99999999999")).thenReturn(null);
+            when(userMapper.selectByEmail("99999999999")).thenReturn(null);
 
             ResourceNotFoundException exception = assertThrows(
                     ResourceNotFoundException.class,
@@ -151,8 +155,8 @@ class AuthServiceTest {
             );
 
             assertTrue(exception.getMessage().contains("User not found"));
-            verify(userMapper).selectOne(any(LambdaQueryWrapper.class));
-            verify(passwordEncoder, never()).matches(anyString(), anyString());
+            verify(userMapper).selectByPhone("99999999999");
+            verify(userMapper).selectByEmail("99999999999");
         }
 
         @Test
@@ -163,18 +167,16 @@ class AuthServiceTest {
                     .password("wrongpassword")
                     .build();
 
-            when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testUser);
-            when(passwordEncoder.matches("wrongpassword", testEncodedPassword)).thenReturn(false);
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                    .thenThrow(new org.springframework.security.authentication.BadCredentialsException("Bad credentials"));
 
-            BadRequestException exception = assertThrows(
-                    BadRequestException.class,
+            org.springframework.security.authentication.BadCredentialsException exception = assertThrows(
+                    org.springframework.security.authentication.BadCredentialsException.class,
                     () -> authService.login(request)
             );
 
-            assertEquals("Invalid password", exception.getMessage());
-            verify(userMapper).selectOne(any(LambdaQueryWrapper.class));
-            verify(passwordEncoder).matches("wrongpassword", testEncodedPassword);
-            verify(authenticationManager, never()).authenticate(any());
+            assertTrue(exception.getMessage().contains("Bad credentials"));
+            verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         }
     }
 
@@ -331,8 +333,9 @@ class AuthServiceTest {
                     .build();
 
             when(merchantMapper.selectByPhone(testPhone)).thenReturn(testMerchant);
-            when(passwordEncoder.matches(testPassword, testEncodedPassword)).thenReturn(true);
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn(testPhone);
             when(jwtUtils.generateJwtToken(authentication)).thenReturn(testJwtToken);
 
             LoginResponse response = authService.merchantLogin(request);
@@ -345,7 +348,6 @@ class AuthServiceTest {
             assertEquals("merchant", response.getUser().getRole());
 
             verify(merchantMapper).selectByPhone(testPhone);
-            verify(passwordEncoder).matches(testPassword, testEncodedPassword);
         }
 
         @Test
@@ -356,10 +358,11 @@ class AuthServiceTest {
                     .password(testPassword)
                     .build();
 
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn("merchant@example.com");
             when(merchantMapper.selectByPhone("merchant@example.com")).thenReturn(null);
             when(merchantMapper.selectByEmail("merchant@example.com")).thenReturn(testMerchant);
-            when(passwordEncoder.matches(testPassword, testEncodedPassword)).thenReturn(true);
-            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
             when(jwtUtils.generateJwtToken(authentication)).thenReturn(testJwtToken);
 
             LoginResponse response = authService.merchantLogin(request);
@@ -380,6 +383,9 @@ class AuthServiceTest {
                     .password(testPassword)
                     .build();
 
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn("99999999999");
             when(merchantMapper.selectByPhone("99999999999")).thenReturn(null);
             when(merchantMapper.selectByEmail("99999999999")).thenReturn(null);
 
@@ -400,6 +406,9 @@ class AuthServiceTest {
                     .password(testPassword)
                     .build();
 
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn(testPhone);
             when(merchantMapper.selectByPhone(testPhone)).thenReturn(testMerchant);
 
             BadRequestException exception = assertThrows(
@@ -420,6 +429,9 @@ class AuthServiceTest {
                     .password(testPassword)
                     .build();
 
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn(testPhone);
             when(merchantMapper.selectByPhone(testPhone)).thenReturn(testMerchant);
 
             BadRequestException exception = assertThrows(
@@ -438,15 +450,15 @@ class AuthServiceTest {
                     .password("wrongpassword")
                     .build();
 
-            when(merchantMapper.selectByPhone(testPhone)).thenReturn(testMerchant);
-            when(passwordEncoder.matches("wrongpassword", testEncodedPassword)).thenReturn(false);
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                    .thenThrow(new org.springframework.security.authentication.BadCredentialsException("Bad credentials"));
 
-            BadRequestException exception = assertThrows(
-                    BadRequestException.class,
+            org.springframework.security.authentication.BadCredentialsException exception = assertThrows(
+                    org.springframework.security.authentication.BadCredentialsException.class,
                     () -> authService.merchantLogin(request)
             );
 
-            assertEquals("Invalid password", exception.getMessage());
+            assertTrue(exception.getMessage().contains("Bad credentials"));
         }
     }
 
@@ -583,8 +595,9 @@ class AuthServiceTest {
                     .build();
 
             when(adminMapper.selectByUsername("admin")).thenReturn(testAdmin);
-            when(passwordEncoder.matches(testPassword, testEncodedPassword)).thenReturn(true);
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn("admin");
             when(jwtUtils.generateJwtToken(authentication)).thenReturn(testJwtToken);
 
             LoginResponse response = authService.adminLogin(request);
@@ -597,7 +610,6 @@ class AuthServiceTest {
             assertEquals("admin", response.getUser().getRole());
 
             verify(adminMapper).selectByUsername("admin");
-            verify(passwordEncoder).matches(testPassword, testEncodedPassword);
         }
 
         @Test
@@ -608,6 +620,9 @@ class AuthServiceTest {
                     .password(testPassword)
                     .build();
 
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+            when(authentication.getPrincipal()).thenReturn(userDetails);
+            when(userDetails.getUsername()).thenReturn("nonexistent");
             when(adminMapper.selectByUsername("nonexistent")).thenReturn(null);
 
             ResourceNotFoundException exception = assertThrows(
@@ -626,15 +641,15 @@ class AuthServiceTest {
                     .password("wrongpassword")
                     .build();
 
-            when(adminMapper.selectByUsername("admin")).thenReturn(testAdmin);
-            when(passwordEncoder.matches("wrongpassword", testEncodedPassword)).thenReturn(false);
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                    .thenThrow(new org.springframework.security.authentication.BadCredentialsException("Bad credentials"));
 
-            BadRequestException exception = assertThrows(
-                    BadRequestException.class,
+            org.springframework.security.authentication.BadCredentialsException exception = assertThrows(
+                    org.springframework.security.authentication.BadCredentialsException.class,
                     () -> authService.adminLogin(request)
             );
 
-            assertEquals("Invalid password", exception.getMessage());
+            assertTrue(exception.getMessage().contains("Bad credentials"));
         }
     }
 

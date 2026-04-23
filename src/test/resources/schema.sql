@@ -176,8 +176,11 @@ CREATE TABLE IF NOT EXISTS "notification" (
 CREATE TABLE IF NOT EXISTS "merchant_settings" (
     id INT AUTO_INCREMENT PRIMARY KEY,
     merchant_id INT,
-    business_hours VARCHAR(100),
-    notification_settings TEXT,
+    is_open BOOLEAN DEFAULT TRUE,
+    appointment_notification BOOLEAN DEFAULT TRUE,
+    order_notification BOOLEAN DEFAULT TRUE,
+    review_notification BOOLEAN DEFAULT TRUE,
+    notification_type VARCHAR(20) DEFAULT 'email',
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );

@@ -54,23 +54,22 @@ public class AuthService {
     @Transactional
     public LoginResponse login(LoginRequest request) {
         String loginIdentifier = request.getLoginIdentifier();
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getPhone, loginIdentifier);
-        User user = userRepository.selectOne(wrapper);
-
-        if (user == null) {
-            throw new ResourceNotFoundException("User not found, please use phone number to login");
-        }
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadRequestException("Invalid password");
-        }
-
+        
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getPhone(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(loginIdentifier, request.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        User user = userRepository.selectByPhone(userDetails.getUsername());
+        if (user == null) {
+            user = userRepository.selectByEmail(userDetails.getUsername());
+        }
+        
+        if (user == null) {
+            throw new ResourceNotFoundException("User not found");
+        }
 
         UserDTO userDTO = convertToDTO(user);
         return LoginResponse.builder()
@@ -145,9 +144,16 @@ public class AuthService {
     public LoginResponse merchantLogin(LoginRequest request) {
         String loginIdentifier = request.getLoginIdentifier();
 
-        Merchant merchant = merchantRepository.selectByPhone(loginIdentifier);
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginIdentifier, request.getPassword()));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        Merchant merchant = merchantRepository.selectByPhone(userDetails.getUsername());
         if (merchant == null) {
-            merchant = merchantRepository.selectByEmail(loginIdentifier);
+            merchant = merchantRepository.selectByEmail(userDetails.getUsername());
         }
 
         if (merchant == null) {
@@ -157,16 +163,6 @@ public class AuthService {
         if (!"approved".equals(merchant.getStatus())) {
             throw new BadRequestException("Merchant account is not approved. Current status: " + merchant.getStatus());
         }
-
-        if (!passwordEncoder.matches(request.getPassword(), merchant.getPassword())) {
-            throw new BadRequestException("Invalid password");
-        }
-
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(merchant.getPhone(), request.getPassword()));
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
 
         UserDTO userDTO = UserDTO.builder()
                 .id(merchant.getId())
@@ -187,21 +183,18 @@ public class AuthService {
     public LoginResponse adminLogin(LoginRequest request) {
         String loginIdentifier = request.getLoginIdentifier();
 
-        Admin admin = adminRepository.selectByUsername(loginIdentifier);
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginIdentifier, request.getPassword()));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        Admin admin = adminRepository.selectByUsername(userDetails.getUsername());
 
         if (admin == null) {
             throw new ResourceNotFoundException("Admin not found");
         }
-
-        if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
-            throw new BadRequestException("Invalid password");
-        }
-
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(admin.getUsername(), request.getPassword()));
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
 
         UserDTO userDTO = UserDTO.builder()
                 .id(admin.getId())

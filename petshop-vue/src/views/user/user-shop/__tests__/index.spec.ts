@@ -33,21 +33,23 @@ const mockUserApi = {
     data: createMerchant({ id: 1, name: '测试宠物店' })
   })),
   getMerchantServices: vi.fn(() => Promise.resolve(createServiceList(3))),
+  getMerchantProducts: vi.fn(() => Promise.resolve(createProductList(3))),
   getMerchantReviews: vi.fn(() => Promise.resolve([createMerchantReview()])),
   getFavorites: vi.fn(() => Promise.resolve([])),
-  getProducts: vi.fn(() => Promise.resolve(createProductList(3))),
   addFavorite: vi.fn(() => Promise.resolve({ data: { id: 1, merchantId: 1 } })),
   removeFavorite: vi.fn(() => Promise.resolve({ data: null })),
+  addToCart: vi.fn(() => Promise.resolve({ data: { id: 1 } })),
 }
 
 vi.mock('@/api/user', () => ({
   getMerchantInfo: (...args: any[]) => mockUserApi.getMerchantInfo(...args),
   getMerchantServices: (...args: any[]) => mockUserApi.getMerchantServices(...args),
+  getMerchantProducts: (...args: any[]) => mockUserApi.getMerchantProducts(...args),
   getMerchantReviews: (...args: any[]) => mockUserApi.getMerchantReviews(...args),
   getFavorites: (...args: any[]) => mockUserApi.getFavorites(...args),
-  getProducts: (...args: any[]) => mockUserApi.getProducts(...args),
   addFavorite: (...args: any[]) => mockUserApi.addFavorite(...args),
   removeFavorite: (...args: any[]) => mockUserApi.removeFavorite(...args),
+  addToCart: (...args: any[]) => mockUserApi.addToCart(...args),
 }))
 
 describe('UserShop', () => {
@@ -59,14 +61,17 @@ describe('UserShop', () => {
     mockUserApi.getMerchantServices.mockImplementation(() =>
       Promise.resolve(createServiceList(3))
     )
+    mockUserApi.getMerchantProducts.mockImplementation(() =>
+      Promise.resolve(createProductList(3))
+    )
     mockUserApi.getMerchantReviews.mockImplementation(() =>
       Promise.resolve([createMerchantReview()])
     )
     mockUserApi.getFavorites.mockImplementation(() =>
       Promise.resolve([])
     )
-    mockUserApi.getProducts.mockImplementation(() =>
-      Promise.resolve(createProductList(3))
+    mockUserApi.addToCart.mockImplementation(() =>
+      Promise.resolve({ data: { id: 1 } })
     )
   })
 

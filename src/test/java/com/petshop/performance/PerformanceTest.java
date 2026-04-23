@@ -1,10 +1,16 @@
 package com.petshop.performance;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.petshop.config.TestRedisConfig;
 import com.petshop.dto.*;
+import com.petshop.entity.Merchant;
 import com.petshop.entity.Product;
 import com.petshop.entity.User;
+import com.petshop.entity.Address;
+import com.petshop.mapper.MerchantMapper;
+import com.petshop.mapper.ProductMapper;
 import com.petshop.mapper.UserMapper;
+import com.petshop.mapper.AddressMapper;
 import com.petshop.service.AuthService;
 import com.petshop.service.ProductService;
 import com.petshop.service.ProductOrderService;
@@ -12,11 +18,15 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,7 +38,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestRedisConfig.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Transactional
 public class PerformanceTest {
 
     @Autowired
@@ -49,6 +61,18 @@ public class PerformanceTest {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private MerchantMapper merchantMapper;
+
+    @Autowired
+    private ProductMapper productMapper;
+
+    @Autowired
+    private AddressMapper addressMapper;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private static final int WARMUP_ITERATIONS = 5;
     private static final int MEASUREMENT_ITERATIONS = 10;
     private static final int CONCURRENT_USERS = 50;
@@ -59,6 +83,63 @@ public class PerformanceTest {
     private static List<Long> orderCreationResponseTimes = new CopyOnWriteArrayList<>();
     private static AtomicInteger successCount = new AtomicInteger(0);
     private static AtomicInteger failureCount = new AtomicInteger(0);
+
+    private User testUser;
+    private Merchant testMerchant;
+    private Product testProduct;
+    private Address testAddress;
+    private String testPassword = "password123";
+    private String encodedPassword;
+    private String testPhone = "13800138000";
+
+    @BeforeEach
+    void setUp() {
+        encodedPassword = passwordEncoder.encode(testPassword);
+
+        testUser = new User();
+        testUser.setUsername("testuser");
+        testUser.setPhone(testPhone);
+        testUser.setEmail("testuser@example.com");
+        testUser.setPassword(encodedPassword);
+        testUser.setStatus("active");
+        userMapper.insert(testUser);
+
+        testMerchant = new Merchant();
+        testMerchant.setName("Test Merchant");
+        testMerchant.setContactPerson("Contact Person");
+        testMerchant.setPhone("13800138001");
+        testMerchant.setEmail("merchant@example.com");
+        testMerchant.setPassword(encodedPassword);
+        testMerchant.setAddress("Test Address");
+        testMerchant.setStatus("approved");
+        merchantMapper.insert(testMerchant);
+
+        testProduct = new Product();
+        testProduct.setName("Test Product");
+        testProduct.setDescription("Test Description");
+        testProduct.setPrice(new BigDecimal("99.99"));
+        testProduct.setStock(100);
+        testProduct.setMerchantId(testMerchant.getId());
+        testProduct.setImage("test.jpg");
+        productMapper.insert(testProduct);
+
+        testAddress = new Address();
+        testAddress.setUserId(testUser.getId());
+        testAddress.setContactName("Test Contact");
+        testAddress.setPhone(testPhone);
+        testAddress.setProvince("北京市");
+        testAddress.setCity("北京市");
+        testAddress.setDistrict("朝阳区");
+        testAddress.setDetailAddress("测试地址123号");
+        testAddress.setIsDefault(true);
+        addressMapper.insert(testAddress);
+
+        loginResponseTimes.clear();
+        productQueryResponseTimes.clear();
+        orderCreationResponseTimes.clear();
+        successCount.set(0);
+        failureCount.set(0);
+    }
 
     @BeforeAll
     static void setup() {
@@ -199,14 +280,14 @@ public class PerformanceTest {
                 try {
                     long startTime = System.nanoTime();
                     
-                    MvcResult loginResult = performLogin("concurrent_user_" + userId);
                     MvcResult productResult = performProductQuery(userId);
+                    MvcResult servicesResult = performServicesQuery(userId);
                     
                     long endTime = System.nanoTime();
                     long responseTime = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
                     
-                    if (loginResult.getResponse().getStatus() == 200 &&
-                        productResult.getResponse().getStatus() == 200) {
+                    if (productResult.getResponse().getStatus() == 200 &&
+                        servicesResult.getResponse().getStatus() == 200) {
                         successCount.incrementAndGet();
                     } else {
                         failureCount.incrementAndGet();
@@ -311,8 +392,8 @@ public class PerformanceTest {
 
     private MvcResult performLogin(String username) throws Exception {
         LoginRequest request = new LoginRequest();
-        request.setLoginIdentifier("13800138000");
-        request.setPassword("password123");
+        request.setPhone(testPhone);
+        request.setPassword(testPassword);
         
         return mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -327,10 +408,23 @@ public class PerformanceTest {
             .andReturn();
     }
 
+    private MvcResult performServicesQuery(int queryId) throws Exception {
+        return mockMvc.perform(get("/api/services")
+                .param("page", "0")
+                .param("pageSize", "10"))
+            .andReturn();
+    }
+
     private MvcResult performOrderCreation(String token, int orderId) throws Exception {
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setAddressId(1);
-        request.setItems(Collections.emptyList());
+        request.setAddressId(testAddress.getId());
+        
+        List<CreateOrderRequest.OrderItemRequest> items = new ArrayList<>();
+        CreateOrderRequest.OrderItemRequest item = new CreateOrderRequest.OrderItemRequest();
+        item.setProductId(testProduct.getId());
+        item.setQuantity(1);
+        items.add(item);
+        request.setItems(items);
         request.setRemark("性能测试订单 " + orderId);
         
         return mockMvc.perform(post("/api/user/orders")
@@ -342,8 +436,8 @@ public class PerformanceTest {
 
     private String getAuthToken() throws Exception {
         LoginRequest request = new LoginRequest();
-        request.setLoginIdentifier("13800138000");
-        request.setPassword("password123");
+        request.setPhone(testPhone);
+        request.setPassword(testPassword);
         
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

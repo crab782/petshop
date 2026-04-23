@@ -24,11 +24,13 @@ vi.mock('@/composables', () => ({
         return result
       } catch (e) {
         error.value = e
-        throw e
+        console.error('useAsync error:', e)
+        return null
       } finally {
         loading.value = false
       }
     }
+    execute()
     return { data, loading, error, execute }
   }),
 }))

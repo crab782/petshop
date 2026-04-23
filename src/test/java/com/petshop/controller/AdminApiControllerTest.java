@@ -1,6 +1,8 @@
 package com.petshop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.petshop.config.TestRedisConfig;
+import com.petshop.dto.ApiResponse;
 import com.petshop.dto.LoginRequest;
 import com.petshop.entity.Admin;
 import com.petshop.entity.Announcement;
@@ -11,12 +13,13 @@ import com.petshop.mapper.AnnouncementMapper;
 import com.petshop.mapper.MerchantMapper;
 import com.petshop.mapper.UserMapper;
 import com.petshop.TestDataInitializer;
+import com.petshop.security.JwtUtils;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,8 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestRedisConfig.class)
 @Transactional
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AdminApiControllerTest {
 
     @Autowired
@@ -59,7 +62,10 @@ class AdminApiControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private MockHttpSession adminSession;
+    @Autowired
+    private JwtUtils jwtUtils;
+
+    private String adminToken;
     private Admin testAdmin;
     private User testUser;
     private Merchant testMerchant;
@@ -108,13 +114,26 @@ class AdminApiControllerTest {
         pendingMerchant.setUpdatedAt(LocalDateTime.now());
         merchantMapper.insert(pendingMerchant);
 
-        adminSession = performAdminLogin("admin_test", "admin123");
+        adminToken = jwtUtils.generateTokenFromUsername("admin_test");
     }
 
-    private MockHttpSession performAdminLogin(String username, String password) throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("admin", username);
-        return session;
+    private String getAdminToken(String username, String password) throws Exception {
+        LoginRequest loginRequest = LoginRequest.builder()
+                .username(username)
+                .password(password)
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/auth/admin/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String responseBody = result.getResponse().getContentAsString();
+        ApiResponse response = objectMapper.readValue(responseBody, ApiResponse.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) response.getData();
+        return (String) data.get("token");
     }
 
     @Nested
@@ -216,7 +235,7 @@ class AdminApiControllerTest {
         @DisplayName("获取用户列表成功")
         void testGetUsersSuccess() throws Exception {
             mockMvc.perform(get("/api/admin/users")
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray())
                     .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
@@ -236,7 +255,7 @@ class AdminApiControllerTest {
         @DisplayName("获取用户详情成功")
         void testGetUserDetailSuccess() throws Exception {
             mockMvc.perform(get("/api/admin/users/" + testUser.getId())
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.user.username").value("user_test"))
@@ -250,7 +269,7 @@ class AdminApiControllerTest {
         @DisplayName("获取用户详情失败 - 用户不存在")
         void testGetUserDetailNotFound() throws Exception {
             mockMvc.perform(get("/api/admin/users/99999")
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value(404))
                     .andExpect(jsonPath("$.message").value("User not found"));
@@ -272,7 +291,7 @@ class AdminApiControllerTest {
             request.put("status", "disabled");
 
             mockMvc.perform(put("/api/admin/users/" + testUser.getId() + "/status")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -294,7 +313,7 @@ class AdminApiControllerTest {
             request.put("status", "active");
 
             mockMvc.perform(put("/api/admin/users/" + testUser.getId() + "/status")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -313,7 +332,7 @@ class AdminApiControllerTest {
             request.put("status", "invalid_status");
 
             mockMvc.perform(put("/api/admin/users/" + testUser.getId() + "/status")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -329,7 +348,7 @@ class AdminApiControllerTest {
             request.put("status", "active");
 
             mockMvc.perform(put("/api/admin/users/99999/status")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound())
@@ -360,7 +379,7 @@ class AdminApiControllerTest {
         @DisplayName("获取待审核商家列表成功")
         void testGetPendingMerchantsSuccess() throws Exception {
             mockMvc.perform(get("/api/admin/merchants/pending")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .param("page", "0")
                             .param("pageSize", "10"))
                     .andExpect(status().isOk())
@@ -382,7 +401,7 @@ class AdminApiControllerTest {
         @DisplayName("获取待审核商家列表 - 按关键字搜索")
         void testGetPendingMerchantsWithKeyword() throws Exception {
             mockMvc.perform(get("/api/admin/merchants/pending")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .param("page", "0")
                             .param("pageSize", "10")
                             .param("keyword", "Pending"))
@@ -400,7 +419,7 @@ class AdminApiControllerTest {
             request.put("reason", "资质审核通过");
 
             mockMvc.perform(put("/api/admin/merchants/" + pendingMerchant.getId() + "/audit")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -420,7 +439,7 @@ class AdminApiControllerTest {
             request.put("reason", "资质不符合要求");
 
             mockMvc.perform(put("/api/admin/merchants/" + pendingMerchant.getId() + "/audit")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -440,7 +459,7 @@ class AdminApiControllerTest {
             request.put("reason", "测试");
 
             mockMvc.perform(put("/api/admin/merchants/" + pendingMerchant.getId() + "/audit")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -457,7 +476,7 @@ class AdminApiControllerTest {
             request.put("reason", "测试");
 
             mockMvc.perform(put("/api/admin/merchants/99999/audit")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound())
@@ -483,7 +502,7 @@ class AdminApiControllerTest {
         @DisplayName("获取商家详情成功")
         void testGetMerchantDetailSuccess() throws Exception {
             mockMvc.perform(get("/api/admin/merchants/" + testMerchant.getId())
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.name").value("Approved Merchant"))
@@ -496,7 +515,7 @@ class AdminApiControllerTest {
         @DisplayName("获取商家详情失败 - 商家不存在")
         void testGetMerchantDetailNotFound() throws Exception {
             mockMvc.perform(get("/api/admin/merchants/99999")
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value(404));
         }
@@ -520,7 +539,7 @@ class AdminApiControllerTest {
         @DisplayName("获取系统配置成功")
         void testGetSystemConfigSuccess() throws Exception {
             mockMvc.perform(get("/api/admin/system/config")
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.websiteName").exists());
@@ -544,7 +563,7 @@ class AdminApiControllerTest {
             request.put("contactPhone", "400-123-4567");
 
             mockMvc.perform(put("/api/admin/system/config")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -577,7 +596,7 @@ class AdminApiControllerTest {
             announcement.setStatus("published");
 
             mockMvc.perform(post("/api/admin/announcements")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(announcement)))
                     .andExpect(status().isOk())
@@ -612,7 +631,7 @@ class AdminApiControllerTest {
             announcement.setStatus("draft");
 
             mockMvc.perform(post("/api/admin/announcements")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(announcement)))
                     .andExpect(status().isOk())
@@ -643,7 +662,7 @@ class AdminApiControllerTest {
             merchantMapper.insert(newMerchant);
 
             mockMvc.perform(get("/api/admin/merchants/pending")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .param("page", "0")
                             .param("pageSize", "10"))
                     .andExpect(status().isOk())
@@ -654,14 +673,14 @@ class AdminApiControllerTest {
             auditRequest.put("reason", "所有资质审核通过");
 
             mockMvc.perform(put("/api/admin/merchants/" + newMerchant.getId() + "/audit")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(auditRequest)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("approved"));
 
             mockMvc.perform(get("/api/admin/merchants/" + newMerchant.getId())
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("approved"));
         }
@@ -681,7 +700,7 @@ class AdminApiControllerTest {
             userMapper.insert(newUser);
 
             mockMvc.perform(get("/api/admin/users/" + newUser.getId())
-                            .session(adminSession))
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.user.status").value("active"));
 
@@ -689,7 +708,7 @@ class AdminApiControllerTest {
             disableRequest.put("status", "disabled");
 
             mockMvc.perform(put("/api/admin/users/" + newUser.getId() + "/status")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(disableRequest)))
                     .andExpect(status().isOk())
@@ -699,7 +718,7 @@ class AdminApiControllerTest {
             enableRequest.put("status", "active");
 
             mockMvc.perform(put("/api/admin/users/" + newUser.getId() + "/status")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(enableRequest)))
                     .andExpect(status().isOk())
@@ -716,14 +735,14 @@ class AdminApiControllerTest {
             announcement.setStatus("published");
 
             mockMvc.perform(post("/api/admin/announcements")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(announcement)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.title").value("重要通知"));
 
             mockMvc.perform(get("/api/admin/announcements")
-                            .session(adminSession)
+                            .header("Authorization", "Bearer " + adminToken)
                             .param("page", "0")
                             .param("pageSize", "10"))
                     .andExpect(status().isOk())

@@ -1,6 +1,7 @@
 package com.petshop.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.petshop.TestDataInitializer;
 import com.petshop.config.TestRedisConfig;
 import com.petshop.dto.ApiResponse;
 import com.petshop.dto.LoginRequest;
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("integration")
+@ActiveProfiles("test")
 @Import(TestRedisConfig.class)
 @Transactional
 @DisplayName("安全集成测试")
@@ -70,35 +71,52 @@ class SecurityIntegrationTest {
     private User testUser;
     private Merchant testMerchant;
     private Admin testAdmin;
-    private String testPassword = "password123";
+    private String testUserPassword = TestDataInitializer.TEST_USER_PASSWORD;
+    private String testMerchantPassword = TestDataInitializer.TEST_MERCHANT_PASSWORD;
+    private String testAdminPassword = TestDataInitializer.TEST_ADMIN_PASSWORD;
     private String encodedPassword;
 
     @BeforeEach
     void setUp() {
-        encodedPassword = passwordEncoder.encode(testPassword);
-
-        testUser = new User();
-        testUser.setUsername("testuser");
-        testUser.setPhone("13800138001");
-        testUser.setEmail("testuser@example.com");
-        testUser.setPassword(encodedPassword);
-        testUser.setStatus("active");
-        userMapper.insert(testUser);
-
-        testMerchant = new Merchant();
-        testMerchant.setName("Test Merchant");
-        testMerchant.setContactPerson("Contact Person");
-        testMerchant.setPhone("13800138002");
-        testMerchant.setEmail("merchant@example.com");
-        testMerchant.setPassword(encodedPassword);
-        testMerchant.setAddress("Test Address");
-        testMerchant.setStatus("approved");
-        merchantMapper.insert(testMerchant);
-
-        testAdmin = new Admin();
-        testAdmin.setUsername("testadmin");
-        testAdmin.setPassword(encodedPassword);
-        adminMapper.insert(testAdmin);
+        testUser = userMapper.selectByPhone("13800138001");
+        testMerchant = merchantMapper.selectByPhone("13900139001");
+        testAdmin = adminMapper.selectByUsername(TestDataInitializer.TEST_ADMIN_USERNAME);
+        
+        if (testUser == null) {
+            encodedPassword = passwordEncoder.encode(testUserPassword);
+            testUser = new User();
+            testUser.setUsername("testuser");
+            testUser.setPhone("13800138001");
+            testUser.setEmail("testuser@example.com");
+            testUser.setPassword(encodedPassword);
+            testUser.setStatus("active");
+            userMapper.insert(testUser);
+        }
+        
+        if (testMerchant == null) {
+            if (encodedPassword == null) {
+                encodedPassword = passwordEncoder.encode(testMerchantPassword);
+            }
+            testMerchant = new Merchant();
+            testMerchant.setName("Test Merchant");
+            testMerchant.setContactPerson("Contact Person");
+            testMerchant.setPhone("13900139001");
+            testMerchant.setEmail("merchant@example.com");
+            testMerchant.setPassword(encodedPassword);
+            testMerchant.setAddress("Test Address");
+            testMerchant.setStatus("approved");
+            merchantMapper.insert(testMerchant);
+        }
+        
+        if (testAdmin == null) {
+            if (encodedPassword == null) {
+                encodedPassword = passwordEncoder.encode(testAdminPassword);
+            }
+            testAdmin = new Admin();
+            testAdmin.setUsername("testadmin");
+            testAdmin.setPassword(encodedPassword);
+            adminMapper.insert(testAdmin);
+        }
     }
 
     @Nested
@@ -109,7 +127,7 @@ class SecurityIntegrationTest {
         @DisplayName("测试 JWT Token 生成")
         void testJwtTokenGeneration() {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(testUser.getPhone(), testPassword));
+                    new UsernamePasswordAuthenticationToken(testUser.getPhone(), testUserPassword));
 
             String token = jwtUtils.generateJwtToken(authentication);
 
@@ -231,7 +249,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试认证用户访问受保护资源 - 用户角色")
         void testAuthenticatedAccess_UserRole() throws Exception {
-            String token = loginUser(testUser.getPhone(), testPassword);
+            String token = loginUser(testUser.getPhone(), testUserPassword);
 
             mockMvc.perform(get("/api/user/profile")
                             .header("Authorization", "Bearer " + token))
@@ -242,7 +260,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试认证用户访问用户端API - 获取宠物列表")
         void testAuthenticatedAccess_UserApi_GetPets() throws Exception {
-            String token = loginUser(testUser.getPhone(), testPassword);
+            String token = loginUser(testUser.getPhone(), testUserPassword);
 
             mockMvc.perform(get("/api/user/pets")
                             .header("Authorization", "Bearer " + token))
@@ -252,7 +270,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试认证用户访问用户端API - 获取预约列表")
         void testAuthenticatedAccess_UserApi_GetAppointments() throws Exception {
-            String token = loginUser(testUser.getPhone(), testPassword);
+            String token = loginUser(testUser.getPhone(), testUserPassword);
 
             mockMvc.perform(get("/api/user/appointments")
                             .header("Authorization", "Bearer " + token))
@@ -262,7 +280,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试认证用户访问用户端API - 获取订单列表")
         void testAuthenticatedAccess_UserApi_GetOrders() throws Exception {
-            String token = loginUser(testUser.getPhone(), testPassword);
+            String token = loginUser(testUser.getPhone(), testUserPassword);
 
             mockMvc.perform(get("/api/user/orders")
                             .header("Authorization", "Bearer " + token))
@@ -275,7 +293,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试商家角色访问商家API")
         void testAuthenticatedAccess_MerchantRole() throws Exception {
-            String token = loginMerchant(testMerchant.getPhone(), testPassword);
+            String token = loginMerchant(testMerchant.getPhone(), testMerchantPassword);
 
             mockMvc.perform(get("/api/merchant/profile")
                             .header("Authorization", "Bearer " + token))
@@ -285,7 +303,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试商家角色访问商家API - 获取服务列表")
         void testAuthenticatedAccess_MerchantApi_GetServices() throws Exception {
-            String token = loginMerchant(testMerchant.getPhone(), testPassword);
+            String token = loginMerchant(testMerchant.getPhone(), testMerchantPassword);
 
             mockMvc.perform(get("/api/merchant/services")
                             .header("Authorization", "Bearer " + token))
@@ -295,7 +313,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试商家角色访问商家API - 获取商品列表")
         void testAuthenticatedAccess_MerchantApi_GetProducts() throws Exception {
-            String token = loginMerchant(testMerchant.getPhone(), testPassword);
+            String token = loginMerchant(testMerchant.getPhone(), testMerchantPassword);
 
             mockMvc.perform(get("/api/merchant/products")
                             .header("Authorization", "Bearer " + token))
@@ -305,7 +323,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试管理员角色访问管理员API")
         void testAuthenticatedAccess_AdminRole() throws Exception {
-            String token = loginAdmin(testAdmin.getUsername(), testPassword);
+            String token = loginAdmin(testAdmin.getUsername(), testAdminPassword);
 
             mockMvc.perform(get("/api/admin/users")
                             .header("Authorization", "Bearer " + token))
@@ -318,7 +336,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试管理员角色访问管理员API - 获取商家列表")
         void testAuthenticatedAccess_AdminApi_GetMerchants() throws Exception {
-            String token = loginAdmin(testAdmin.getUsername(), testPassword);
+            String token = loginAdmin(testAdmin.getUsername(), testAdminPassword);
 
             mockMvc.perform(get("/api/admin/merchants")
                             .header("Authorization", "Bearer " + token))
@@ -359,7 +377,7 @@ class SecurityIntegrationTest {
         void testUserLogin() throws Exception {
             LoginRequest loginRequest = new LoginRequest();
             loginRequest.setPhone(testUser.getPhone());
-            loginRequest.setPassword(testPassword);
+            loginRequest.setPassword(testUserPassword);
 
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -389,7 +407,7 @@ class SecurityIntegrationTest {
         void testUserLogin_UserNotFound() throws Exception {
             LoginRequest loginRequest = new LoginRequest();
             loginRequest.setPhone("99999999999");
-            loginRequest.setPassword(testPassword);
+            loginRequest.setPassword(testUserPassword);
 
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -403,7 +421,7 @@ class SecurityIntegrationTest {
         void testMerchantLogin() throws Exception {
             LoginRequest loginRequest = new LoginRequest();
             loginRequest.setPhone(testMerchant.getPhone());
-            loginRequest.setPassword(testPassword);
+            loginRequest.setPassword(testMerchantPassword);
 
             mockMvc.perform(post("/api/auth/merchant/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -419,7 +437,7 @@ class SecurityIntegrationTest {
         void testMerchantLogin_WithEmail() throws Exception {
             LoginRequest loginRequest = new LoginRequest();
             loginRequest.setUsername(testMerchant.getEmail());
-            loginRequest.setPassword(testPassword);
+            loginRequest.setPassword(testMerchantPassword);
 
             mockMvc.perform(post("/api/auth/merchant/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -434,7 +452,7 @@ class SecurityIntegrationTest {
         void testAdminLogin() throws Exception {
             LoginRequest loginRequest = new LoginRequest();
             loginRequest.setUsername(testAdmin.getUsername());
-            loginRequest.setPassword(testPassword);
+            loginRequest.setPassword(testAdminPassword);
 
             mockMvc.perform(post("/api/auth/admin/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -448,7 +466,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试获取当前用户信息")
         void testGetCurrentUserInfo() throws Exception {
-            String token = loginUser(testUser.getPhone(), testPassword);
+            String token = loginUser(testUser.getPhone(), testUserPassword);
 
             mockMvc.perform(get("/api/auth/userinfo")
                             .header("Authorization", "Bearer " + token))
@@ -695,7 +713,7 @@ class SecurityIntegrationTest {
         @Test
         @DisplayName("测试用户登出")
         void testLogout() throws Exception {
-            String token = loginUser(testUser.getPhone(), testPassword);
+            String token = loginUser(testUser.getPhone(), testUserPassword);
 
             mockMvc.perform(post("/api/auth/logout")
                             .header("Authorization", "Bearer " + token))

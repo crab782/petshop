@@ -9,6 +9,6 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface RoleMapper extends BaseMapper<Role> {
     
-    @Select("SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END FROM role WHERE id = #{id}")
+    @Select("SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END FROM `role` WHERE id = #{id}")
     boolean existsById(@Param("id") Integer id);
 }

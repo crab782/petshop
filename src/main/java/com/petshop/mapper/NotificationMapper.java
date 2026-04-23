@@ -10,11 +10,11 @@ import java.util.List;
 @Mapper
 public interface NotificationMapper extends BaseMapper<Notification> {
     
-    @Update("UPDATE notification SET is_read = true WHERE user_id = #{userId}")
+    @Update("UPDATE `notification` SET is_read = true WHERE user_id = #{userId}")
     int markAllAsReadByUserId(Integer userId);
     
     @Update("<script>" +
-            "UPDATE notification SET is_read = true WHERE id IN " +
+            "UPDATE `notification` SET is_read = true WHERE id IN " +
             "<foreach collection='ids' item='id' open='(' separator=',' close=')'>" +
             "#{id}" +
             "</foreach>" +

@@ -6,6 +6,7 @@ import com.petshop.dto.LoginRequest;
 import com.petshop.dto.MerchantRegisterRequest;
 import com.petshop.entity.*;
 import com.petshop.mapper.*;
+import com.petshop.security.JwtUtils;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -61,6 +62,9 @@ class MerchantApiControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JwtUtils jwtUtils;
+
     private Merchant testMerchant;
     private Service testService;
     private Product testProduct;
@@ -77,7 +81,7 @@ class MerchantApiControllerTest {
         testUser = createTestUser();
         testOrder = createTestOrder();
         testReview = createTestReview();
-        merchantToken = loginAsMerchant();
+        merchantToken = jwtUtils.generateTokenFromUsername("13900000001");
     }
 
     private Merchant createTestMerchant() {
@@ -952,20 +956,18 @@ class MerchantApiControllerTest {
     class AuthorizationTests {
 
         @Test
-        @DisplayName("7.1 无Token访问接口 - 应返回200（permitAll）")
+        @DisplayName("7.1 无Token访问接口 - 应返回401")
         void testAccessWithoutToken() throws Exception {
             mockMvc.perform(get("/api/merchant/services"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("7.2 无效Token访问接口 - 应返回200（permitAll）")
+        @DisplayName("7.2 无效Token访问接口 - 应返回401")
         void testAccessWithInvalidToken() throws Exception {
             mockMvc.perform(get("/api/merchant/services")
                             .header("Authorization", "Bearer invalid_token"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test

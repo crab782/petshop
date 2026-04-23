@@ -2,6 +2,7 @@ package com.petshop.config;
 
 import com.petshop.security.JwtAuthenticationFilter;
 import com.petshop.security.UserDetailsServiceImpl;
+import com.petshop.security.CustomAuthenticationEntryPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +31,9 @@ public class SecurityConfig {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
+    private CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public JwtAuthenticationFilter authenticationJwtTokenFilter() {
@@ -60,24 +64,29 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(customAuthenticationEntryPoint)
+            )
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/", "/login", "/login.html", "/register", "/register.html", "/register/user", "/register/merchant", "/index.html", "/admin-dashboard.html", "/user-dashboard.html", "/merchant-dashboard.html", "/merchant-add-service.html", "/user-add-pet.html", "/service-*.html").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/webjars/**").permitAll()
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout").permitAll()
                 .requestMatchers("/api/auth/sendVerifyCode", "/api/auth/resetPassword").permitAll()
+                .requestMatchers("/api/auth/merchant/login", "/api/auth/merchant/register", "/api/auth/admin/login", "/api/auth/admin/register").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/services", "/api/services/**").permitAll()
                 .requestMatchers("/api/products", "/api/products/**").permitAll()
                 .requestMatchers("/api/merchants", "/api/merchants/**").permitAll()
-                .requestMatchers("/api/merchant/**").permitAll()
+                .requestMatchers("/api/merchant/{id}", "/api/merchant/{id}/**").permitAll()
                 .requestMatchers("/api/search/**").permitAll()
                 .requestMatchers("/user/**").permitAll()
                 .requestMatchers("/merchant/**").permitAll()
                 .requestMatchers("/admin/**").permitAll()
                 .requestMatchers("/api/user/**").authenticated()
+                .requestMatchers("/api/admin/**").authenticated()
                 .requestMatchers("/api/merchant-api/**").authenticated()
                 .requestMatchers("/api/admin-api/**").authenticated()
-                .anyRequest().permitAll()
+                .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class)

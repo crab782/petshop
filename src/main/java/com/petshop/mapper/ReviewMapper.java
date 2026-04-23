@@ -9,6 +9,6 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ReviewMapper extends BaseMapper<Review> {
     
-    @Select("SELECT AVG(rating) FROM review WHERE merchant_id = #{merchantId}")
+    @Select("SELECT AVG(rating) FROM `review` WHERE merchant_id = #{merchantId}")
     Double getAverageRatingByMerchantId(@Param("merchantId") Integer merchantId);
 }

@@ -52,29 +52,33 @@ public class TestDataInitializer implements CommandLineRunner {
     }
 
     private void initTestUser() {
-        User user = new User();
-        user.setUsername(TEST_USER_USERNAME);
-        user.setEmail("testuser@example.com");
-        user.setPassword(passwordEncoder.encode(TEST_USER_PASSWORD));
-        user.setPhone("13800138001");
-        user.setStatus("active");
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
-        userMapper.insert(user);
+        if (userMapper.selectByPhone("13800138001") == null) {
+            User user = new User();
+            user.setUsername(TEST_USER_USERNAME);
+            user.setEmail("testuser@example.com");
+            user.setPassword(passwordEncoder.encode(TEST_USER_PASSWORD));
+            user.setPhone("13800138001");
+            user.setStatus("active");
+            user.setCreatedAt(LocalDateTime.now());
+            user.setUpdatedAt(LocalDateTime.now());
+            userMapper.insert(user);
+        }
     }
 
     private void initTestMerchant() {
-        Merchant merchant = new Merchant();
-        merchant.setName(TEST_MERCHANT_NAME);
-        merchant.setContactPerson("Test Contact");
-        merchant.setEmail("merchant@example.com");
-        merchant.setPassword(passwordEncoder.encode(TEST_MERCHANT_PASSWORD));
-        merchant.setPhone("13900139001");
-        merchant.setAddress("Test Address 123");
-        merchant.setStatus("approved");
-        merchant.setCreatedAt(LocalDateTime.now());
-        merchant.setUpdatedAt(LocalDateTime.now());
-        merchantMapper.insert(merchant);
+        if (merchantMapper.selectByPhone("13900139001") == null) {
+            Merchant merchant = new Merchant();
+            merchant.setName(TEST_MERCHANT_NAME);
+            merchant.setContactPerson("Test Contact");
+            merchant.setEmail("merchant@example.com");
+            merchant.setPassword(passwordEncoder.encode(TEST_MERCHANT_PASSWORD));
+            merchant.setPhone("13900139001");
+            merchant.setAddress("Test Address 123");
+            merchant.setStatus("approved");
+            merchant.setCreatedAt(LocalDateTime.now());
+            merchant.setUpdatedAt(LocalDateTime.now());
+            merchantMapper.insert(merchant);
+        }
     }
 
     private void initTestService() {
@@ -98,11 +102,13 @@ public class TestDataInitializer implements CommandLineRunner {
     }
 
     private void initTestAdmin() {
-        Admin admin = new Admin();
-        admin.setUsername(TEST_ADMIN_USERNAME);
-        admin.setPassword(passwordEncoder.encode(TEST_ADMIN_PASSWORD));
-        admin.setCreatedAt(LocalDateTime.now());
-        admin.setUpdatedAt(LocalDateTime.now());
-        adminMapper.insert(admin);
+        if (adminMapper.selectByUsername(TEST_ADMIN_USERNAME) == null) {
+            Admin admin = new Admin();
+            admin.setUsername(TEST_ADMIN_USERNAME);
+            admin.setPassword(passwordEncoder.encode(TEST_ADMIN_PASSWORD));
+            admin.setCreatedAt(LocalDateTime.now());
+            admin.setUpdatedAt(LocalDateTime.now());
+            adminMapper.insert(admin);
+        }
     }
 }
