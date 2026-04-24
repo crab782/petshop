@@ -110,7 +110,7 @@ const filteredProductOrders = computed(() => {
     )
   }
 
-  if (dateRange.value && dateRange.value.length === 2) {
+  if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
     const startDate = new Date(dateRange.value[0])
     const endDate = new Date(dateRange.value[1])
     endDate.setHours(23, 59, 59, 999)
@@ -138,7 +138,7 @@ const filteredAppointments = computed(() => {
     )
   }
 
-  if (dateRange.value && dateRange.value.length === 2) {
+  if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
     const startDate = new Date(dateRange.value[0])
     const endDate = new Date(dateRange.value[1])
     endDate.setHours(23, 59, 59, 999)
@@ -168,8 +168,8 @@ const fetchProductOrders = async () => {
     params.page = currentPage.value
     params.pageSize = pageSize.value
     const res = await getProductOrders(params)
-    productOrders.value = res.data || []
-    total.value = res.total || productOrders.value.length
+    productOrders.value = res?.data || []
+    total.value = res?.total || productOrders.value.length
   } catch (error) {
     console.error('获取商品订单失败:', error)
     ElMessage.error('获取商品订单失败，请稍后重试')
@@ -195,7 +195,7 @@ const fetchAppointments = async () => {
     params.page = currentPage.value
     params.pageSize = pageSize.value
     const res = await getUserAppointments(params)
-    appointments.value = res.data || []
+    appointments.value = res?.data || []
   } catch (error) {
     console.error('获取服务预约订单失败:', error)
     ElMessage.error('获取服务预约订单失败，请稍后重试')
@@ -225,11 +225,11 @@ const handleAppointmentSelectionChange = (selection: Appointment[]) => {
 }
 
 const handleViewProductOrder = (orderId: number) => {
-  router.push(`/user/order/${orderId}`)
+  router.push(`/user/orders/detail/${orderId}`)
 }
 
 const handleViewAppointment = (appointmentId: number) => {
-  router.push(`/user/appointment/${appointmentId}`)
+  router.push(`/user/appointments/${appointmentId}`)
 }
 
 const handleCancelProductOrder = async (orderId: number) => {

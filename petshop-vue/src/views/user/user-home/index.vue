@@ -42,8 +42,7 @@ const loadHomeData = async () => {
   loading.value = true
   merchantsLoading.value = true
   try {
-    const statsResponse = await getHomeStats()
-    const statsData = statsResponse.data || statsResponse
+    const statsData = await getHomeStats()
     if (statsData) {
       stats.value = [
         { title: '我的宠物', value: (statsData.petCount || 0).toString(), icon: Goods, color: '#409eff', route: '/user/pets' },
@@ -52,14 +51,12 @@ const loadHomeData = async () => {
       ]
     }
 
-    const activitiesResponse = await getRecentActivities(5)
-    const activitiesData = activitiesResponse.data || activitiesResponse
+    const activitiesData = await getRecentActivities(5)
     if (activitiesData) {
       recentActivities.value = activitiesData
     }
 
-    const servicesResponse = await getRecommendedServices(4)
-    const servicesData = servicesResponse.data || servicesResponse
+    const servicesData = await getRecommendedServices(4)
     if (servicesData) {
       recommendedServices.value = servicesData
     }

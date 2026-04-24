@@ -278,25 +278,25 @@ onMounted(() => {
         <el-row :gutter="16">
           <el-col :xs="12" :sm="6">
             <el-card class="stat-card">
-              <div class="stat-value">{{ appointments.value.length }}</div>
+              <div class="stat-value">{{ Array.isArray(appointments.value) ? appointments.value.length : 0 }}</div>
               <div class="stat-label">总预约数</div>
             </el-card>
           </el-col>
           <el-col :xs="12" :sm="6">
             <el-card class="stat-card pending">
-              <div class="stat-value">{{ appointments.value.filter(a => a.status === 'pending').length }}</div>
+              <div class="stat-value">{{ Array.isArray(appointments.value) ? appointments.value.filter(a => a.status === 'pending').length : 0 }}</div>
               <div class="stat-label">待处理</div>
             </el-card>
           </el-col>
           <el-col :xs="12" :sm="6">
             <el-card class="stat-card confirmed">
-              <div class="stat-value">{{ appointments.value.filter(a => a.status === 'confirmed').length }}</div>
+              <div class="stat-value">{{ Array.isArray(appointments.value) ? appointments.value.filter(a => a.status === 'confirmed').length : 0 }}</div>
               <div class="stat-label">已确认</div>
             </el-card>
           </el-col>
           <el-col :xs="12" :sm="6">
             <el-card class="stat-card completed">
-              <div class="stat-value">{{ appointments.value.filter(a => a.status === 'completed').length }}</div>
+              <div class="stat-value">{{ Array.isArray(appointments.value) ? appointments.value.filter(a => a.status === 'completed').length : 0 }}</div>
               <div class="stat-label">已完成</div>
             </el-card>
           </el-col>
