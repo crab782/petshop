@@ -143,7 +143,6 @@ onUnmounted(() => {
             v-for="item in menuItems" 
             :key="item.key" 
             :index="item.key"
-            v-memo="[item.key, routePath, isCollapse]"
           >
             <el-icon><component :is="item.icon" /></el-icon>
             <template #title>{{ item.label }}</template>
