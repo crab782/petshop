@@ -1,6 +1,7 @@
 """
 性能测试配置文件
 """
+
 import os
 import sys
 
@@ -11,7 +12,7 @@ from config import Config
 
 class PerformanceConfig:
     API_BASE_URL = os.getenv("API_BASE_URL", Config.API_BASE_URL)
-    
+
     TEST_USERS = {
         "user": {
             "loginIdentifier": os.getenv("PERF_USER_PHONE", Config.TEST_USER["phone"]),
@@ -24,9 +25,9 @@ class PerformanceConfig:
         "admin": {
             "loginIdentifier": os.getenv("PERF_ADMIN_USERNAME", Config.TEST_ADMIN["username"]),
             "password": os.getenv("PERF_ADMIN_PASSWORD", Config.TEST_ADMIN["password"]),
-        }
+        },
     }
-    
+
     PERFORMANCE_THRESHOLDS = {
         "login": {
             "max_response_time_ms": 500,
@@ -47,32 +48,32 @@ class PerformanceConfig:
             "max_error_rate": 0.01,
         },
     }
-    
+
     TEST_DATA = {
         "service_id": int(os.getenv("PERF_SERVICE_ID", "1")),
         "pet_id": int(os.getenv("PERF_PET_ID", "1")),
         "product_id": int(os.getenv("PERF_PRODUCT_ID", "1")),
         "merchant_id": int(os.getenv("PERF_MERCHANT_ID", "1")),
     }
-    
+
     LOAD_TEST_CONFIG = {
         "users": int(os.getenv("LOAD_TEST_USERS", "10")),
         "spawn_rate": int(os.getenv("LOAD_TEST_SPAWN_RATE", "2")),
         "run_time": os.getenv("LOAD_TEST_RUN_TIME", "60s"),
     }
-    
+
     STRESS_TEST_CONFIG = {
         "users": int(os.getenv("STRESS_TEST_USERS", "50")),
         "spawn_rate": int(os.getenv("STRESS_TEST_SPAWN_RATE", "5")),
         "run_time": os.getenv("STRESS_TEST_RUN_TIME", "120s"),
     }
-    
+
     SPIKE_TEST_CONFIG = {
         "users": int(os.getenv("SPIKE_TEST_USERS", "100")),
         "spawn_rate": int(os.getenv("SPIKE_TEST_SPAWN_RATE", "20")),
         "run_time": os.getenv("SPIKE_TEST_RUN_TIME", "30s"),
     }
-    
+
     REPORT_CONFIG = {
         "output_dir": os.getenv("PERF_REPORT_DIR", "tests/performance/reports"),
         "html_report": os.getenv("PERF_HTML_REPORT", "tests/performance/reports/performance_report.html"),

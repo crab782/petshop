@@ -2,6 +2,7 @@
 自动修复机制完整演示
 演示所有核心功能的使用
 """
+
 import sys
 from pathlib import Path
 
@@ -9,29 +10,25 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tests.auto_fix import (
     AutoFixRunner,
-    FailedTestDetector,
     ErrorLogger,
+    FailedTestDetector,
     FixSuggestionGenerator,
+    RetryResult,
     TestFailure,
-    RetryResult
 )
-from tests.auto_fix_config import (
-    AutoFixConfig,
-    ErrorType,
-    RetryConfig
-)
+from tests.auto_fix_config import AutoFixConfig, ErrorType, RetryConfig
 
 
 def print_header(title: str):
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(title)
-    print("="*80)
+    print("=" * 80)
 
 
 def demo_error_detection():
     """演示错误检测功能"""
     print_header("演示1: 错误检测")
-    
+
     pytest_output = """
 ============================= test session starts =============================
 collected 5 items
@@ -84,25 +81,25 @@ FAILED tests/test_network.py::test_network_timeout - TimeoutError: Request timed
 FAILED tests/test_validation.py::test_data_validation - AssertionError: Expected 201 but got 400
 ========================= 5 failed in 2.35s =========================
 """
-    
+
     detector = FailedTestDetector()
     failures = detector.parse_pytest_output(pytest_output)
-    
+
     print(f"\n检测到 {len(failures)} 个失败的测试:")
     for i, failure in enumerate(failures, 1):
         print(f"\n{i}. {failure.test_name}")
         print(f"   错误类型: {failure.error_type.value}")
         print(f"   错误信息: {failure.error_message[:60]}...")
-    
+
     return failures
 
 
 def demo_fix_suggestions(failures):
     """演示修复建议生成"""
     print_header("演示2: 修复建议生成")
-    
+
     generator = FixSuggestionGenerator()
-    
+
     for failure in failures[:3]:  # 只演示前3个
         suggestions = generator.generate_suggestions(failure)
         report = generator.generate_fix_report(failure)
@@ -112,14 +109,14 @@ def demo_fix_suggestions(failures):
 def demo_error_logging(failures):
     """演示错误日志记录"""
     print_header("演示3: 错误日志记录")
-    
+
     logger = ErrorLogger(log_dir="tests/logs")
-    
+
     for failure in failures[:2]:  # 只演示前2个
         logger.log_error(failure)
-    
+
     print("\n✅ 错误日志已保存到 tests/logs/errors.log")
-    
+
     logger.save_error_report(failures)
     print("✅ 错误报告已保存到 tests/logs/auto_fix_report.json")
 
@@ -127,38 +124,33 @@ def demo_error_logging(failures):
 def demo_retry_mechanism():
     """演示重试机制"""
     print_header("演示4: 重试机制")
-    
-    retry_config = RetryConfig(
-        max_retries=3,
-        retry_delay=2,
-        exponential_backoff=True,
-        max_delay=30
-    )
-    
+
+    retry_config = RetryConfig(max_retries=3, retry_delay=2, exponential_backoff=True, max_delay=30)
+
     runner = AutoFixRunner(retry_config=retry_config)
-    
+
     test_failures = [
         TestFailure(
             test_name="test_network_timeout",
             error_message="Timeout error",
             error_type=ErrorType.TIMEOUT_ERROR,
-            traceback="TimeoutError at line 25"
+            traceback="TimeoutError at line 25",
         ),
         TestFailure(
             test_name="test_auth_error",
             error_message="401 Unauthorized",
             error_type=ErrorType.AUTH_ERROR,
-            traceback="AssertionError at line 30"
-        )
+            traceback="AssertionError at line 30",
+        ),
     ]
-    
+
     print("\n重试策略测试:")
     for failure in test_failures:
         should_retry = runner.should_retry(failure)
         print(f"\n测试: {failure.test_name}")
         print(f"错误类型: {failure.error_type.value}")
         print(f"是否应该重试: {'✅ 是' if should_retry else '❌ 否'}")
-        
+
         if should_retry:
             print("重试延迟计算:")
             for attempt in range(1, retry_config.max_retries + 1):
@@ -169,7 +161,7 @@ def demo_retry_mechanism():
 def demo_error_type_detection():
     """演示错误类型检测"""
     print_header("演示5: 错误类型自动检测")
-    
+
     test_errors = [
         ("Connection refused", "网络连接错误"),
         ("Timeout error", "请求超时"),
@@ -181,7 +173,7 @@ def demo_error_type_detection():
         ("Database connection failed", "数据库错误"),
         ("AssertionError: Expected 200", "数据断言错误"),
     ]
-    
+
     print("\n错误类型自动检测:")
     for error_msg, description in test_errors:
         error_type = AutoFixConfig.get_error_type_from_message(error_msg)
@@ -194,7 +186,7 @@ def demo_error_type_detection():
 def demo_full_workflow():
     """演示完整工作流程"""
     print_header("演示6: 完整工作流程")
-    
+
     print("\n自动修复完整工作流程:")
     print("1. 运行测试")
     print("   └─ python -m pytest tests/ -v")
@@ -214,10 +206,10 @@ def demo_full_workflow():
     print("\n6. 生成最终报告")
     print("   └─ JSON格式报告")
     print("   └─ HTML可视化报告")
-    
+
     print("\n命令行使用:")
     print("  python tests/auto_fix.py --max-retries 3 --retry-delay 5")
-    
+
     print("\nPython API使用:")
     print("""
     from tests.auto_fix import AutoFixRunner
@@ -232,14 +224,14 @@ def demo_full_workflow():
 def demo_ci_cd_integration():
     """演示CI/CD集成"""
     print_header("演示7: CI/CD集成")
-    
+
     print("\nCI/CD集成方式:")
     print("\n1. GitHub Actions:")
     print("   - 工作流文件: .github/workflows/auto_fix_tests.yml")
     print("   - 自动运行测试")
     print("   - 自动修复和重试")
     print("   - 上传测试报告")
-    
+
     print("\n2. Jenkins Pipeline:")
     print("""
     pipeline {
@@ -250,7 +242,7 @@ def demo_ci_cd_integration():
         }
     }
     """)
-    
+
     print("\n3. GitLab CI:")
     print("""
     auto_fix_tests:
@@ -260,7 +252,7 @@ def demo_ci_cd_integration():
         paths:
           - tests/report/
     """)
-    
+
     print("\n环境变量配置:")
     print("  MAX_RETRIES=3")
     print("  RETRY_DELAY=5")
@@ -270,37 +262,37 @@ def demo_ci_cd_integration():
 
 def main():
     """主演示函数"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("自动修复和重试机制 - 完整功能演示")
-    print("="*80)
-    
+    print("=" * 80)
+
     failures = demo_error_detection()
-    
+
     demo_fix_suggestions(failures)
-    
+
     demo_error_logging(failures)
-    
+
     demo_retry_mechanism()
-    
+
     demo_error_type_detection()
-    
+
     demo_full_workflow()
-    
+
     demo_ci_cd_integration()
-    
+
     print_header("演示完成")
-    
+
     print("\n✅ 所有功能演示完成！")
     print("\n生成的文件:")
     print("  - tests/logs/errors.log (错误日志)")
     print("  - tests/logs/retries.log (重试日志)")
     print("  - tests/logs/auto_fix_report.json (JSON报告)")
-    
+
     print("\n更多信息请查看:")
     print("  - tests/AUTO_FIX_README.md (详细使用文档)")
     print("  - tests/AUTO_FIX_SUMMARY.md (实现总结)")
     print("  - tests/auto_fix_example.py (更多示例)")
-    
+
     print("\n开始使用:")
     print("  python tests/auto_fix.py --test-path tests/ --max-retries 3")
 

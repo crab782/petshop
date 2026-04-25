@@ -1,0 +1,38 @@
+[run]
+source = tests
+omit = 
+    tests/__pycache__/*
+    tests/fixtures/*
+    tests/testdata/*
+    tests/performance/*
+    tests/logs/*
+    */__init__.py
+
+branch = true
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+
+fail_under = 0
+show_missing = true
+skip_covered = false
+skip_empty = true
+sort = Cover
+
+[html]
+directory = coverage-reports/html
+title = PetShop Test Coverage Report
+
+[xml]
+output = coverage-reports/coverage.xml
+
+[json]
+output = coverage-reports/coverage.json
+show_contexts = true

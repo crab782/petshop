@@ -1,0 +1,16 @@
+# 性能测试依赖包
+
+# Locust - 性能测试框架
+locust>=2.15.0
+
+# 数据处理和统计
+numpy>=1.24.0
+
+# 图表生成（可选）
+matplotlib>=3.7.0
+
+# JSON处理
+jsonschema>=4.17.0
+
+# 日期时间处理
+python-dateutil>=2.8.0

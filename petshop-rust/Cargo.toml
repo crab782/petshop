@@ -1,0 +1,68 @@
+[package]
+name = "petshop-rust"
+version = "0.1.0"
+edition = "2021"
+authors = ["PetShop Team"]
+description = "Pet Service Platform Backend API"
+
+[lib]
+name = "petshop_rust"
+path = "src/lib.rs"
+
+[[bin]]
+name = "petshop-rust"
+path = "src/main.rs"
+
+[dependencies]
+actix-web = "4.5"
+actix-rt = "2.9"
+actix-service = "2.0"
+actix-utils = "3.0"
+
+diesel = { version = "2.1", features = ["mysql", "r2d2", "chrono", "uuid"] }
+diesel_migrations = "2.1"
+r2d2 = "0.8"
+
+tokio = { version = "1", features = ["full"] }
+
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
+
+dotenv = "0.15"
+config = "0.14"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+chrono = { version = "0.4", features = ["serde"] }
+
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+utoipa = "4.0"
+utoipa-swagger-ui = "4.0"
+
+validator = { version = "0.18", features = ["derive"] }
+
+log = "0.4"
+env_logger = "0.10"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+thiserror = "1.0"
+anyhow = "1.0"
+
+ring = "0.17"
+
+rand = "0.8"
+
+[dev-dependencies]
+actix-rt = "2.9"
+mockall = "0.12"
+fake = { version = "3", features = ["derive"] }
+tempfile = "3"
+tokio-test = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

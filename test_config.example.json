@@ -1,0 +1,28 @@
+{
+  "suite": "unit",
+  "module": "user",
+  "marker": "smoke",
+  "env": "dev",
+  "parallel": 2,
+  "retry": 1,
+  "retry_delay": 2,
+  "verbose": true,
+  "coverage": true,
+  "report_path": "tests/report",
+  "base_url": "http://localhost:8080",
+  "timeout": 30,
+  "execution_mode": "local",
+  "custom": {
+    "database": {
+      "host": "localhost",
+      "port": 3306,
+      "database": "cg",
+      "user": "root",
+      "password": "123456"
+    },
+    "test_data": {
+      "init_on_startup": true,
+      "cleanup_after_test": false
+    }
+  }
+}

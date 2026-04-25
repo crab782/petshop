@@ -12,9 +12,20 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
+
+from tests.test_runner import (
+    TestConfiguration,
+    TestRunner,
+    TestSuite,
+    TestModule,
+    TestMarker,
+    Environment,
+    ExecutionMode,
+    create_test_runner,
+)
 
 
 class Colors:
@@ -29,7 +40,7 @@ class Colors:
     BOLD = '\033[1m'
 
 
-class TestRunner:
+class TestRunnerCLI:
     def __init__(self):
         self.project_root = Path(__file__).parent
         self.tests_dir = self.project_root / "tests"
@@ -51,7 +62,7 @@ class TestRunner:
             "failed_tests": [],
             "retry_count": 0
         }
-        
+    
     def print_banner(self, text: str, color: str = Colors.CYAN):
         width = 70
         print(f"\n{color}{Colors.BOLD}")
@@ -69,13 +80,21 @@ class TestRunner:
         
         required_packages = [
             "pytest", "requests", "pytest-html", "pytest-cov",
-            "allure-pytest", "python-dotenv"
+            "allure-pytest", "python-dotenv", "pytest-xdist",
+            "pytest-rerunfailures"
         ]
         
         missing_packages = []
         for package in required_packages:
             try:
-                __import__(package.replace("-", "_").replace("pytest_html", "pytest_html"))
+                module_name = package.replace("-", "_")
+                if package == "pytest-html":
+                    module_name = "pytest_html"
+                elif package == "pytest-xdist":
+                    module_name = "xdist"
+                elif package == "pytest-rerunfailures":
+                    module_name = "rerunfailures"
+                __import__(module_name)
                 print(f"  {Colors.GREEN}✓{Colors.RESET} {package}")
             except ImportError:
                 print(f"  {Colors.RED}✗{Colors.RESET} {package} (缺失)")
@@ -167,9 +186,11 @@ class TestRunner:
         markers: List[str] = None,
         parallel: int = 1,
         retry: int = 0,
+        retry_delay: int = 2,
         coverage: bool = False,
         report: bool = False,
-        verbose: bool = True
+        verbose: bool = True,
+        load_balance: bool = False
     ) -> List[str]:
         cmd = [sys.executable, "-m", "pytest"]
         
@@ -192,9 +213,14 @@ class TestRunner:
         
         if parallel > 1:
             cmd.extend(["-n", str(parallel)])
+            if load_balance:
+                cmd.append("--dist=loadfile")
         
         if retry > 0:
-            cmd.extend(["--reruns", str(retry), "--reruns-delay", "2"])
+            cmd.extend([
+                "--reruns", str(retry),
+                "--reruns-delay", str(retry_delay)
+            ])
         
         if coverage:
             cmd.extend([
@@ -217,8 +243,10 @@ class TestRunner:
         markers: List[str] = None,
         parallel: int = 1,
         retry: int = 0,
+        retry_delay: int = 2,
         coverage: bool = False,
-        report: bool = False
+        report: bool = False,
+        load_balance: bool = False
     ) -> Tuple[int, Dict]:
         self.print_banner("开始执行测试")
         
@@ -227,8 +255,10 @@ class TestRunner:
             markers=markers,
             parallel=parallel,
             retry=retry,
+            retry_delay=retry_delay,
             coverage=coverage,
-            report=report
+            report=report,
+            load_balance=load_balance
         )
         
         print(f"\n{Colors.CYAN}执行命令:{Colors.RESET}")
@@ -332,6 +362,34 @@ class TestRunner:
             print(f"  {Colors.GREEN}✓{Colors.RESET} 测试数据清理完成")
         except Exception as e:
             print(f"  {Colors.YELLOW}⚠{Colors.RESET} 测试数据清理跳过: {e}")
+    
+    def run_with_config(self, config: TestConfiguration) -> int:
+        test_paths = None
+        markers = []
+        
+        if config.suite:
+            suite_dir = self.tests_dir / config.suite.value
+            if suite_dir.exists():
+                test_paths = [str(suite_dir)]
+        
+        if config.module:
+            markers.append(config.module.value)
+        
+        if config.marker:
+            markers.append(config.marker.value)
+        
+        return_code, results = self.run_tests(
+            test_paths=test_paths,
+            markers=markers if markers else None,
+            parallel=config.parallel,
+            retry=config.retry,
+            retry_delay=config.retry_delay,
+            coverage=config.coverage,
+            report=True,
+            load_balance=config.parallel > 1
+        )
+        
+        return return_code
 
 
 def parse_arguments():
@@ -341,69 +399,50 @@ def parse_arguments():
         epilog="""
 示例用法:
   python run_tests.py --all                    # 运行所有测试
-  python run_tests.py --auth                   # 只运行认证测试
-  python run_tests.py --appointment            # 只运行服务订单测试
-  python run_tests.py --product-order          # 只运行商品订单测试
-  python run_tests.py --isolation              # 只运行数据隔离测试
-  python run_tests.py --performance            # 运行性能测试
+  python run_tests.py --suite unit             # 只运行单元测试
+  python run_tests.py --suite integration      # 只运行集成测试
+  python run_tests.py --module user            # 只运行用户端测试
+  python run_tests.py --module merchant        # 只运行商家端测试
+  python run_tests.py --marker smoke           # 只运行冒烟测试
+  python run_tests.py --marker regression      # 只运行回归测试
+  python run_tests.py --env test               # 使用测试环境配置
+  python run_tests.py --parallel 4             # 并行执行测试（4个进程）
+  python run_tests.py --retry 3                # 失败重试3次
   python run_tests.py --report --coverage      # 生成HTML报告和覆盖率报告
-  python run_tests.py --all --parallel 4       # 并行执行测试
-  python run_tests.py --all --retry 3          # 失败重试3次
+  python run_tests.py --config test_config.json # 从配置文件加载
         """
     )
     
     test_group = parser.add_argument_group("测试选择")
     test_group.add_argument(
+        "--suite", type=str, choices=[s.value for s in TestSuite],
+        help="选择测试套件 (unit/integration/performance/security)"
+    )
+    test_group.add_argument(
+        "--module", type=str, choices=[m.value for m in TestModule],
+        help="选择测试模块 (user/merchant/admin/public)"
+    )
+    test_group.add_argument(
+        "--marker", type=str, choices=[m.value for m in TestMarker],
+        help="选择测试标记 (smoke/regression/auth/appointment/product_order/isolation/performance/security)"
+    )
+    test_group.add_argument(
         "--all", action="store_true",
         help="运行所有测试"
     )
-    test_group.add_argument(
-        "--auth", action="store_true",
-        help="只运行认证测试"
+    
+    env_group = parser.add_argument_group("环境配置")
+    env_group.add_argument(
+        "--env", type=str, choices=[e.value for e in Environment], default='dev',
+        help="选择测试环境 (dev/test/prod)"
     )
-    test_group.add_argument(
-        "--appointment", action="store_true",
-        help="只运行服务订单测试"
+    env_group.add_argument(
+        "--config", type=str,
+        help="从配置文件加载测试配置 (JSON格式)"
     )
-    test_group.add_argument(
-        "--product-order", action="store_true",
-        help="只运行商品订单测试"
-    )
-    test_group.add_argument(
-        "--isolation", action="store_true",
-        help="只运行数据隔离测试"
-    )
-    test_group.add_argument(
-        "--performance", action="store_true",
-        help="运行性能测试"
-    )
-    test_group.add_argument(
-        "--smoke", action="store_true",
-        help="只运行冒烟测试"
-    )
-    test_group.add_argument(
-        "--regression", action="store_true",
-        help="只运行回归测试"
-    )
-    test_group.add_argument(
-        "--user", action="store_true",
-        help="只运行用户相关测试"
-    )
-    test_group.add_argument(
-        "--merchant", action="store_true",
-        help="只运行商家相关测试"
-    )
-    test_group.add_argument(
-        "--admin", action="store_true",
-        help="只运行管理员相关测试"
-    )
-    test_group.add_argument(
-        "--security", action="store_true",
-        help="只运行安全测试"
-    )
-    test_group.add_argument(
-        "--test-path", type=str, nargs="+",
-        help="指定测试文件或目录路径"
+    env_group.add_argument(
+        "--base-url", type=str, default="http://localhost:8080",
+        help="后端服务地址 (默认: http://localhost:8080)"
     )
     
     exec_group = parser.add_argument_group("执行选项")
@@ -414,6 +453,14 @@ def parse_arguments():
     exec_group.add_argument(
         "--retry", type=int, default=0,
         help="失败重试次数 (默认: 0)"
+    )
+    exec_group.add_argument(
+        "--retry-delay", type=int, default=2,
+        help="失败重试延迟秒数 (默认: 2)"
+    )
+    exec_group.add_argument(
+        "--load-balance", action="store_true",
+        help="启用负载均衡（并行执行时）"
     )
     exec_group.add_argument(
         "--verbose", "-v", action="store_true",
@@ -432,6 +479,10 @@ def parse_arguments():
     report_group.add_argument(
         "--allure", action="store_true",
         help="生成Allure报告 (需要安装allure命令行工具)"
+    )
+    report_group.add_argument(
+        "--report-path", type=str,
+        help="报告输出路径"
     )
     
     other_group = parser.add_argument_group("其他选项")
@@ -452,8 +503,8 @@ def parse_arguments():
         help="测试完成后清理测试数据"
     )
     other_group.add_argument(
-        "--base-url", type=str, default="http://localhost:8080",
-        help="后端服务地址 (默认: http://localhost:8080)"
+        "--notify", type=str,
+        help="测试完成后发送通知的Webhook URL"
     )
     
     return parser.parse_args()
@@ -462,71 +513,86 @@ def parse_arguments():
 def main():
     args = parse_arguments()
     
-    runner = TestRunner()
+    cli = TestRunnerCLI()
     
-    runner.print_banner("宠物服务平台测试运行器", Colors.MAGENTA)
+    cli.print_banner("宠物服务平台测试运行器", Colors.MAGENTA)
     
     if not args.skip_deps:
-        if not runner.check_dependencies():
+        if not cli.check_dependencies():
             sys.exit(1)
     
     if not args.skip_backend_check:
-        if not runner.check_backend_service(args.base_url):
+        if not cli.check_backend_service(args.base_url):
             sys.exit(1)
     
     if not args.skip_init:
-        runner.init_test_data()
+        cli.init_test_data()
     
-    markers = []
-    test_paths = args.test_path
-    
-    if args.all:
-        pass
-    else:
-        if args.auth:
-            markers.append("auth")
-        if args.appointment:
-            markers.append("appointment")
-        if args.product_order:
-            markers.append("product_order")
-        if args.isolation:
-            markers.append("isolation")
-        if args.performance:
-            markers.append("performance")
-        if args.smoke:
-            markers.append("smoke")
-        if args.regression:
-            markers.append("regression")
-        if args.user:
-            markers.append("user")
-        if args.merchant:
-            markers.append("merchant")
-        if args.admin:
-            markers.append("admin")
-        if args.security:
-            markers.append("security")
-    
-    if args.performance:
-        test_paths = [str(runner.tests_dir / "performance" / "locustfile.py")]
-    
-    return_code, results = runner.run_tests(
-        test_paths=test_paths,
-        markers=markers if markers else None,
+    config = TestConfiguration(
+        suite=TestSuite(args.suite) if args.suite else None,
+        module=TestModule(args.module) if args.module else None,
+        marker=TestMarker(args.marker) if args.marker else None,
+        env=Environment(args.env),
         parallel=args.parallel,
         retry=args.retry,
+        retry_delay=args.retry_delay,
+        verbose=args.verbose,
         coverage=args.coverage,
-        report=args.report
+        base_url=args.base_url,
+        report_path=Path(args.report_path) if args.report_path else None,
     )
     
-    if args.allure:
-        runner.generate_allure_report()
+    if args.config:
+        config.load_from_file(args.config)
     
-    runner.print_summary(results)
+    config.load_from_env()
+    
+    if not config.validate():
+        print(f"{Colors.RED}配置验证失败{Colors.RESET}")
+        sys.exit(1)
+    
+    if args.all:
+        config.suite = None
+        config.module = None
+        config.marker = None
+    
+    return_code = cli.run_with_config(config)
+    
+    if args.allure:
+        cli.generate_allure_report()
+    
+    cli.print_summary(cli.results)
     
     if args.cleanup:
-        runner.cleanup()
+        cli.cleanup()
     
-    runner.print_banner("测试执行完成", Colors.GREEN if return_code == 0 else Colors.RED)
+    if args.notify:
+        try:
+            import requests
+            stats = cli.results
+            message = {
+                "text": "测试执行完成",
+                "attachments": [
+                    {
+                        "color": "good" if stats.get('passed', 0) > stats.get('failed', 0) else "danger",
+                        "fields": [
+                            {"title": "总测试数", "value": str(stats.get('total', 0)), "short": True},
+                            {"title": "通过数", "value": str(stats.get('passed', 0)), "short": True},
+                            {"title": "失败数", "value": str(stats.get('failed', 0)), "short": True},
+                            {"title": "执行时间", "value": f"{stats.get('duration', 0):.2f}秒", "short": True},
+                        ]
+                    }
+                ]
+            }
+            response = requests.post(args.notify, json=message, timeout=10)
+            if response.status_code == 200:
+                print(f"{Colors.GREEN}通知发送成功{Colors.RESET}")
+            else:
+                print(f"{Colors.RED}通知发送失败: {response.status_code}{Colors.RESET}")
+        except Exception as e:
+            print(f"{Colors.RED}通知发送失败: {e}{Colors.RESET}")
+    
+    cli.print_banner("测试执行完成", Colors.GREEN if return_code == 0 else Colors.RED)
     
     sys.exit(return_code)
 

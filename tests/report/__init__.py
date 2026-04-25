@@ -1,16 +1,17 @@
 """
 测试报告生成器模块
 """
+
 from .generator import (
-    HTMLReportGenerator,
-    PerformanceReportGenerator,
     CoverageReportGenerator,
+    HTMLReportGenerator,
     NotificationSender,
+    PerformanceReportGenerator,
 )
 
 __all__ = [
-    'HTMLReportGenerator',
-    'PerformanceReportGenerator',
-    'CoverageReportGenerator',
-    'NotificationSender',
+    "HTMLReportGenerator",
+    "PerformanceReportGenerator",
+    "CoverageReportGenerator",
+    "NotificationSender",
 ]
